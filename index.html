@@ -212,7 +212,7 @@ const KUBUN=['計画','突発'];
 const INPUT_BY=['三上','金森','岩本'];
 
 let currentView='list',viewingId=null,editingId=null,detailTab='basic';
-let employees=[],yukyuRecords=[],yukyuGrants=[],departments=[],visaTypes=[];
+let employees=[],yukyuRecords=[],yukyuGrants=[],departments=[],visaTypes=[],companyInfo={};
 let kenkoImgData='',rcImgData='';
 let yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};
 let yfFromDetail=false;
@@ -272,8 +272,9 @@ async function loadYukyu(){yukyuRecords=await sb('yukyu_records?select=*&order=u
 async function loadGrants(){yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');}
 async function loadDepts(){departments=await sb('departments?select=*&order=sort_order.asc,id.asc');}
 async function loadVisaTypes(){visaTypes=await sb('visa_types?select=*&order=id.asc');}
+async function loadCompanyInfo(){const rows=await sb('company_info?select=*&limit=1');companyInfo=rows[0]||{};}
 async function loadAndRender(){
-  try{await Promise.all([loadEmployees(),loadYukyu(),loadGrants(),loadDepts(),loadVisaTypes()]);}catch(e){console.error(e);}
+  try{await Promise.all([loadEmployees(),loadYukyu(),loadGrants(),loadDepts(),loadVisaTypes(),loadCompanyInfo()]);}catch(e){console.error(e);}
   await checkAndAutoGrant();
   render();
 }
@@ -513,6 +514,8 @@ function renderList(){
           ${showCol('updated_at')?`<td style="font-size:12px;color:var(--text3)">${e.updated_at||'—'}</td>`:''}
           <td style="white-space:nowrap">
             <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
+            <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')" style="margin-left:4px">在職証明</button>
+            ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')" style="margin-left:4px">退職証明</button>`:''}
             <button class="btn btn-sm btn-danger" onclick="deleteEmp(${e.id})" style="margin-left:4px">削除</button>
           </td></tr>`;
       }).join('')}</tbody>
@@ -571,6 +574,8 @@ function renderDetail(id){
       <button class="btn btn-sm" ${prevEmp?`onclick="viewDetail(${prevEmp.id})"`:'disabled'} style="${!prevEmp?'opacity:.4':''}">◀ 前へ</button>
       <span style="font-size:12px;color:var(--text3)">${idx+1}/${currentFilteredList.length}</span>
       <button class="btn btn-sm" ${nextEmp?`onclick="viewDetail(${nextEmp.id})"`:'disabled'} style="${!nextEmp?'opacity:.4':''}">次へ ▶</button>
+      <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
+      ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
     <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
@@ -1077,6 +1082,19 @@ function renderSettings(){
   document.getElementById('mainContent').innerHTML=`
     <div style="max-width:600px">
       <div style="font-size:16px;font-weight:700;margin-bottom:20px">設定</div>
+
+      <div class="settings-card" style="margin-bottom:20px">
+        <h3>発行元情報（証明書用）</h3>
+        <div class="field-grid" style="margin-bottom:12px">
+          <div class="field"><label>会社名</label><input type="text" id="ci_company" value="${companyInfo.company_name||''}" placeholder="株式会社〇〇"></div>
+          <div class="field"><label>郵便番号</label><input type="text" id="ci_postal" value="${companyInfo.postal_code||''}" placeholder="000-0000"></div>
+          <div class="field" style="grid-column:1/-1"><label>住所</label><input type="text" id="ci_address" value="${companyInfo.address||''}" placeholder="愛知県〇〇市..."></div>
+          <div class="field"><label>電話番号</label><input type="text" id="ci_tel" value="${companyInfo.tel||''}" placeholder="0000-00-0000"></div>
+          <div class="field"><label>代表者名</label><input type="text" id="ci_rep" value="${companyInfo.representative||''}" placeholder="代表取締役 〇〇 〇〇"></div>
+        </div>
+        <div style="text-align:right"><button class="btn btn-primary btn-sm" onclick="saveCompanyInfo()">保存</button></div>
+      </div>
+
       <div class="settings-card" style="margin-bottom:20px">
         <h3>部署マスター管理</h3>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -1114,6 +1132,89 @@ function renderSettings(){
             </div>`).join('')}
       </div>
     </div>`;
+}
+
+// ---- 発行元情報 ----
+async function saveCompanyInfo(){
+  const data={
+    company_name:document.getElementById('ci_company')?.value||'',
+    postal_code:document.getElementById('ci_postal')?.value||'',
+    address:document.getElementById('ci_address')?.value||'',
+    tel:document.getElementById('ci_tel')?.value||'',
+    representative:document.getElementById('ci_rep')?.value||''
+  };
+  try{
+    await sb('company_info?id=eq.1','PATCH',data);
+    companyInfo={...companyInfo,...data};
+    alert('保存しました');
+  }catch(e){alert('保存に失敗しました：'+e.message);}
+}
+
+// ---- 証明書生成 ----
+function generateCertificate(empId,type){
+  const e=employees.find(x=>x.id===empId);
+  if(!e){alert('従業員が見つかりません');return;}
+  if(!companyInfo.company_name){alert('設定画面で発行元情報を登録してください');return;}
+
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+  const dept=departments.find(d=>d.id===Number(e.dept_id));
+  const isZaishoku=type==='zaishoku';
+  const title=isZaishoku?'在職証明書':'退職証明書';
+
+  // HTML→PDF用のコンテンツ生成
+  const content=`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  body{font-family:'MS Mincho','Yu Mincho',serif;margin:0;padding:40px;color:#000;font-size:14px;line-height:2}
+  .title{text-align:center;font-size:24px;font-weight:bold;margin:20px 0 40px;letter-spacing:4px}
+  .date{text-align:right;margin-bottom:30px}
+  .content{margin:0 20px}
+  .name-line{font-size:16px;margin:20px 0;border-bottom:1px solid #000;padding-bottom:4px}
+  .section{margin:16px 0}
+  .section-title{font-weight:bold}
+  .table{width:100%;border-collapse:collapse;margin:16px 0}
+  .table td{padding:8px 12px;border:1px solid #333;font-size:13px}
+  .table td:first-child{width:30%;background:#f5f5f5;font-weight:bold}
+  .seal-area{text-align:right;margin-top:40px}
+  .company-info{text-align:right;line-height:1.8;margin-top:10px}
+  .stamp{display:inline-block;width:60px;height:60px;border:2px solid #c00;border-radius:50%;line-height:60px;text-align:center;color:#c00;font-size:11px;margin-left:10px;vertical-align:middle}
+  @media print{body{padding:20px}}
+</style>
+</head>
+<body>
+  <div class="date">発行日：${todayStr}</div>
+  <div class="title">${title}</div>
+  <div class="content">
+    <div class="name-line">氏　名：${e.sei} ${e.mei}　様</div>
+    <div style="margin:20px 0">上記の者は、下記のとおり${isZaishoku?'在職していることを証明します':'退職したことを証明します'}。</div>
+    <table class="table">
+      <tr><td>所属</td><td>${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join('　'):'—'}</td></tr>
+      <tr><td>雇用形態</td><td>${e.koyou||'—'}</td></tr>
+      <tr><td>入社年月日</td><td>${e.nyusha_date||'—'}</td></tr>
+      ${!isZaishoku?`<tr><td>退職年月日</td><td>${e.taishoku_date||'—'}</td></tr>`:''}
+      ${isZaishoku?`<tr><td>在籍状況</td><td>在職中</td></tr>`:''}
+    </table>
+    <div style="margin-top:30px;font-size:12px;color:#555">※本証明書は${todayStr}現在のものです。</div>
+  </div>
+  <div class="seal-area">
+    <div class="company-info">
+      〒${companyInfo.postal_code||''}<br>
+      ${companyInfo.address||''}<br>
+      ${companyInfo.company_name||''}<br>
+      TEL：${companyInfo.tel||''}<br>
+      代表者：${companyInfo.representative||''}　<span class="stamp">印</span>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const w=window.open('','_blank','width=800,height=900');
+  w.document.write(content);
+  w.document.close();
+  w.onload=()=>{w.print();};
 }
 
 // ---- 部署ドラッグ＆ドロップ ----
