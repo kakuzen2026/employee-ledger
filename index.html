@@ -2339,7 +2339,8 @@ h1{font-size:13pt;font-weight:bold;text-align:center;letter-spacing:4px;margin:0
     <div style="font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;">派遣元事業主</div>
     所在地：${e(ph.COMPANY_ADDRESS)}<br>
     事業所名：${e(ph.COMPANY_NAME)}<br>
-    代表者：${e(ph.COMPANY_CEO)}　許可番号：${e(ph.LICENSE_NO)}
+    代表者：${e(ph.COMPANY_CEO)}<br>
+    許可番号：${e(ph.LICENSE_NO)}
   </div>
   <div style="border:1px solid #666;padding:3px 6px;font-size:9pt;">
     <div style="font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;">派遣労働者</div>
@@ -2410,15 +2411,16 @@ ${sec('【解雇予告・雇用維持措置】')}
     <div style="font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;">派遣元（会社）</div>
     所在地：${e(ph.COMPANY_ADDRESS)}<br>
     ${e(ph.COMPANY_NAME)}<br>
-    代表者：${e(ph.COMPANY_CEO)}　許可番号：${e(ph.LICENSE_NO)}<br>
-    <div style="margin-top:8mm;border-bottom:1px solid #333;width:80%;"></div>
+    代表者：${e(ph.COMPANY_CEO)}<br>
+    許可番号：${e(ph.LICENSE_NO)}<br>
+    <div style="margin-top:8mm;"></div>
     <span style="font-size:8.5pt;">${e(ph.COMPANY_CEO_TITLE)||'（役職）　　　'}&nbsp;&nbsp;${e(ph.COMPANY_CEO)||'（氏名）　　　　　'}&nbsp;&nbsp;印</span>
   </div>
   <div style="border:1px solid #666;padding:4px 8px;min-height:18mm;font-size:9pt;">
     <div style="font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;">派遣労働者</div>
     氏名：${e(ph.EMPLOYEE_NAME)}<br>
     住所：${e(ph.EMPLOYEE_ADDRESS)}<br>
-    <div style="margin-top:8mm;border-bottom:1px solid #333;width:80%;"></div>
+    <div style="margin-top:8mm;"></div>
     <span style="font-size:8.5pt;">署名　　　　　　　　　　　　　　　　　　　印</span>
   </div>
 </div>`;
