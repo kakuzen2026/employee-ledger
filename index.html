@@ -1969,52 +1969,42 @@ async function createSimpleDocx(title, bodyText, filename){
 function openPdfWindow(title, bodyHtml, filename){
   const css = `
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'MS Mincho','Yu Mincho','Hiragino Mincho ProN',serif;font-size:10.5pt;line-height:1.8;color:#000;background:#fff;padding:15mm 18mm;}
-    h1{font-size:16pt;font-weight:bold;text-align:center;letter-spacing:4px;margin:0 0 8mm;}
-    h2{font-size:11pt;font-weight:bold;background:#f0f0f0;border:1px solid #999;padding:3px 8px;margin:6mm 0 2mm;}
-    h3{font-size:10.5pt;font-weight:bold;border-left:3px solid #333;padding-left:6px;margin:4mm 0 2mm;}
-    table{width:100%;border-collapse:collapse;margin:2mm 0;}
-    th,td{border:1px solid #999;padding:4px 8px;font-size:10pt;vertical-align:top;}
+    body{font-family:'MS Mincho','Yu Mincho','Hiragino Mincho ProN',serif;font-size:9.5pt;line-height:1.7;color:#000;background:#fff;padding:12mm 15mm;}
+    h1{font-size:14pt;font-weight:bold;text-align:center;letter-spacing:4px;margin:0 0 6mm;}
+    h2{font-size:10pt;font-weight:bold;background:#f0f0f0;border:1px solid #999;padding:2px 6px;margin:4mm 0 2mm;}
+    h3{font-size:9.5pt;font-weight:bold;border-left:3px solid #333;padding-left:6px;margin:3mm 0 2mm;}
+    table{width:100%;border-collapse:collapse;margin:1.5mm 0;}
+    th,td{border:1px solid #999;padding:3px 6px;font-size:9pt;vertical-align:top;}
     th{background:#f5f5f5;font-weight:bold;white-space:nowrap;width:32%;}
-    td{width:68%;}
-    .meta{text-align:right;font-size:9pt;margin-bottom:6mm;color:#333;}
-    .parties{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:4mm 0 6mm;}
-    .party{border:1px solid #999;padding:4px 8px;}
-    .party-label{font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;padding-bottom:2px;font-size:9.5pt;}
-    .party-body{font-size:9.5pt;line-height:1.7;}
-    .sign-area{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-top:10mm;}
-    .sign-box{border:1px solid #999;padding:6px 10px;min-height:25mm;}
-    .sign-label{font-size:9pt;color:#555;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:2px;}
-    .sign-line{margin-top:8mm;border-bottom:1px solid #333;width:80%;}
-    .note{font-size:9pt;color:#555;margin-top:6mm;line-height:1.6;border-top:1px solid #ccc;padding-top:4mm;}
-    .stamp{display:inline-block;width:14mm;height:14mm;border:2px solid #c00;border-radius:50%;text-align:center;line-height:14mm;color:#c00;font-size:9pt;vertical-align:middle;margin-left:4px;}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:4mm;}
-    .section{margin:4mm 0;}
+    td{width:68%;word-break:break-all;}
+    .meta{text-align:right;font-size:8.5pt;margin-bottom:4mm;color:#333;}
+    .parties{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:3mm 0 4mm;}
+    .party{border:1px solid #999;padding:3px 6px;}
+    .party-label{font-weight:bold;border-bottom:1px solid #999;margin-bottom:2px;padding-bottom:2px;font-size:8.5pt;}
+    .party-body{font-size:8.5pt;line-height:1.6;}
+    .sign-area{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:6mm;}
+    .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:6mm;}
+    .sign-box{border:1px solid #999;padding:4px 8px;min-height:20mm;font-size:8.5pt;line-height:1.6;}
+    .sign-label{font-size:8.5pt;color:#555;margin-bottom:3px;border-bottom:1px solid #ddd;padding-bottom:2px;}
+    .sign-line{margin-top:6mm;border-bottom:1px solid #333;width:80%;}
+    .note{font-size:8pt;color:#555;margin-top:4mm;line-height:1.5;border-top:1px solid #ccc;padding-top:3mm;}
+    .stamp{display:inline-block;width:12mm;height:12mm;border:2px solid #c00;border-radius:50%;text-align:center;line-height:12mm;color:#c00;font-size:8pt;vertical-align:middle;margin-left:3px;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .section{margin:3mm 0;}
     @media print{
-      body{padding:10mm 15mm;}
+      body{padding:8mm 12mm;font-size:9pt;}
       @page{size:A4;margin:8mm 12mm;}
       tr{page-break-inside:avoid;break-inside:avoid;}
       td,th{page-break-inside:avoid;break-inside:avoid;}
       table{page-break-inside:auto;border-collapse:collapse;}
+      h2{page-break-after:avoid;break-after:avoid;}
       .sign-area,.sign-grid{page-break-inside:avoid;break-inside:avoid;}
+      .section{page-break-inside:avoid;break-inside:avoid;}
     }
   `;
   const w = window.open('','_blank','width=900,height=1100');
   if(!w){toast('ポップアップがブロックされました。ブラウザの設定でこのサイトのポップアップを許可してください。','error');return;}
-  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${esc(title)}</title><style>${css}</style>
-<style>
-/* テーマ切り替え */
-body.theme-dark{background:var(--bg,#0f1117);color:var(--text,#e2e8f0);}
-body.theme-light{background:#f5f4f0;color:#1a1a18;}
-body.theme-light #sidebar{display:none!important;}
-body.theme-light .topbar{display:none!important;}
-body.theme-light #main{margin-left:0!important;padding:0!important;}
-body.theme-light #main .page{display:none!important;}
-body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
-body.theme-dark #emp-back-btn{display:block;}
-</style></head><body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>${bodyHtml}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${esc(title)}</title><style>${css}</style></head><body>${bodyHtml}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   w.document.close();
 }
 
@@ -2029,10 +2019,12 @@ function buildKobetsuHtml(ph){
   const V=S;
   const labelStyle = S+'background:#f0f0f0;font-weight:bold;white-space:nowrap;width:34%;';
   const valStyle = S+'width:66%;';
-  const tbl = (rows) => `<table style="width:100%;border-collapse:collapse;margin:0.5mm 0;page-break-inside:auto;">${rows}</table>`;
+  const tbl = (rows) => `<table style="width:100%;border-collapse:collapse;margin:0;">${rows}</table>`;
   const r = (label, val) => `<tr><td style="${labelStyle}">${label}</td><td style="${valStyle}">${val||'　'}</td></tr>`;
   const r2 = (l1,v1,l2,v2) => `<tr><td style="${L};width:18%;">${l1}</td><td style="${V};width:32%;">${v1||'　'}</td><td style="${L};width:18%;">${l2}</td><td style="${V};width:32%;">${v2||'　'}</td></tr>`;
-  const section = (title) => `<div style="background:#e8e8e8;border:1px solid #666;border-bottom:none;padding:1px 5px;font-size:8.5pt;font-weight:bold;margin-top:2mm;page-break-after:avoid;break-after:avoid;">■ ${title}</div>`;
+  const secHead = (title) => `<div style="background:#e8e8e8;border:1px solid #666;border-bottom:none;padding:1px 5px;font-size:8.5pt;font-weight:bold;">■ ${title}</div>`;
+  const secStart = () => `<div style="page-break-inside:avoid;break-inside:avoid;margin-top:2mm;">`;
+  const secEnd = () => `</div>`;
 
   return `
 <style>
@@ -2046,10 +2038,6 @@ function buildKobetsuHtml(ph){
   @media print{
     body{padding:6mm 10mm;}
     @page{size:A4;margin:6mm 10mm;}
-    tr{page-break-inside:avoid;break-inside:avoid;}
-    td,th{page-break-inside:avoid;break-inside:avoid;}
-    table{page-break-inside:auto;border-collapse:collapse;}
-    .sign-grid{page-break-inside:avoid;break-inside:avoid;}
   }
 </style>
 
@@ -2057,13 +2045,16 @@ function buildKobetsuHtml(ph){
 <h1>労 働 者 派 遣 個 別 契 約 書</h1>
 <div class="intro">${e(ph.COMPANY_NAME)}（派遣元）は、${e(ph.CLIENT_NAME)}（派遣先）に対し、次の条件のもとに、労働者派遣を行うものとする。</div>
 
-${section('派遣先事業所 / 就業場所')}
+${secStart()}
+${secHead('派遣先事業所 / 就業場所')}
 ${tbl(`
   ${r2('派遣先事業所',e(ph.CLIENT_SITE_NAME)+'　'+e(ph.CLIENT_SITE_ADDRESS),'就業場所',e(ph.WORK_LOCATION_NAME)+'　'+e(ph.WORK_LOCATION_ADDRESS)+(ph.WORK_DEPT?'（部署）'+e(ph.WORK_DEPT):'')+(ph.WORK_TEL?'（電話）'+e(ph.WORK_TEL):''))}
 `)}
+${secEnd()}
 
-${section('限定区分 / 協定対象 / 派遣人員')}
-<table style="width:100%;border-collapse:collapse;margin:0.5mm 0;">
+${secStart()}
+${secHead('限定区分 / 協定対象 / 派遣人員')}
+<table style="width:100%;border-collapse:collapse;">
   <tr>
     <td style="${L};width:24%;">無期雇用・60歳以上限定</td>
     <td style="${V};width:42%;">${ph.MUKIROGEN==='mukirogen'?'☑':'□'} 無期雇用又は60歳以上に限定　${ph.MUKIROGEN==='none'?'☑':'□'} 限定なし</td>
@@ -2073,15 +2064,19 @@ ${section('限定区分 / 協定対象 / 派遣人員')}
     <td style="${V};width:8%;white-space:nowrap;">${e(ph.STAFF_COUNT)}人</td>
   </tr>
 </table>
+${secEnd()}
 
-${section('業務内容 / 責任の程度 / 組織単位')}
+${secStart()}
+${secHead('業務内容 / 責任の程度 / 組織単位')}
 ${tbl(`
   ${r('業務内容', e(ph.JOB_DETAIL))}
   ${r('業務に伴う責任の程度', e(ph.AUTHORITY_DETAIL)||'付与される権限なし')}
   ${r('組織単位（長の職名）', e(ph.ORGANIZATION_UNIT)+(ph.UNIT_MANAGER_TITLE?'（'+e(ph.UNIT_MANAGER_TITLE)+'）':''))}
 `)}
+${secEnd()}
 
-${section('指揮命令者 / 派遣期間・就業日 / 就業時間')}
+${secStart()}
+${secHead('指揮命令者 / 派遣期間・就業日 / 就業時間')}
 ${tbl(`
   ${r('指揮命令者', '（部署）'+e(ph.CMD_DEPT)+'　（役職）'+e(ph.CMD_TITLE)+'　（氏名）'+e(ph.CMD_NAME)+'　（電話）'+e(ph.CMD_TEL))}
   ${r('派遣期間', e(ph.DISPATCH_START)+'　〜　'+e(ph.DISPATCH_END))}
@@ -2089,25 +2084,33 @@ ${tbl(`
   ${r('就業時間', e(ph.WORK_START)+'から'+e(ph.WORK_END)+'（休憩 '+e(ph.BREAK_TIME)+'）')}
   ${r('就業時間外労働', e(ph.OVERTIME_RULE)||'月2日・１日5時間・月36時間・年360時間まで')}
 `)}
+${secEnd()}
 
-${section('派遣先責任者 / 派遣元責任者')}
+${secStart()}
+${secHead('派遣先責任者 / 派遣元責任者')}
 ${tbl(`
   ${r('派遣先責任者', '（部署）'+e(ph.CLIENT_MGR_DEPT)+'　（役職）'+e(ph.CLIENT_MGR_TITLE)+'　（氏名）'+e(ph.CLIENT_MGR_NAME)+'　（電話）'+e(ph.CLIENT_MGR_TEL))}
   ${r('派遣元責任者', '（部署）'+e(ph.HAKEN_MGR_DEPT)+'　（役職）'+e(ph.HAKEN_MGR_TITLE)+'　（氏名）'+e(ph.HAKEN_MGR_NAME)+'　（電話）'+e(ph.HAKEN_MGR_TEL))}
 `)}
+${secEnd()}
 
-${section('安全及び衛生 / 福祉増進のための便宜供与')}
+${secStart()}
+${secHead('安全及び衛生 / 福祉増進のための便宜供与')}
 ${tbl(`
   ${r('安全及び衛生', e(ph.SAFETY_CONTENT))}
   ${r('福祉増進の便宜供与', e(ph.WELFARE_CONTENT))}
 `)}
+${secEnd()}
 
-${section('派遣先が派遣労働者を雇用する場合の紛争防止措置')}
+${secStart()}
+${secHead('派遣先が派遣労働者を雇用する場合の紛争防止措置')}
 <div style="border:1px solid #666;padding:2px 6px;font-size:8pt;line-height:1.6;">
 派遣先が派遣終了後に、当該派遣労働者を雇用する場合、その雇用意思を事前に派遣元へ示すこととする。
 </div>
+${secEnd()}
 
-${section('労働者派遣契約の解除に当たって講ずる派遣労働者の雇用の安定を図るために必要な措置')}
+${secStart()}
+${secHead('労働者派遣契約の解除に当たって講ずる派遣労働者の雇用の安定を図るために必要な措置')}
 <div style="border:1px solid #666;padding:2px 8px;font-size:8pt;line-height:1.7;">
   <div style="font-weight:bold;margin-bottom:1px;">（1）労働者派遣契約の解除の事前の申入れ</div>
   <div style="margin-bottom:4px;text-indent:1em;">派遣先は、専ら派遣先に起因する事由により、労働者派遣契約の契約期間が満了する前の解除を行おうとする場合には、派遣元の合意を得ることはもとより、あらかじめ相当の猶予期間をもって派遣元に解除の申入れを行うこととする。</div>
@@ -2118,8 +2121,10 @@ ${section('労働者派遣契約の解除に当たって講ずる派遣労働者
   <div style="font-weight:bold;margin-bottom:1px;">（4）労働者派遣契約の解除の理由の明示</div>
   <div style="text-indent:1em;">派遣先は、労働者派遣契約の契約期間が満了する前に労働者派遣契約の解除を行おうとする場合であって、派遣元から請求があったときは、労働者派遣契約の解除を行った理由を派遣元に対して明らかにすることとする。</div>
 </div>
+${secEnd()}
 
-${section('苦情の申出先、処理方法・連携体制')}
+${secStart()}
+${secHead('苦情の申出先、処理方法・連携体制')}
 <div style="border:1px solid #666;padding:2px 6px;font-size:8pt;">
   <div style="font-weight:bold;margin-bottom:2px;">（1）苦情の申出を受ける者</div>
   <table style="width:100%;border-collapse:collapse;margin-bottom:3px;table-layout:fixed;">
@@ -2146,8 +2151,9 @@ ${section('苦情の申出先、処理方法・連携体制')}
     　③派遣先及び派遣元は、自らでその解決が容易であり、即時に処理した苦情の他は、相互に遅滞なく通知するとともに、密接に連絡調整を行いつつ、その解決を図ることとする。
   </div>
 </div>
+${secEnd()}
 
-<div class="sign-grid">
+<div class="sign-grid" style="page-break-inside:avoid;break-inside:avoid;">
   <div class="sign-box">
     <div class="sign-label">派　遣　先</div>
     （所在地）${e(ph.CLIENT_ADDRESS)}<br>
