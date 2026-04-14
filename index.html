@@ -2650,8 +2650,8 @@ function emp_emp_showToast(msg,type='success'){
   setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},3500);
 }
 
-// ---- 状態管理 (ST オブジェクト) ----
-const ST={
+// ---- 状態管理 (EMP_ST オブジェクト) ----
+const EMP_ST={
   employees:[],yukyuRecords:[],yukyuGrants:[],departments:[],visaTypes:[],
   companyInfo:{},certificates:[],workPatterns:[],employmentContracts:[],
   currentView:'list',viewingId:null,editingId:null,detailTab:'basic',
@@ -2668,14 +2668,14 @@ let employees,yukyuRecords,yukyuGrants,departments,visaTypes,companyInfo,certifi
 let currentView,viewingId,editingId,detailTab,listFilter,currentFilteredList;
 let yf,yfFromDetail,deptModalMode,deptModalId,deptModalCallback,kenkoImgData,rcImgData;
 function syncFromST(){
-  employees=ST.employees;yukyuRecords=ST.yukyuRecords;yukyuGrants=ST.yukyuGrants;
-  departments=ST.departments;visaTypes=ST.visaTypes;companyInfo=ST.companyInfo;
-  certificates=ST.certificates;workPatterns=ST.workPatterns;employmentContracts=ST.employmentContracts;
-  currentView=ST.currentView;viewingId=ST.viewingId;editingId=ST.editingId;
-  detailTab=ST.detailTab;listFilter=ST.listFilter;currentFilteredList=ST.currentFilteredList;
-  yf=ST.yf;yfFromDetail=ST.yfFromDetail;deptModalMode=ST.deptModalMode;
-  deptModalId=ST.deptModalId;deptModalCallback=ST.deptModalCallback;
-  kenkoImgData=ST.kenkoImgData;rcImgData=ST.rcImgData;
+  employees=EMP_ST.employees;yukyuRecords=EMP_ST.yukyuRecords;yukyuGrants=EMP_ST.yukyuGrants;
+  departments=EMP_ST.departments;visaTypes=EMP_ST.visaTypes;companyInfo=EMP_ST.companyInfo;
+  certificates=EMP_ST.certificates;workPatterns=EMP_ST.workPatterns;employmentContracts=EMP_ST.employmentContracts;
+  currentView=EMP_ST.currentView;viewingId=EMP_ST.viewingId;editingId=EMP_ST.editingId;
+  detailTab=EMP_ST.detailTab;listFilter=EMP_ST.listFilter;currentFilteredList=EMP_ST.currentFilteredList;
+  yf=EMP_ST.yf;yfFromDetail=EMP_ST.yfFromDetail;deptModalMode=EMP_ST.deptModalMode;
+  deptModalId=EMP_ST.deptModalId;deptModalCallback=EMP_ST.deptModalCallback;
+  kenkoImgData=EMP_ST.kenkoImgData;rcImgData=EMP_ST.rcImgData;
 }
 syncFromST();
 
@@ -2747,15 +2747,15 @@ async function sb(path,method='GET',body=null){
   if(!res.ok)throw new Error(await res.text());
   const t=await res.text();return t?JSON.parse(t):[];
 }
-async function loadEmployees(){ST.employees=(await sb('employees?select=*&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=ST.employees;}
-async function loadYukyu(){ST.yukyuRecords=await sb('yukyu_records?select=*&order=use_date.desc,id.desc');yukyuRecords=ST.yukyuRecords;}
-async function loadGrants(){ST.yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');yukyuGrants=ST.yukyuGrants;}
-async function loadDepts(){ST.departments=await sb('departments?select=*&order=sort_order.asc,id.asc');departments=ST.departments;}
-async function loadVisaTypes(){ST.visaTypes=await sb('visa_types?select=*&order=id.asc');visaTypes=ST.visaTypes;}
-async function loadCompanyInfo(){const rows=await sb('company_info?select=*&limit=1');ST.companyInfo=rows[0]||{};companyInfo=ST.companyInfo;}
-async function loadCertificates(){ST.certificates=await sb('certificates?select=*&order=created_at.desc');certificates=ST.certificates;}
-async function loadWorkPatterns(){ST.workPatterns=await sb('work_patterns?select=*&order=sort_order.asc,id.asc');workPatterns=ST.workPatterns;}
-async function loadEmploymentContracts(){ST.employmentContracts=await sb('employment_contracts?select=*&order=created_at.desc');employmentContracts=ST.employmentContracts;}
+async function loadEmployees(){EMP_ST.employees=(await sb('employees?select=*&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
+async function loadYukyu(){EMP_ST.yukyuRecords=await sb('yukyu_records?select=*&order=use_date.desc,id.desc');yukyuRecords=EMP_ST.yukyuRecords;}
+async function loadGrants(){EMP_ST.yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');yukyuGrants=EMP_ST.yukyuGrants;}
+async function loadDepts(){EMP_ST.departments=await sb('departments?select=*&order=sort_order.asc,id.asc');departments=EMP_ST.departments;}
+async function loadVisaTypes(){EMP_ST.visaTypes=await sb('visa_types?select=*&order=id.asc');visaTypes=EMP_ST.visaTypes;}
+async function loadCompanyInfo(){const rows=await sb('company_info?select=*&limit=1');EMP_ST.companyInfo=rows[0]||{};companyInfo=EMP_ST.companyInfo;}
+async function loadCertificates(){EMP_ST.certificates=await sb('certificates?select=*&order=created_at.desc');certificates=EMP_ST.certificates;}
+async function loadWorkPatterns(){EMP_ST.workPatterns=await sb('work_patterns?select=*&order=sort_order.asc,id.asc');workPatterns=EMP_ST.workPatterns;}
+async function loadEmploymentContracts(){EMP_ST.employmentContracts=await sb('employment_contracts?select=*&order=created_at.desc');employmentContracts=EMP_ST.employmentContracts;}
 async function loadAndRender(){
   const tasks=[
     {fn:loadEmployees,name:'従業員'},
