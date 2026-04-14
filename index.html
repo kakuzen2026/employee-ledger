@@ -2084,10 +2084,24 @@ ${secEnd()}
 
 ${secStart()}
 ${secHead('派遣先責任者 / 派遣元責任者')}
-${tbl(`
-  ${r('派遣先責任者', '（部署）'+e(ph.CLIENT_MGR_DEPT)+'　（役職）'+e(ph.CLIENT_MGR_TITLE)+'　（氏名）'+e(ph.CLIENT_MGR_NAME)+'　（電話）'+e(ph.CLIENT_MGR_TEL))}
-  ${r('派遣元責任者', '（部署）'+e(ph.HAKEN_MGR_DEPT)+'　（役職）'+e(ph.HAKEN_MGR_TITLE)+'　（氏名）'+e(ph.HAKEN_MGR_NAME)+'　（電話）'+e(ph.HAKEN_MGR_TEL))}
-`)}
+<div style="border:1px solid #666;padding:2px 6px;font-size:8.5pt;line-height:1.8;">
+  <table style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;width:7em;">派遣先責任者</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_DEPT)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_TITLE)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_NAME)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_TEL)}</td>
+    </tr>
+    <tr>
+      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;">派遣元責任者</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_DEPT)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_TITLE)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_NAME)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_TEL)}</td>
+    </tr>
+  </table>
+</div>
 ${secEnd()}
 
 ${secStart()}
@@ -2123,21 +2137,20 @@ ${secStart()}
 ${secHead('苦情の申出先、処理方法・連携体制')}
 <div style="border:1px solid #666;padding:2px 6px;font-size:8pt;">
   <div style="font-weight:bold;margin-bottom:2px;">（1）苦情の申出を受ける者</div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:3px;table-layout:fixed;">
-    <colgroup><col style="width:7%"><col style="width:7%"><col style="width:16%"><col style="width:7%"><col style="width:14%"><col style="width:7%"><col style="width:14%"><col style="width:7%"><col style="width:21%"></colgroup>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:3px;line-height:1.8;">
     <tr>
-      <td style="padding:1px 3px;font-weight:bold;">派遣先</td>
-      <td style="padding:1px 3px;color:#555;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TEL)}</td>
+      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;width:7em;">派遣先</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_DEPT)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TITLE)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_NAME)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TEL)}</td>
     </tr>
     <tr>
-      <td style="padding:1px 3px;font-weight:bold;">派遣元</td>
-      <td style="padding:1px 3px;color:#555;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TEL)}</td>
+      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;">派遣元</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_DEPT)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TITLE)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_NAME)}</td>
+      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TEL)}</td>
     </tr>
   </table>
   <div style="font-weight:bold;margin-bottom:2px;">（2）苦情処理方法、連携体制等</div>
