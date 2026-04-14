@@ -420,6 +420,10 @@ document.addEventListener('click',e=>{
     btn.classList.remove('open');
   }
 });
+// URL パラメータで自動ログイン（hakennアプリからの遷移用）
+if(new URLSearchParams(location.search).get('autologin')==='1'){
+  sessionStorage.setItem('auth','1');
+}
 if(sessionStorage.getItem('auth')==='1'){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appScreen').style.display='flex';
