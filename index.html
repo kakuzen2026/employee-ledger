@@ -1075,8 +1075,11 @@ let currentDocContract = null;
 
 // ===== LOGIN =====
 function checkLogin(){
-  if(sessionStorage.getItem('dauth')===PASSWORD) showApp();
-  else document.getElementById('login-screen').style.display='block';
+  if(sessionStorage.getItem('dauth')===PASSWORD){showApp();}
+  else{
+    document.getElementById('emp-login').style.display='flex';
+    document.getElementById('emp-app-inner').style.display='none';
+  }
 }
 function doLogin(){
   if(document.getElementById('login-pw').value===PASSWORD){
@@ -2833,10 +2836,13 @@ try{const s=localStorage.getItem('emp_cols');if(s)visibleCols=JSON.parse(s);}cat
 function emp_doLogin(){
   if(document.getElementById('pwInput').value===APP_PASSWORD){
     sessionStorage.setItem('emp_auth','1');
+    sessionStorage.setItem('dauth',APP_PASSWORD); // 派遣管理も同時ログイン
     document.getElementById('emp-login').style.display='none';
-    document.getElementById('appScreen').style.display='flex';
-    loadAndRender();
-  } else {document.getElementById('loginErr').style.display='block';}
+    document.getElementById('emp-app-inner').style.display='flex';
+    if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
+  } else {
+    document.getElementById('loginErr').style.display='block';
+  }
 }
 function doLogout(){sessionStorage.removeItem('emp_auth');document.getElementById('emp-login').style.display='flex';document.getElementById('emp-app-inner').style.display='none';}
 
@@ -2866,7 +2872,7 @@ if(new URLSearchParams(location.search).get('autologin')==='1'){
 }
 if(sessionStorage.getItem('emp_auth')==='1'){
   document.getElementById('emp-login').style.display='none';
-  document.getElementById('appScreen').style.display='flex';
+  document.getElementById('emp-app-inner').style.display='flex';
   loadAndRender();
 }
 
