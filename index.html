@@ -265,9 +265,10 @@ body.theme-dark #emp-back-btn{display:block;}
   <div class="login-bg">
     <div class="login-card">
       <div class="login-logo"><div class="licon">📋</div><h1>派遣・従業員管理システム</h1><p>KAKUZEN</p></div>
-      <div class="form-group"><label class="form-label">パスワード</label><input type="password" class="form-input" id="login-pw" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;">❌ パスワードが違います</div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">ログイン</button>
+      <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="login-email" placeholder="メールアドレスを入力" onkeydown="if(event.key==='Enter')doMagicLogin()"></div>
+      <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
+      <div id="login-success" style="display:none;color:var(--success);font-size:12px;margin-bottom:12px;">✅ ログインリンクを送信しました。メールを確認してください。</div>
+      <button class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center;" onclick="doMagicLogin()">ログインリンクを送信</button>
     </div>
   </div>
 </div>
@@ -294,7 +295,10 @@ body.theme-dark #emp-back-btn{display:block;}
       <span class="icon">👥</span>従業員管理
     </div>
   </div>
-  <div class="sidebar-bottom"><div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">v4.0.0</div></div>
+  <div class="sidebar-bottom">
+    <div class="nav-item" onclick="doLogoutAll()" style="color:var(--text3);font-size:12px;"><span class="icon">🚪</span>ログアウト</div>
+    <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;padding:8px 10px;">v4.0.0</div>
+  </div>
 </nav>
 
 <!-- MOBILE BOTTOM NAV -->
@@ -452,10 +456,9 @@ body.theme-dark #emp-back-btn{display:block;}
         <div id="emp-login">
   <div class="login-box">
     <h1>従業員管理台帳</h1>
-    <p>パスワードを入力してください</p>
-    <input type="password" id="pwInput" placeholder="パスワード" onkeydown="if(event.key==='Enter')emp_doLogin()">
-    <button onclick="emp_doLogin()">ログイン</button>
-    <div class="login-error" id="loginErr">パスワードが違います</div>
+    <p>ログインしてください</p>
+    <div id="emp-login-msg" style="color:var(--emp-text2);font-size:13px;margin-bottom:12px;">メイン画面からログインしてください。</div>
+    <button onclick="location.reload()">再読み込み</button>
   </div>
 </div>
 
@@ -934,7 +937,6 @@ body.theme-dark #emp-back-btn{display:block;}
 
 <script>
 // ===== CONFIG =====
-const PASSWORD = 'kakuzen2026';
 const SUPA_URL = 'https://wkzbsdfgslidubqpifwa.supabase.co';
 const SUPA_KEY = 'sb_publishable_mfVmygJgUjnax83quON02Q_KMdYfF-Y';
 const EMP_URL  = 'https://jqokhqybxjkcantxsjfm.supabase.co';
@@ -951,24 +953,61 @@ let ST = {clients:[],sites:[],contracts:[],billing:[],page:'dashboard',ctTab:'ac
 let wpList=[], selEmps=[], empCache=null, empTimer=null;
 let currentDocContract = null;
 
-// ===== LOGIN =====
-function checkLogin(){
-  if(sessionStorage.getItem('dauth')===PASSWORD){showApp();}
-  else{
-    document.getElementById('emp-login').style.display='flex';
-    document.getElementById('emp-app-inner').style.display='none';
+// ===== LOGIN (Magic Link) =====
+async function checkLogin(){
+  // URLハッシュにトークンが含まれる場合（マジックリンクからの遷移）
+  if(window.location.hash && window.location.hash.includes('access_token')){
+    // Supabase v2 が自動でセッションを復元するのを待つ
+    const {data:{session},error} = await db.auth.getSession();
+    if(session){
+      window.location.hash = '';
+      showApp();
+      return;
+    }
   }
-}
-function doLogin(){
-  if(document.getElementById('login-pw').value===PASSWORD){
-    sessionStorage.setItem('dauth',PASSWORD);
-    document.getElementById('login-screen').style.display='none';
+  const {data:{session}} = await db.auth.getSession();
+  if(session){
     showApp();
   } else {
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-pw').value='';
+    document.getElementById('login-screen').style.display='block';
   }
 }
+
+async function doMagicLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  if(!email){
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('login-err').textContent='❌ メールアドレスを入力してください';
+    return;
+  }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-success').style.display='none';
+
+  const {error} = await db.auth.signInWithOtp({
+    email: email,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+
+  if(error){
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('login-err').textContent='❌ ' + error.message;
+    btn.disabled = false;
+    btn.textContent = 'ログインリンクを送信';
+  } else {
+    document.getElementById('login-success').style.display='block';
+    btn.textContent = '✅ 送信済み';
+  }
+}
+
+async function doLogoutAll(){
+  await db.auth.signOut();
+  sessionStorage.clear();
+  window.location.reload();
+}
+
 function showApp(){navigate('jugyoin');}
 
 // ===== NAV =====
@@ -1003,16 +1042,17 @@ function navigate(page){
   else if(page==='billing'){initBillingMonths();loadBilling();}
   else if(page==='records') loadRecords();
   else if(page==='jugyoin'){
-    // dauthがあれば従業員管理も自動認証
-    if(sessionStorage.getItem('dauth')){
-      sessionStorage.setItem('emp_auth','1');
-      document.getElementById('emp-login').style.display='none';
-      document.getElementById('emp-app-inner').style.display='flex';
-      if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
-    } else {
-      document.getElementById('emp-login').style.display='flex';
-      document.getElementById('emp-app-inner').style.display='none';
-    }
+    // Supabase Auth セッションがあれば従業員管理も自動認証
+    db.auth.getSession().then(({data:{session}})=>{
+      if(session){
+        document.getElementById('emp-login').style.display='none';
+        document.getElementById('emp-app-inner').style.display='flex';
+        if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
+      } else {
+        document.getElementById('emp-login').style.display='flex';
+        document.getElementById('emp-app-inner').style.display='none';
+      }
+    });
   }
   else if(page==='settings') loadSettings();
 }
@@ -2634,7 +2674,6 @@ document.addEventListener('click',e=>{const dd=document.getElementById('ct-emp-d
 // ===== EMPLOYEE MANAGEMENT (統合) =====
 const SUPABASE_URL='https://jqokhqybxjkcantxsjfm.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxb2tocXlieGprY2FudHhzamZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODA0OTcsImV4cCI6MjA5MTI1NjQ5N30.BXjGGwnQXOAyKTlOcVs9v0myUqOGDybvTJ9saqdLIk0';
-const APP_PASSWORD='kakuzen2026';
 const KOYOU=['正社員','パート・アルバイト','契約社員','派遣社員','業務委託'];
 const CHECKRES=['異常なし','要経過観察','要精密検査','受診未了'];
 const USE_TYPES=['全日','半休（午前）','半休（午後）'];
@@ -2711,16 +2750,10 @@ try{const s=localStorage.getItem('emp_cols');if(s)visibleCols=JSON.parse(s);}cat
 
 // ---- Auth ----
 function emp_doLogin(){
-  if(document.getElementById('pwInput').value===APP_PASSWORD){
-    sessionStorage.setItem('emp_auth','1');
-    sessionStorage.setItem('dauth',APP_PASSWORD);
-    document.getElementById('emp-login').style.display='none';
-    showApp(); // showApp()経由でnavigate('jugyoin')を呼ぶ
-  } else {
-    document.getElementById('loginErr').style.display='block';
-  }
+  // マジックリンク認証はメイン画面で行うため、ここでは何もしない
+  location.reload();
 }
-function doLogout(){sessionStorage.removeItem('emp_auth');document.getElementById('emp-login').style.display='flex';document.getElementById('emp-app-inner').style.display='none';}
+function doLogout(){doLogoutAll();}
 
 // ---- ハンバーガーメニュー ----
 function toggleMenu(){
@@ -2742,19 +2775,24 @@ document.addEventListener('click',e=>{
     btn.classList.remove('open');
   }
 });
-// URL パラメータで自動ログイン（hakennアプリからの遷移用）
-if(new URLSearchParams(location.search).get('autologin')==='1'){
-  sessionStorage.setItem('emp_auth','1');
-}
-if(sessionStorage.getItem('emp_auth')==='1'){
-  document.getElementById('emp-login').style.display='none';
-  document.getElementById('emp-app-inner').style.display='flex';
-  loadAndRender();
-}
+// Supabase Auth セッションで自動ログイン
+db.auth.getSession().then(({data:{session}})=>{
+  if(session){
+    document.getElementById('emp-login').style.display='none';
+    document.getElementById('emp-app-inner').style.display='flex';
+    if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
+  }
+});
 
 // ---- Supabase ----
 async function sb(path,method='GET',body=null){
-  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
+  // 派遣管理DBのAuth セッションからトークンを取得して従業員管理DBにも使う
+  let token = SUPABASE_KEY;
+  try {
+    const {data:{session}} = await db.auth.getSession();
+    if(session?.access_token) token = session.access_token;
+  } catch(e){}
+  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'}};
   if(body)opts.body=JSON.stringify(body);
   const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
   if(!res.ok)throw new Error(await res.text());
