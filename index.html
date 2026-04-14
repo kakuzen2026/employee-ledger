@@ -278,7 +278,7 @@ body.theme-light #emp-back-btn{display:block;}
   <div class="sidebar-logo"><h1>派遣管理台帳</h1><p>KAKUZEN</p></div>
   <div class="nav-section">
     <div class="nav-section-label">メイン</div>
-    <div class="nav-item active" onclick="navigate('dashboard')"><span class="icon">📊</span>ダッシュボード</div>
+    <div class="nav-item" onclick="navigate('dashboard')"><span class="icon">📊</span>ダッシュボード</div>
     <div class="nav-item" onclick="navigate('clients')"><span class="icon">🏢</span>取引先管理</div>
     <div class="nav-item" onclick="navigate('sites')"><span class="icon">📍</span>現場管理</div>
     <div class="nav-item" onclick="navigate('contracts')"><span class="icon">📄</span>契約管理</div>
@@ -301,7 +301,7 @@ body.theme-light #emp-back-btn{display:block;}
 <!-- MOBILE BOTTOM NAV -->
 <nav id="mobile-nav">
   <div class="mnav-inner">
-    <div class="mnav-item active" onclick="navigate('dashboard')" data-page="dashboard"><div class="micon">📊</div><div class="mlabel">ホーム</div></div>
+    <div class="mnav-item" onclick="navigate('dashboard')" data-page="dashboard"><div class="micon">📊</div><div class="mlabel">ホーム</div></div>
     <div class="mnav-item" onclick="navigate('clients')" data-page="clients"><div class="micon">🏢</div><div class="mlabel">取引先</div></div>
     <div class="mnav-item" onclick="navigate('sites')" data-page="sites"><div class="micon">📍</div><div class="mlabel">現場</div></div>
     <div class="mnav-item" onclick="navigate('contracts')" data-page="contracts"><div class="micon">📄</div><div class="mlabel">契約</div></div>
@@ -965,7 +965,7 @@ function doLogin(){
     document.getElementById('login-pw').value='';
   }
 }
-function showApp(){loadDashboard();}
+function showApp(){navigate('jugyoin');}
 
 // ===== NAV =====
 const NAV_TITLES={dashboard:'ダッシュボード',clients:'取引先管理',sites:'現場管理',contracts:'契約管理',billing:'請求管理',records:'記録管理',settings:'設定',jugyoin:'従業員管理台帳'};
