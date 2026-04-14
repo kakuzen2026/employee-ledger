@@ -265,10 +265,10 @@ body.theme-dark #emp-back-btn{display:block;}
   <div class="login-bg">
     <div class="login-card">
       <div class="login-logo"><div class="licon">📋</div><h1>派遣・従業員管理システム</h1><p>KAKUZEN</p></div>
-      <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="login-email" placeholder="メールアドレスを入力" onkeydown="if(event.key==='Enter')doMagicLogin()"></div>
+      <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="login-email" placeholder="メールアドレスを入力"></div>
+      <div class="form-group"><label class="form-label">パスワード</label><input type="password" class="form-input" id="login-pw" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doEmailLogin()"></div>
       <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;"></div>
-      <div id="login-success" style="display:none;color:var(--success);font-size:12px;margin-bottom:12px;">✅ ログインリンクを送信しました。メールを確認してください。</div>
-      <button class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center;" onclick="doMagicLogin()">ログインリンクを送信</button>
+      <button class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center;" onclick="doEmailLogin()">ログイン</button>
     </div>
   </div>
 </div>
@@ -973,32 +973,29 @@ async function checkLogin(){
   }
 }
 
-async function doMagicLogin(){
+async function doEmailLogin(){
   const email = document.getElementById('login-email').value.trim();
-  if(!email){
+  const pw = document.getElementById('login-pw').value;
+  if(!email || !pw){
     document.getElementById('login-err').style.display='block';
-    document.getElementById('login-err').textContent='❌ メールアドレスを入力してください';
+    document.getElementById('login-err').textContent='❌ メールアドレスとパスワードを入力してください';
     return;
   }
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
-  btn.textContent = '送信中...';
+  btn.textContent = 'ログイン中...';
   document.getElementById('login-err').style.display='none';
-  document.getElementById('login-success').style.display='none';
 
-  const {error} = await db.auth.signInWithOtp({
-    email: email,
-    options: { emailRedirectTo: window.location.origin + window.location.pathname }
-  });
+  const {error} = await db.auth.signInWithPassword({ email, password: pw });
 
   if(error){
     document.getElementById('login-err').style.display='block';
     document.getElementById('login-err').textContent='❌ ' + error.message;
     btn.disabled = false;
-    btn.textContent = 'ログインリンクを送信';
+    btn.textContent = 'ログイン';
   } else {
-    document.getElementById('login-success').style.display='block';
-    btn.textContent = '✅ 送信済み';
+    document.getElementById('login-screen').style.display='none';
+    showApp();
   }
 }
 
@@ -2786,13 +2783,8 @@ db.auth.getSession().then(({data:{session}})=>{
 
 // ---- Supabase ----
 async function sb(path,method='GET',body=null){
-  // 派遣管理DBのAuth セッションからトークンを取得して従業員管理DBにも使う
-  let token = SUPABASE_KEY;
-  try {
-    const {data:{session}} = await db.auth.getSession();
-    if(session?.access_token) token = session.access_token;
-  } catch(e){}
-  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'}};
+  // 従業員管理DBは別プロジェクトなのでanon keyを使用
+  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
   if(body)opts.body=JSON.stringify(body);
   const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
   if(!res.ok)throw new Error(await res.text());
@@ -2882,21 +2874,21 @@ function calcYukyuInfo(empId){
 // ---- 自動付与チェック（ログイン時に実行） ----
 async function checkAndAutoGrant(){
   const todayStr=new Date().toISOString().slice(0,10);
+  const batch=[];
   for(const e of employees.filter(x=>x.status==='在籍'&&x.nyusha_date)){
     const dates=calcGrantDates(e.id);
     const existingDates=yukyuGrants.filter(g=>g.employee_id===e.id).map(g=>g.grant_date);
     for(const d of dates){
       if(d<=todayStr&&!existingDates.includes(d)){
-        // 有効期限：付与日から2年後-1日
         const exp=new Date(d);exp.setFullYear(exp.getFullYear()+2);exp.setDate(exp.getDate()-1);
-        const expStr=exp.toISOString().slice(0,10);
-        try{
-          await sb('yukyu_grants','POST',{employee_id:e.id,grant_date:d,days:null,expire_date:expStr});
-        }catch(err){console.error('自動付与エラー',err);}
+        batch.push({employee_id:e.id,grant_date:d,days:null,expire_date:exp.toISOString().slice(0,10)});
       }
     }
   }
-  await loadGrants();
+  if(batch.length){
+    try{await sb('yukyu_grants','POST',batch);}catch(err){console.error('自動付与エラー',err);}
+    await loadGrants();
+  }
 }
 function deptLabel(d){return d?[d.shozoku1,d.shozoku2].filter(Boolean).join(' / '):''}
 function deptLabelById(id){const d=departments.find(x=>x.id===Number(id));return d?deptLabel(d):''}
