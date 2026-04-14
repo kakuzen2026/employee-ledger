@@ -643,7 +643,7 @@ function renderList(){
       <div class="scard"><div class="scard-label">在留期限90日以内</div><div class="scard-val" style="color:var(--warn)">${warn}</div></div>
     </div>
     <div class="search-bar">
-      <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" oninput="listFilter.sq=this.value;render()">
+      <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" oninput="listFilter.sq=this.value;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(()=>renderList(),300)">
       <select id="fCompany" onchange="listFilter.fc=this.value;render()">
         <option value="">会社：全て</option>
         <option value="セレクト" ${fc==='セレクト'?'selected':''}>セレクト</option>
