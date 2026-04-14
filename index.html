@@ -254,11 +254,11 @@ body.theme-light .topbar{display:none!important;}
 body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
-body.theme-light #emp-back-btn{display:block;}
+#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
+body.theme-dark #emp-back-btn{display:block;}
 </style></head>
 <body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
+<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
 
 <!-- LOGIN -->
 <div id="login-screen" style="display:none;">
@@ -291,7 +291,7 @@ body.theme-light #emp-back-btn{display:block;}
   <div class="nav-section" style="margin-top:auto;">
     <div class="nav-section-label">連携</div>
     <div class="nav-item" onclick="navigate('jugyoin')" style="color:var(--accent2);border:1px solid var(--border);border-radius:var(--radius);">
-      <span class="icon">👥</span>従業員管理台帳
+      <span class="icon">👥</span>従業員管理
     </div>
   </div>
   <div class="sidebar-bottom"><div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">v4.0.0</div></div>
@@ -462,6 +462,7 @@ body.theme-light #emp-back-btn{display:block;}
 <div id="emp-app-inner" style="display:flex;flex-direction:column;min-height:100%">
   <header>
     <h1>従業員管理台帳</h1>
+    <button onclick="navigate('dashboard')" style="margin-left:auto;padding:5px 12px;border:1px solid var(--emp-border2,#ccc9be);border-radius:var(--emp-radius,8px);background:transparent;color:var(--emp-text2,#6b6860);font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0;">派遣管理 →</button>
     <button class="hamburger" onclick="toggleMenu()" id="hamburgerBtn" aria-label="メニュー">
       <span></span><span></span><span></span>
     </button>
@@ -1973,10 +1974,10 @@ body.theme-light .topbar{display:none!important;}
 body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
-body.theme-light #emp-back-btn{display:block;}
+#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
+body.theme-dark #emp-back-btn{display:block;}
 </style></head><body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>${bodyHtml}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>${bodyHtml}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   w.document.close();
 }
 
@@ -3928,11 +3929,11 @@ body.theme-light .topbar{display:none!important;}
 body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
-body.theme-light #emp-back-btn{display:block;}
+#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
+body.theme-dark #emp-back-btn{display:block;}
 </style></head>
 <body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
+<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
   <div class="date">発行日：${todayStr}</div>
   <div class="title">${title}</div>
   <div class="content">
@@ -4066,11 +4067,11 @@ body.theme-light .topbar{display:none!important;}
 body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
-body.theme-light #emp-back-btn{display:block;}
+#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
+body.theme-dark #emp-back-btn{display:block;}
 </style></head>
 <body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
+<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
   <div class="date">作成日：${todayStr}</div>
   <h1>労働条件通知書兼雇用契約書</h1>
   <div class="sub">（${isFixed?'有期':'無期'}雇用契約）</div>
