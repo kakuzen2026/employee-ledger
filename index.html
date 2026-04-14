@@ -175,15 +175,31 @@ tr:hover td{background:#fafaf8}
   .scard-val{font-size:20px}
   .detail-grid{grid-template-columns:1fr 1fr}
   .field-grid{grid-template-columns:1fr}
-  table{font-size:12px}
-  th,td{padding:8px 6px}
   .itab{padding:8px 10px;font-size:12px}
   .sticky-footer{padding:10px 12px}
   .yukyu-form{padding:14px}
   .modal-box{padding:16px;margin:0 8px}
   .form-wrap{max-width:100%}
   .settings-card{max-width:100%}
+  /* テーブル → カード形式（hakennと同じパターン） */
+  .table-wrap table{display:block;}
+  .table-wrap thead{display:none;}
+  .table-wrap tbody{display:block;}
+  .table-wrap tr{display:block;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:10px;}
+  .table-wrap tr:hover td{background:transparent;}
+  .table-wrap td{display:flex;align-items:flex-start;gap:8px;border:none;padding:3px 0;font-size:13px;line-height:1.5;white-space:normal;}
+  .table-wrap td::before{content:attr(data-label);font-size:10px;color:var(--text3);min-width:68px;padding-top:3px;flex-shrink:0;letter-spacing:.02em;}
+  .table-wrap td[data-label=""]::before,.table-wrap td.no-label::before{display:none;}
+  .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--border);margin-top:4px;flex-wrap:wrap;gap:6px;}
+  .table-wrap td:last-child::before{display:none;}
+  .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
 }
+/* トースト通知 */
+#jToastWrap{position:fixed;bottom:24px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.j-toast{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.j-toast.success{border-left:3px solid #1a5c30;}
+.j-toast.error{border-left:3px solid var(--danger);}
+.j-toast.warn{border-left:3px solid var(--warn);}
 </style>
 </head>
 <body>
@@ -306,17 +322,55 @@ const SHUBETSU=['自己都合','会社都合'];
 const KUBUN=['計画','突発'];
 const INPUT_BY=['三上','金森','岩本'];
 
-let currentView='list',viewingId=null,editingId=null,detailTab='basic';
-let employees=[],yukyuRecords=[],yukyuGrants=[],departments=[],visaTypes=[],companyInfo={},certificates=[],workPatterns=[],employmentContracts=[];
-let kenkoImgData='',rcImgData='';
-let yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};
-let yfFromDetail=false;
-let deptModalMode='add',deptModalId=null,deptModalCallback=null;
+// ---- XSS エスケープ ----
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 
-// フィルター状態を保持
-let listFilter={sq:'',fs:'在籍',fd:'',fc:''};
+// ---- トースト通知 ----
+function _ensureToastWrap(){
+  if(document.getElementById('jToastWrap'))return;
+  const wrap=document.createElement('div');wrap.id='jToastWrap';
+  document.body.appendChild(wrap);
+}
+function showToast(msg,type='success'){
+  _ensureToastWrap();
+  const el=document.createElement('div');
+  el.className='j-toast '+type;
+  const icon=type==='success'?'✓':type==='error'?'✕':'⚠';
+  el.innerHTML='<span>'+icon+'</span><span>'+esc(msg)+'</span>';
+  document.getElementById('jToastWrap').appendChild(el);
+  setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},3500);
+}
 
-// 一覧表示列の設定（デフォルト）
+// ---- 状態管理 (ST オブジェクト) ----
+const ST={
+  employees:[],yukyuRecords:[],yukyuGrants:[],departments:[],visaTypes:[],
+  companyInfo:{},certificates:[],workPatterns:[],employmentContracts:[],
+  currentView:'list',viewingId:null,editingId:null,detailTab:'basic',
+  listFilter:{sq:'',fs:'在籍',fd:'',fc:''},
+  currentFilteredList:[],
+  yf:{employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''},
+  yfFromDetail:false,
+  deptModalMode:'add',deptModalId:null,deptModalCallback:null,
+  kenkoImgData:'',rcImgData:'',
+};
+
+// 後方互換：既存コードがグローバル変数として参照する箇所用のプロキシ
+let employees,yukyuRecords,yukyuGrants,departments,visaTypes,companyInfo,certificates,workPatterns,employmentContracts;
+let currentView,viewingId,editingId,detailTab,listFilter,currentFilteredList;
+let yf,yfFromDetail,deptModalMode,deptModalId,deptModalCallback,kenkoImgData,rcImgData;
+function syncFromST(){
+  employees=ST.employees;yukyuRecords=ST.yukyuRecords;yukyuGrants=ST.yukyuGrants;
+  departments=ST.departments;visaTypes=ST.visaTypes;companyInfo=ST.companyInfo;
+  certificates=ST.certificates;workPatterns=ST.workPatterns;employmentContracts=ST.employmentContracts;
+  currentView=ST.currentView;viewingId=ST.viewingId;editingId=ST.editingId;
+  detailTab=ST.detailTab;listFilter=ST.listFilter;currentFilteredList=ST.currentFilteredList;
+  yf=ST.yf;yfFromDetail=ST.yfFromDetail;deptModalMode=ST.deptModalMode;
+  deptModalId=ST.deptModalId;deptModalCallback=ST.deptModalCallback;
+  kenkoImgData=ST.kenkoImgData;rcImgData=ST.rcImgData;
+}
+syncFromST();
+
+// ---- 一覧表示列の設定 ----
 const ALL_COLS=[
   {key:'name',label:'氏名',default:true},
   {key:'company',label:'会社',default:true},
@@ -334,9 +388,6 @@ const ALL_COLS=[
 ];
 let visibleCols=ALL_COLS.filter(c=>c.default).map(c=>c.key);
 try{const s=localStorage.getItem('emp_cols');if(s)visibleCols=JSON.parse(s);}catch(e){}
-
-// 現在フィルター済みの従業員リスト（前後移動用）
-let currentFilteredList=[];
 
 // ---- Auth ----
 function doLogin(){
@@ -383,17 +434,34 @@ async function sb(path,method='GET',body=null){
   if(!res.ok)throw new Error(await res.text());
   const t=await res.text();return t?JSON.parse(t):[];
 }
-async function loadEmployees(){employees=(await sb('employees?select=*&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));}
-async function loadYukyu(){yukyuRecords=await sb('yukyu_records?select=*&order=use_date.desc,id.desc');}
-async function loadGrants(){yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');}
-async function loadDepts(){departments=await sb('departments?select=*&order=sort_order.asc,id.asc');}
-async function loadVisaTypes(){visaTypes=await sb('visa_types?select=*&order=id.asc');}
-async function loadCompanyInfo(){const rows=await sb('company_info?select=*&limit=1');companyInfo=rows[0]||{};}
-async function loadCertificates(){certificates=await sb('certificates?select=*&order=created_at.desc');}
-async function loadWorkPatterns(){workPatterns=await sb('work_patterns?select=*&order=sort_order.asc,id.asc');}
-async function loadEmploymentContracts(){employmentContracts=await sb('employment_contracts?select=*&order=created_at.desc');}
+async function loadEmployees(){ST.employees=(await sb('employees?select=*&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=ST.employees;}
+async function loadYukyu(){ST.yukyuRecords=await sb('yukyu_records?select=*&order=use_date.desc,id.desc');yukyuRecords=ST.yukyuRecords;}
+async function loadGrants(){ST.yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');yukyuGrants=ST.yukyuGrants;}
+async function loadDepts(){ST.departments=await sb('departments?select=*&order=sort_order.asc,id.asc');departments=ST.departments;}
+async function loadVisaTypes(){ST.visaTypes=await sb('visa_types?select=*&order=id.asc');visaTypes=ST.visaTypes;}
+async function loadCompanyInfo(){const rows=await sb('company_info?select=*&limit=1');ST.companyInfo=rows[0]||{};companyInfo=ST.companyInfo;}
+async function loadCertificates(){ST.certificates=await sb('certificates?select=*&order=created_at.desc');certificates=ST.certificates;}
+async function loadWorkPatterns(){ST.workPatterns=await sb('work_patterns?select=*&order=sort_order.asc,id.asc');workPatterns=ST.workPatterns;}
+async function loadEmploymentContracts(){ST.employmentContracts=await sb('employment_contracts?select=*&order=created_at.desc');employmentContracts=ST.employmentContracts;}
 async function loadAndRender(){
-  try{await Promise.all([loadEmployees(),loadYukyu(),loadGrants(),loadDepts(),loadVisaTypes(),loadCompanyInfo(),loadCertificates(),loadWorkPatterns(),loadEmploymentContracts()]);}catch(e){console.error(e);}
+  const tasks=[
+    {fn:loadEmployees,name:'従業員'},
+    {fn:loadYukyu,name:'有給記録'},
+    {fn:loadGrants,name:'有給付与'},
+    {fn:loadDepts,name:'部署'},
+    {fn:loadVisaTypes,name:'在留資格'},
+    {fn:loadCompanyInfo,name:'会社情報'},
+    {fn:loadCertificates,name:'証明書'},
+    {fn:loadWorkPatterns,name:'勤務パターン'},
+    {fn:loadEmploymentContracts,name:'雇用契約書'},
+  ];
+  const results=await Promise.allSettled(tasks.map(t=>t.fn()));
+  const failed=results.map((r,i)=>r.status==='rejected'?tasks[i].name:null).filter(Boolean);
+  if(failed.length){
+    showToast(`データ読み込み失敗：${failed.join('、')}`, 'error');
+    console.error('Load errors:', results.filter(r=>r.status==='rejected').map(r=>r.reason));
+  }
+  syncFromST();
   await checkAndAutoGrant();
   render();
 }
@@ -490,7 +558,7 @@ function closeDeptModal(){document.getElementById('deptModal').style.display='no
 async function saveDeptModal(){
   const s1=document.getElementById('dm_s1').value.trim();
   const s2=document.getElementById('dm_s2').value.trim();
-  if(!s1){alert('所属1は必須です');return;}
+  if(!s1){showToast('所属1は必須です','error');return;}
   try{
     if(deptModalMode==='add'){
       const res=await sb('departments','POST',{shozoku1:s1,shozoku2:s2});
@@ -506,7 +574,7 @@ async function saveDeptModal(){
       if(currentView==='settings')renderSettings();
       else render();
     }
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- Nav ----
@@ -621,19 +689,19 @@ function renderList(){
         const rowBg=isExpired?'background:#fdf0f0':isWarn?'background:#fdf3e7':'';
         const companyBadge=e.company==='セレクト'?`<span class="badge badge-visa">セレクト</span>`:e.company==='覚善'?`<span class="badge badge-active">覚善</span>`:'<span style="color:var(--text3)">—</span>';
         return`<tr style="${rowBg}">
-          <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}<br><span style="font-size:11px;color:var(--text2);font-weight:400">${e.seikana||''} ${e.meikana||''}</span></span>${e.shain_no&&!showCol('shain_no')?`<br><span style="font-size:11px;color:var(--text3)">No. ${e.shain_no}</span>`:''}</td>
-          ${showCol('company')?`<td>${companyBadge}</td>`:''}
-          ${showCol('shozoku1')?`<td>${dept?.shozoku1||'—'}</td>`:''}
-          ${showCol('shozoku2')?`<td>${dept?.shozoku2||'—'}</td>`:''}
-          ${showCol('koyou')?`<td><span class="chip">${e.koyou||'—'}</span></td>`:''}
-          ${showCol('status')?`<td><span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${e.status||'—'}</span></td>`:''}
-          ${showCol('visa')?`<td>${vb}</td>`:''}
-          ${showCol('visa_expiry')?`<td>${el}</td>`:''}
-          ${showCol('license_expiry')?`<td>${ll}</td>`:''}
-          ${showCol('nyusha_date')?`<td style="font-size:12px">${e.nyusha_date||'—'}</td>`:''}
-          ${showCol('shain_no')?`<td style="font-size:12px;color:var(--text2)">${e.shain_no||'—'}</td>`:''}
-          ${showCol('updated_at')?`<td style="font-size:12px;color:var(--text3)">${e.updated_at||'—'}</td>`:''}
-          <td style="white-space:nowrap">
+          <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${esc(e.sei)} ${esc(e.mei)}<br><span style="font-size:11px;color:var(--text2);font-weight:400">${esc(e.seikana||'')} ${esc(e.meikana||'')}</span></span>${e.shain_no&&!showCol('shain_no')?`<br><span style="font-size:11px;color:var(--text3)">No. ${esc(e.shain_no)}</span>`:''}</td>
+          ${showCol('company')?`<td data-label="会社">${companyBadge}</td>`:''}
+          ${showCol('shozoku1')?`<td data-label="所属1">${esc(dept?.shozoku1||'—')}</td>`:''}
+          ${showCol('shozoku2')?`<td data-label="所属2">${esc(dept?.shozoku2||'—')}</td>`:''}
+          ${showCol('koyou')?`<td data-label="雇用形態"><span class="chip">${esc(e.koyou||'—')}</span></td>`:''}
+          ${showCol('status')?`<td data-label="在籍"><span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${esc(e.status||'—')}</span></td>`:''}
+          ${showCol('visa')?`<td data-label="在留資格">${vb}</td>`:''}
+          ${showCol('visa_expiry')?`<td data-label="在留期限">${el}</td>`:''}
+          ${showCol('license_expiry')?`<td data-label="免許期限">${ll}</td>`:''}
+          ${showCol('nyusha_date')?`<td data-label="入社日" style="font-size:12px">${esc(e.nyusha_date||'—')}</td>`:''}
+          ${showCol('shain_no')?`<td data-label="社員番号" style="font-size:12px;color:var(--text2)">${esc(e.shain_no||'—')}</td>`:''}
+          ${showCol('updated_at')?`<td data-label="更新日" style="font-size:12px;color:var(--text3)">${esc(e.updated_at||'—')}</td>`:''}
+          <td class="no-label" style="white-space:nowrap">
             <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
             <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')" style="margin-left:4px">在職証明</button>
             ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')" style="margin-left:4px">退職証明</button>`:''}
@@ -690,16 +758,17 @@ function renderDetail(id){
   document.getElementById('mainContent').innerHTML=`
     <div class="sticky-back">
       <button class="btn btn-sm" onclick="currentView='list';render()">← 一覧</button>
-      <h2>${e.sei} ${e.mei}</h2>
-      <span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${e.status||'—'}</span>
+      <h2>${esc(e.sei)} ${esc(e.mei)}</h2>
+      <span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${esc(e.status||'—')}</span>
       ${dl!==null&&dl<90?`<span class="badge badge-warn">在留${dl<0?'期限切れ':'残'+dl+'日'}</span>`:''}
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">最終更新: ${e.updated_at||'—'}</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">最終更新: ${esc(e.updated_at||'—')}</span>
       <button class="btn btn-sm" ${prevEmp?`onclick="viewDetail(${prevEmp.id})"`:'disabled'} style="${!prevEmp?'opacity:.4':''}">◀ 前へ</button>
       <span style="font-size:12px;color:var(--text3)">${idx+1}/${currentFilteredList.length}</span>
       <button class="btn btn-sm" ${nextEmp?`onclick="viewDetail(${nextEmp.id})"`:'disabled'} style="${!nextEmp?'opacity:.4':''}">次へ ▶</button>
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
       <button class="btn btn-sm" onclick="openContractModal(${e.id})">雇用契約書</button>
+      <button class="btn btn-sm" style="background:var(--info-light);color:var(--info);border-color:var(--info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
     <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
@@ -802,11 +871,11 @@ async function renderAlert(){
             :days<0?`<span class="badge badge-danger">期限切れ（${Math.abs(days)}日）</span>`
             :`<span class="badge badge-warn">残${days}日</span>`;
           return`<tr style="${!ct||days<0?'background:#fdf0f0':'background:#fdf3e7'}">
-            <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}</span></td>
-            <td>${dept?.shozoku1||'—'}</td>
-            <td>${statusLabel}</td>
-            <td style="font-size:12px">${ct?.contract_end||'—'}</td>
-            <td><button class="btn btn-sm" onclick="openContractModal(${e.id})">契約書作成</button></td>
+            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${esc(e.sei)} ${esc(e.mei)}</span></td>
+            <td data-label="所属">${esc(dept?.shozoku1||'—')}</td>
+            <td data-label="状態">${statusLabel}</td>
+            <td data-label="契約終了日" style="font-size:12px">${esc(ct?.contract_end||'—')}</td>
+            <td class="no-label"><button class="btn btn-sm" onclick="openContractModal(${e.id})">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -822,10 +891,10 @@ async function renderAlert(){
           const dept=departments.find(d=>d.id===Number(e.dept_id));
           const unsetGrants=yukyuGrants.filter(g=>g.employee_id===e.id&&(g.days===null||g.days===undefined||g.days==='')&&g.grant_date<=todayStr);
           return`<tr style="background:var(--warn-light)">
-            <td><span class="emp-name" onclick="detailTab='yukyu';viewDetail(${e.id})">${e.sei} ${e.mei}</span></td>
-            <td>${dept?.shozoku1||'—'}</td>
-            <td style="font-size:12px">${unsetGrants.map(g=>g.grant_date).join('、')}</td>
-            <td><button class="btn btn-sm" onclick="detailTab='yukyu';viewDetail(${e.id})">付与設定へ</button></td>
+            <td data-label="氏名"><span class="emp-name" onclick="detailTab='yukyu';viewDetail(${e.id})">${esc(e.sei)} ${esc(e.mei)}</span></td>
+            <td data-label="所属">${esc(dept?.shozoku1||'—')}</td>
+            <td data-label="未設定の付与日" style="font-size:12px">${unsetGrants.map(g=>esc(g.grant_date)).join('、')}</td>
+            <td class="no-label"><button class="btn btn-sm" onclick="detailTab='yukyu';viewDetail(${e.id})">付与設定へ</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -874,19 +943,19 @@ async function loadDispatchAlerts(){
         <thead><tr><th>氏名</th><th>契約番号</th><th>取引先/現場</th><th>契約終了日</th><th>残日数</th><th></th></tr></thead>
         <tbody>${alertContracts.map(ct=>{
           const emp=empMap[ct.employee_id];
-          const name=emp?`${emp.sei} ${emp.mei}`:`ID:${ct.employee_id}`;
+          const name=emp?`${esc(emp.sei)} ${esc(emp.mei)}`:`ID:${ct.employee_id}`;
           const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
           const rowBg=days<0?'background:var(--danger-light);':days<=14?'background:var(--warn-light);':'';
           const dayLabel=days<0?`<span style="color:var(--danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
             :`<span style="color:var(--warn);font-weight:600;">${days}日</span>`;
-          const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${ct.dispatch_app_contract_id}`;
+          const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${esc(ct.dispatch_app_contract_id)}`;
           return`<tr style="${rowBg}">
-            <td><span class="emp-name" onclick="detailTab='dispatch';viewDetail(${ct.employee_id})">${name}</span></td>
-            <td style="font-size:12px;">${ct.contract_no||'—'}</td>
-            <td style="font-size:12px;">${ct.client_name||'—'} / ${ct.site_name||'—'}</td>
-            <td style="font-size:12px;">${ct.contract_end}</td>
-            <td>${dayLabel}</td>
-            <td><button class="btn btn-sm" onclick="window.open('${dispatchUrl}','_blank')">派遣管理で確認</button></td>
+            <td data-label="氏名"><span class="emp-name" onclick="detailTab='dispatch';viewDetail(${ct.employee_id})">${name}</span></td>
+            <td data-label="契約番号" style="font-size:12px;">${esc(ct.contract_no||'—')}</td>
+            <td data-label="取引先/現場" style="font-size:12px;">${esc(ct.client_name||'—')} / ${esc(ct.site_name||'—')}</td>
+            <td data-label="契約終了日" style="font-size:12px;">${esc(ct.contract_end)}</td>
+            <td data-label="残日数">${dayLabel}</td>
+            <td class="no-label"><button class="btn btn-sm" onclick="window.open('${dispatchUrl}','_blank')">派遣管理で確認</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -1148,7 +1217,7 @@ function df(label,val,full){
 async function saveMemo(id){
   const e=employees.find(x=>x.id===id);
   e.memo=document.getElementById('memoText').value;e.updated_at=new Date().toISOString().slice(0,10);
-  await sb('employees?id=eq.'+id,'PATCH',{memo:e.memo,updated_at:e.updated_at});alert('保存しました');
+  await sb('employees?id=eq.'+id,'PATCH',{memo:e.memo,updated_at:e.updated_at});showToast('保存しました');
 }
 
 // ---- 派遣契約読み込み ----
@@ -1238,7 +1307,7 @@ async function addRcImg(empId,input){
   const f=input.files[0];if(!f)return;
   const e=employees.find(x=>x.id===empId);
   e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){alert('最大4枚です');return;}
+  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
   let data;
   if(f.type.startsWith('image/')){data=await compressImage(f);}
   else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
@@ -1251,7 +1320,7 @@ async function addRcImg(empId,input){
 async function addRcImgDrop(empId,data){
   const e=employees.find(x=>x.id===empId);
   e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){alert('最大4枚です');return;}
+  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
   e.residence_card_imgs.push(data);
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+empId,'PATCH',{residence_card_imgs:e.residence_card_imgs,updated_at:e.updated_at});
@@ -1271,7 +1340,7 @@ async function addLicImg(empId,input){
   const f=input.files[0];if(!f)return;
   const e=employees.find(x=>x.id===empId);
   e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){alert('最大4枚です');return;}
+  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
   let data;
   if(f.type.startsWith('image/')){data=await compressImage(f);}
   else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
@@ -1284,7 +1353,7 @@ async function addLicImg(empId,input){
 async function addLicImgDrop(empId,data){
   const e=employees.find(x=>x.id===empId);
   e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){alert('最大4枚です');return;}
+  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
   e.license_imgs.push(data);
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+empId,'PATCH',{license_imgs:e.license_imgs,updated_at:e.updated_at});
@@ -1314,7 +1383,7 @@ async function saveLicense(id){
   };
   Object.assign(e,patch);
   await sb('employees?id=eq.'+id,'PATCH',patch);
-  alert('保存しました');renderDT();
+  showToast('保存しました');renderDT();
   setTimeout(()=>{
     setupDrop('licDetailDrop',(d)=>addLicImgDrop(id,d));
     setupDrop('rcDetailDrop',(d)=>addRcImgDrop(id,d));
@@ -1323,7 +1392,7 @@ async function saveLicense(id){
 async function addShikaku(id){
   const e=employees.find(x=>x.id===id);
   const name=document.getElementById('sk_name')?.value.trim();
-  if(!name){alert('資格名を入力してください');return;}
+  if(!name){showToast('資格名を入力してください','error');return;}
   e.shikaku_list=e.shikaku_list||[];
   e.shikaku_list.push({name,date:document.getElementById('sk_date')?.value||'',expiry:document.getElementById('sk_expiry')?.value||'',img:skImgData});
   skImgData='';e.updated_at=new Date().toISOString().slice(0,10);
@@ -1346,7 +1415,7 @@ function previewKI(input){
 }
 async function addKenko(id){
   const e=employees.find(x=>x.id===id),d=document.getElementById('kd').value;
-  if(!d){alert('受診日を入力してください');return;}
+  if(!d){showToast('受診日を入力してください','error');return;}
   e.kenkou_list.push({date:d,result:document.getElementById('kr').value,img:kenkoImgData});
   kenkoImgData='';e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+id,'PATCH',{kenkou_list:e.kenkou_list,updated_at:e.updated_at});renderDT();
@@ -1454,7 +1523,7 @@ function openWorkPatternModal(id=null){
 function closeWpModal(){document.getElementById('wpModal').style.display='none';}
 async function saveWpModal(){
   const name=document.getElementById('wp_name').value.trim();
-  if(!name){alert('パターン名は必須です');return;}
+  if(!name){showToast('パターン名は必須です','error');return;}
   const data={
     name,
     start_time:document.getElementById('wp_start').value||null,
@@ -1468,7 +1537,7 @@ async function saveWpModal(){
     if(wpEditId){await sb('work_patterns?id=eq.'+wpEditId,'PATCH',data);}
     else{await sb('work_patterns','POST',{...data,sort_order:workPatterns.length+1});}
     await loadWorkPatterns();closeWpModal();renderSettings();
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function deleteWorkPattern(id){
   if(!confirm('この勤務パターンを削除しますか？'))return;
@@ -1488,15 +1557,15 @@ async function saveCompanyInfo(){
   try{
     await sb('company_info?id=eq.1','PATCH',data);
     companyInfo={...companyInfo,...data};
-    alert('保存しました');
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+    showToast('保存しました');
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- 証明書生成 ----
 function generateCertificate(empId,type){
   const e=employees.find(x=>x.id===empId);
-  if(!e){alert('従業員が見つかりません');return;}
-  if(!companyInfo.company_name){alert('設定画面で発行元情報を登録してください');return;}
+  if(!e){showToast('従業員が見つかりません','error');return;}
+  if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
 
   const today=new Date();
   const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
@@ -1573,7 +1642,7 @@ function openContractModal(empId){
   contractEmpId=empId;
   const e=employees.find(x=>x.id===empId);
   if(!e)return;
-  if(!companyInfo.company_name){alert('設定画面で発行元情報を登録してください');return;}
+  if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
   const isFixed=e.employment_type!=='permanent';
   const dept=departments.find(d=>d.id===Number(e.dept_id));
   document.getElementById('contractModalBody').innerHTML=`
@@ -1760,7 +1829,6 @@ function generateContract(){
   w.onload=()=>{w.print();};
 
   // 雇用契約書履歴を保存
-  const g=id=>document.getElementById(id)?.value||'';
   sb('employment_contracts','POST',{
     employee_id:contractEmpId,
     employee_name:e.sei+' '+e.mei,
@@ -1842,11 +1910,11 @@ async function renderContractList(){
             :`<span class="badge badge-warn">残${days}日</span>`;
           const rowBg=!ct||days<0?'background:#fdf0f0':'background:#fdf3e7';
           return`<tr style="${rowBg}">
-            <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}</span></td>
-            <td style="font-size:12px">${dept?.shozoku1||'—'}</td>
-            <td>${statusLabel}</td>
-            <td style="font-size:12px">${ct?.contract_end||'—'}</td>
-            <td><button class="btn btn-sm" onclick="openContractModal(${e.id})">契約書作成</button></td>
+            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${esc(e.sei)} ${esc(e.mei)}</span></td>
+            <td data-label="所属" style="font-size:12px">${esc(dept?.shozoku1||'—')}</td>
+            <td data-label="状態">${statusLabel}</td>
+            <td data-label="契約終了日" style="font-size:12px">${esc(ct?.contract_end||'—')}</td>
+            <td class="no-label"><button class="btn btn-sm" onclick="openContractModal(${e.id})">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -1864,13 +1932,13 @@ async function renderContractList(){
     <div class="table-wrap"><table>
       <thead><tr><th>発行日</th><th>氏名</th><th>契約開始</th><th>契約終了</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${thisList.map(r=>`<tr>
-        <td style="font-size:13px">${r.issued_date||'—'}</td>
-        <td><span class="emp-name" onclick="viewDetail(${r.employee_id})">${r.employee_name||'—'}</span></td>
-        <td style="font-size:12px">${r.contract_start||'—'}</td>
-        <td style="font-size:12px">${r.contract_end||'無期'}</td>
-        <td><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
-        <td style="font-size:12px;color:var(--text2)">${r.issued_by||'—'}</td>
-        <td>
+        <td data-label="発行日" style="font-size:13px">${esc(r.issued_date||'—')}</td>
+        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${esc(r.employee_name||'—')}</span></td>
+        <td data-label="契約開始" style="font-size:12px">${esc(r.contract_start||'—')}</td>
+        <td data-label="契約終了" style="font-size:12px">${esc(r.contract_end||'無期')}</td>
+        <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
+        <td data-label="発行元" style="font-size:12px;color:var(--text2)">${esc(r.issued_by||'—')}</td>
+        <td class="no-label">
           <button class="btn btn-sm" onclick="openContractModal(${r.employee_id})">再発行</button>
           <button class="btn btn-sm btn-danger" onclick="deleteEmploymentContract(${r.id})" style="margin-left:4px">削除</button>
         </td>
@@ -1922,11 +1990,11 @@ function renderCertList(){
     <div class="table-wrap"><table>
       <thead><tr><th>発行日</th><th>氏名</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${list.map(r=>`<tr>
-        <td style="font-size:13px">${r.issued_date||'—'}</td>
-        <td><span class="emp-name" onclick="viewDetail(${r.employee_id})">${r.employee_name||'—'}</span></td>
-        <td><span class="badge ${r.cert_type==='在職証明書'?'badge-visa':'badge-retired'}">${r.cert_type||'—'}</span></td>
-        <td style="font-size:12px;color:var(--text2)">${r.issued_by||'—'}</td>
-        <td>
+        <td data-label="発行日" style="font-size:13px">${esc(r.issued_date||'—')}</td>
+        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${esc(r.employee_name||'—')}</span></td>
+        <td data-label="種別"><span class="badge ${r.cert_type==='在職証明書'?'badge-visa':'badge-retired'}">${esc(r.cert_type||'—')}</span></td>
+        <td data-label="発行元" style="font-size:12px;color:var(--text2)">${esc(r.issued_by||'—')}</td>
+        <td class="no-label">
           <button class="btn btn-sm" onclick="${r.cert_type==='雇用契約書'?`openContractModal(${r.employee_id})`:`reissueCert(${r.employee_id},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')`}">再発行</button>
           <button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button>
         </td>
@@ -1974,11 +2042,11 @@ async function deptDrop(e,targetId){
   try{
     await Promise.all(departments.map((d,i)=>sb('departments?id=eq.'+d.id,'PATCH',{sort_order:i+1})));
     await loadDepts();renderSettings();
-  }catch(err){alert('並び替えの保存に失敗しました：'+err.message);}
+  }catch(err){showToast('並び替えの保存に失敗しました：'+err.message,'error');}
 }
 async function deleteDept(id){
   const inUse=employees.some(e=>Number(e.dept_id)===id);
-  if(inUse){alert('この部署は従業員に使用されているため削除できません。\n先に従業員の部署を変更してください。');return;}
+  if(inUse){showToast('この部署は使用中です。先に従業員の部署を変更してください。','warn');return;}
   if(!confirm('この部署を削除しますか？'))return;
   await sb('departments?id=eq.'+id,'DELETE');
   await loadDepts();renderSettings();
@@ -1995,16 +2063,16 @@ function openVisaModal(mode,id=null,name=''){
 function closeVisaModal(){document.getElementById('visaModal').style.display='none';}
 async function saveVisaModal(){
   const name=document.getElementById('vm_name').value.trim();
-  if(!name){alert('在留資格名を入力してください');return;}
+  if(!name){showToast('在留資格名を入力してください','error');return;}
   try{
     if(visaModalMode==='add'){await sb('visa_types','POST',{name});}
     else{await sb('visa_types?id=eq.'+visaModalId,'PATCH',{name});}
     await loadVisaTypes();closeVisaModal();renderSettings();
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function deleteVisaType(id){
   const inUse=employees.some(e=>e.visa===visaTypes.find(v=>v.id===id)?.name);
-  if(inUse){alert('この在留資格は従業員に使用されているため削除できません。');return;}
+  if(inUse){showToast('この在留資格は使用中のため削除できません。','warn');return;}
   if(!confirm('この在留資格を削除しますか？'))return;
   await sb('visa_types?id=eq.'+id,'DELETE');
   await loadVisaTypes();renderSettings();
@@ -2099,11 +2167,11 @@ function renderKenkoList(){
     <div class="table-wrap"><table>
       <thead><tr><th>受診日</th><th>氏名</th><th>結果</th><th>写真</th><th></th></tr></thead>
       <tbody>${allRecs.map(r=>`<tr>
-        <td style="font-size:13px">${r.date||'—'}</td>
-        <td><span class="emp-name" onclick="viewDetail(${r.empId})">${r.empName}<br><span style="font-size:11px;color:var(--text2)">${r.empKana.trim()}</span></span></td>
-        <td><span class="badge ${r.result==='異常なし'?'badge-active':r.result==='要精密検査'?'badge-danger':'badge-warn'}">${r.result||'—'}</span></td>
-        <td>${r.img?`<img src="${r.img}" style="height:36px;border-radius:4px;cursor:pointer" onclick="window.open('${r.img}')">`:'—'}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="delKenkoFromList(${r.empId},${r.idx})">削除</button></td>
+        <td data-label="受診日" style="font-size:13px">${esc(r.date||'—')}</td>
+        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.empId})">${esc(r.empName)}<br><span style="font-size:11px;color:var(--text2)">${esc(r.empKana.trim())}</span></span></td>
+        <td data-label="結果"><span class="badge ${r.result==='異常なし'?'badge-active':r.result==='要精密検査'?'badge-danger':'badge-warn'}">${esc(r.result||'—')}</span></td>
+        <td data-label="写真">${r.img?`<img src="${esc(r.img)}" style="height:36px;border-radius:4px;cursor:pointer" onclick="window.open(this.src)">`:'—'}</td>
+        <td class="no-label"><button class="btn btn-sm btn-danger" onclick="delKenkoFromList(${r.empId},${r.idx})">削除</button></td>
       </tr>`).join('')}
       </tbody>
     </table></div>`}`;
@@ -2117,9 +2185,9 @@ function previewKfImg(input){
 }
 async function addKenkoFromList(){
   const empId=document.getElementById('kfEmp')?.value;
-  if(!empId){alert('従業員を選択してください');return;}
+  if(!empId){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('kfDate')?.value;
-  if(!d){alert('受診日を入力してください');return;}
+  if(!d){showToast('受診日を入力してください','error');return;}
   const result=document.getElementById('kfResult')?.value;
   const e=employees.find(x=>x.id===Number(empId));
   e.kenkou_list=e.kenkou_list||[];
@@ -2173,12 +2241,12 @@ function renderYukyuList(){
       <tbody>${activeEmps.map(e=>{
         const info=calcYukyuInfo(e.id);
         return`<tr>
-          <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}</span></td>
-          <td><span style="font-weight:700;color:${info.remaining>0?'#1a5c30':'var(--text2)'}">${info.remaining}日</span></td>
-          <td style="font-size:13px">${info.granted}日</td>
-          <td style="font-size:13px">${info.used}日</td>
-          <td style="font-size:12px;color:var(--text2)">${info.nextDate||'—'}</td>
-          <td><button class="btn btn-sm" onclick="detailTab='yukyu';viewingId=${e.id};currentView='detail';render()">詳細</button></td>
+          <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${esc(e.sei)} ${esc(e.mei)}</span></td>
+          <td data-label="残日数"><span style="font-weight:700;color:${info.remaining>0?'#1a5c30':'var(--text2)'}">${info.remaining}日</span></td>
+          <td data-label="付与合計" style="font-size:13px">${info.granted}日</td>
+          <td data-label="取得合計" style="font-size:13px">${info.used}日</td>
+          <td data-label="次回付与日" style="font-size:12px;color:var(--text2)">${esc(info.nextDate||'—')}</td>
+          <td class="no-label"><button class="btn btn-sm" onclick="detailTab='yukyu';viewingId=${e.id};currentView='detail';render()">詳細</button></td>
         </tr>`;
       }).join('')}
       </tbody>
@@ -2196,15 +2264,15 @@ function renderYukyuList(){
     <div class="table-wrap"><table>
       <thead><tr><th>使用日</th><th>氏名</th><th>使用内容</th><th>種別</th><th>区分</th><th>入力者</th><th>登録日</th><th>備考</th><th></th></tr></thead>
       <tbody>${list.map(r=>`<tr>
-        <td>${r.use_date||'—'}</td>
-        <td><span class="emp-name" onclick="viewDetail(${r.employee_id})">${r.employee_name||'—'}</span></td>
-        <td><span class="badge badge-visa">${r.use_type||'—'}</span></td>
-        <td><span class="chip">${r.shubetsu||'—'}</span></td>
-        <td><span class="chip">${r.kubun||'—'}</span></td>
-        <td>${r.input_by||'—'}</td>
-        <td style="font-size:12px;color:var(--text3)">${r.touroku_date||'—'}</td>
-        <td style="font-size:12px;color:var(--text2);max-width:140px">${r.biko||''}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></td>
+        <td data-label="使用日">${esc(r.use_date||'—')}</td>
+        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${esc(r.employee_name||'—')}</span></td>
+        <td data-label="使用内容"><span class="badge badge-visa">${esc(r.use_type||'—')}</span></td>
+        <td data-label="種別"><span class="chip">${esc(r.shubetsu||'—')}</span></td>
+        <td data-label="区分"><span class="chip">${esc(r.kubun||'—')}</span></td>
+        <td data-label="入力者">${esc(r.input_by||'—')}</td>
+        <td data-label="登録日" style="font-size:12px;color:var(--text3)">${esc(r.touroku_date||'—')}</td>
+        <td data-label="備考" style="font-size:12px;color:var(--text2);max-width:140px">${esc(r.biko||'')}</td>
+        <td class="no-label"><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></td>
       </tr>`).join('')}</tbody>
     </table></div>`}`;
 }
@@ -2234,7 +2302,7 @@ async function saveKousokuDate(id,clear=false){
   e.kousoku_start_date=d;
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+id,'PATCH',{kousoku_start_date:d||null,updated_at:e.updated_at});
-  if(!clear)alert('保存しました');
+  if(!clear)showToast('保存しました');
   renderDT();
 }
 
@@ -2259,7 +2327,7 @@ function openGrantModal(empId,editGrantId=null){
 function closeGrantModal(){document.getElementById('grantModal').style.display='none';}
 async function saveGrant(){
   const d=document.getElementById('gm_date').value;
-  if(!d){alert('付与日は必須です');return;}
+  if(!d){showToast('付与日は必須です','error');return;}
   const daysVal=document.getElementById('gm_days').value;
   const days=daysVal!==''?Number(daysVal):null;
   let expire=document.getElementById('gm_expire').value;
@@ -2274,7 +2342,7 @@ async function saveGrant(){
       await sb('yukyu_grants','POST',{employee_id:grantEmpId,grant_date:d,days,expire_date:expire});
     }
     await loadGrants();closeGrantModal();renderDT();
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function delGrant(id,empId){
   if(!confirm('この付与記録を削除しますか？'))return;
@@ -2337,19 +2405,19 @@ function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const 
 function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
 function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
 async function saveYR(){
-  if(!yf.employee_id){alert('従業員を選択してください');return;}
+  if(!yf.employee_id){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('yDate')?.value;
-  if(!d){alert('使用日を入力してください');return;}
-  if(!yf.use_type){alert('使用内容を選択してください');return;}
-  if(!yf.shubetsu){alert('種別を選択してください');return;}
-  if(!yf.kubun){alert('区分を選択してください');return;}
-  if(!yf.input_by){alert('入力者を選択してください');return;}
+  if(!d){showToast('使用日を入力してください','error');return;}
+  if(!yf.use_type){showToast('使用内容を選択してください','error');return;}
+  if(!yf.shubetsu){showToast('種別を選択してください','error');return;}
+  if(!yf.kubun){showToast('区分を選択してください','error');return;}
+  if(!yf.input_by){showToast('入力者を選択してください','error');return;}
   try{
     await sb('yukyu_records','POST',{employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,touroku_date:new Date().toISOString().slice(0,10),biko:document.getElementById('yBiko')?.value||''});
-    await loadYukyu();alert('登録しました');
+    await loadYukyu();showToast('登録しました');
     if(yfFromDetail){detailTab='yukyu';currentView='detail';yfFromDetail=false;render();}
     else showView('yukyu_list');
-  }catch(e){alert('登録に失敗しました：'+e.message);}
+  }catch(e){showToast('登録に失敗しました：'+e.message,'error');}
 }
 
 // ---- 従業員フォーム ----
@@ -2541,8 +2609,8 @@ function setupFormDropZones(){
 
 async function saveForm(isEdit,id){
   const g=k=>{const el=document.getElementById('f_'+k);return el?el.value:'';};
-  if(!g('sei')||!g('mei')){alert('姓・名は必須です');return;}
-  if(!g('company')){alert('会社（セレクト／覚善）を選択してください');return;}
+  if(!g('sei')||!g('mei')){showToast('姓・名は必須です','error');return;}
+  if(!g('company')){showToast('会社（セレクト／覚善）を選択してください','error');return;}
   const deptId=document.getElementById('f_dept_id')?.value;
   const emp={
     shain_no:g('shain_no'),
@@ -2587,7 +2655,7 @@ async function saveForm(isEdit,id){
     }
     licFormImgData='';skFormImgData=['','',''];
     await loadEmployees();currentView='list';render();
-  }catch(e){alert('保存に失敗しました：'+e.message);}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- CSV インポート ----
@@ -2602,7 +2670,7 @@ async function importCSV(input){
   const file=input.files[0];if(!file)return;
   const text=await file.text();
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-  if(lines.length<2){alert('データがありません');return;}
+  if(lines.length<2){showToast('データがありません','warn');return;}
   const headers=parseCSVLine(lines[0]);
   const idx=col=>headers.indexOf(col);
   const rows=lines.slice(1).map(l=>parseCSVLine(l));
@@ -2629,7 +2697,7 @@ async function importCSV(input){
   }
   input.value='';
   await loadEmployees();render();
-  alert(`インポート完了！\n成功：${ok}件${err?'\nエラー：'+err+'件':''}`);
+  showToast(`インポート完了！　成功：${ok}件${err?' / エラー：'+err+'件':''}`,ok&&!err?'success':'warn');
 }
 function parseCSVLine(line){
   const result=[];let cur='',inQ=false;
