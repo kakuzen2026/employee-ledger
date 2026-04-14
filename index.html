@@ -2048,8 +2048,8 @@ function buildKobetsuHtml(ph){
 ${secStart()}
 ${secHead('派遣先事業所 / 就業場所')}
 ${tbl(`
-  ${r('派遣先事業所', e(ph.CLIENT_SITE_NAME)+'　'+e(ph.CLIENT_SITE_ADDRESS))}
-  ${r('就業場所', e(ph.WORK_LOCATION_NAME)+'　'+e(ph.WORK_LOCATION_ADDRESS)+(ph.WORK_DEPT?'（部署）'+e(ph.WORK_DEPT):'')+(ph.WORK_TEL?'（電話）'+e(ph.WORK_TEL):''))}
+  ${r('派遣先事業所', e(ph.CLIENT_SITE_NAME)+'<br>'+e(ph.CLIENT_SITE_ADDRESS))}
+  ${r('就業場所', e(ph.WORK_LOCATION_NAME)+'<br>'+e(ph.WORK_LOCATION_ADDRESS)+(ph.WORK_DEPT?'<br>（部署）'+e(ph.WORK_DEPT):'')+(ph.WORK_TEL?'　（電話）'+e(ph.WORK_TEL):''))}
 `)}
 ${secEnd()}
 
