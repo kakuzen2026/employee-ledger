@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
-.theme-dark{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--border:#2a3347;--accent:#3b82f6;--accent2:#60a5fa;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--radius:8px;}
+:root{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--border:#2a3347;--accent:#3b82f6;--accent2:#60a5fa;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--radius:8px;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
 #sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;}
@@ -256,8 +256,7 @@ body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
 #emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
 body.theme-light #emp-back-btn{display:block;}
-</style>
-</head>
+</style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
 
@@ -265,7 +264,7 @@ body.theme-light #emp-back-btn{display:block;}
 <div id="login-screen" style="display:none;">
   <div class="login-bg">
     <div class="login-card">
-      <div class="login-logo"><div class="licon">📋</div><h1>派遣管理台帳</h1><p>KAKUZEN</p></div>
+      <div class="login-logo"><div class="licon">📋</div><h1>派遣・従業員管理システム</h1><p>KAKUZEN</p></div>
       <div class="form-group"><label class="form-label">パスワード</label><input type="password" class="form-input" id="login-pw" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:12px;">❌ パスワードが違います</div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">ログイン</button>
@@ -278,7 +277,7 @@ body.theme-light #emp-back-btn{display:block;}
   <div class="sidebar-logo"><h1>派遣管理台帳</h1><p>KAKUZEN</p></div>
   <div class="nav-section">
     <div class="nav-section-label">メイン</div>
-    <div class="nav-item" onclick="navigate('dashboard')"><span class="icon">📊</span>ダッシュボード</div>
+    <div class="nav-item active" onclick="navigate('dashboard')"><span class="icon">📊</span>ダッシュボード</div>
     <div class="nav-item" onclick="navigate('clients')"><span class="icon">🏢</span>取引先管理</div>
     <div class="nav-item" onclick="navigate('sites')"><span class="icon">📍</span>現場管理</div>
     <div class="nav-item" onclick="navigate('contracts')"><span class="icon">📄</span>契約管理</div>
@@ -291,7 +290,7 @@ body.theme-light #emp-back-btn{display:block;}
   </div>
   <div class="nav-section" style="margin-top:auto;">
     <div class="nav-section-label">連携</div>
-    <div class="nav-item" onclick="navigate('jugyoin')">
+    <div class="nav-item" onclick="navigate('jugyoin')" style="color:var(--accent2);border:1px solid var(--border);border-radius:var(--radius);">
       <span class="icon">👥</span>従業員管理台帳
     </div>
   </div>
@@ -301,7 +300,7 @@ body.theme-light #emp-back-btn{display:block;}
 <!-- MOBILE BOTTOM NAV -->
 <nav id="mobile-nav">
   <div class="mnav-inner">
-    <div class="mnav-item" onclick="navigate('dashboard')" data-page="dashboard"><div class="micon">📊</div><div class="mlabel">ホーム</div></div>
+    <div class="mnav-item active" onclick="navigate('dashboard')" data-page="dashboard"><div class="micon">📊</div><div class="mlabel">ホーム</div></div>
     <div class="mnav-item" onclick="navigate('clients')" data-page="clients"><div class="micon">🏢</div><div class="mlabel">取引先</div></div>
     <div class="mnav-item" onclick="navigate('sites')" data-page="sites"><div class="micon">📍</div><div class="mlabel">現場</div></div>
     <div class="mnav-item" onclick="navigate('contracts')" data-page="contracts"><div class="micon">📄</div><div class="mlabel">契約</div></div>
@@ -371,10 +370,12 @@ body.theme-light #emp-back-btn{display:block;}
       <div id="mainContent-records"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
     </div>
 
-    <!-- 従業員管理 (統合) -->
-    <div class="page" id="page-jugyoin" style="padding:0;overflow:auto;background:var(--emp-bg,#f5f4f0);">
+    <!-- 従業員管理（統合） -->
+    <div class="page" id="page-jugyoin" style="padding:0;overflow:auto;">
       <div id="emp-app">
-        <style>#emp-app{
+        <style>
+
+#emp-app{
   --emp-bg:#f5f4f0;--emp-surface:#fff;--emp-border:#e2e0d8;--emp-border2:#ccc9be;
   --emp-text:#1a1a18;--emp-text2:#6b6860;--emp-text3:#9e9b93;
   --emp-accent:#2d5a3d;--emp-accent-light:#e8f0eb;--emp-accent-text:#1e3d2a;
@@ -382,13 +383,129 @@ body.theme-light #emp-back-btn{display:block;}
   --emp-danger:#8b2020;--emp-danger-light:#fdf0f0;
   --emp-info:#1a4a7a;--emp-info-light:#e8f0f8;
   --emp-radius:8px;--emp-radius-lg:12px;
-}#emp-app{box-sizing:border-box;margin:0;padding:0}#emp-app-inner{font-family:'Noto Sans JP',sans-serif;background:var(--emp-bg);color:var(--emp-text);font-size:14px;line-height:1.6;min-height:100vh}#emp-login{display:flex;align-items:center;justify-content:center;min-height:100vh}#emp-app .login-box{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:40px 36px;width:100%;max-width:360px;text-align:center}#emp-app .login-box h1{font-size:18px;font-weight:700;margin-bottom:6px;color:var(--emp-accent)}#emp-app .login-box p{color:var(--emp-text2);font-size:13px;margin-bottom:28px}#emp-app .login-box input{width:100%;padding:10px 14px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:14px;font-family:inherit;margin-bottom:12px;outline:none}#emp-app .login-box input:focus{border-color:var(--emp-accent)}#emp-app .login-box button{width:100%;padding:10px;background:var(--emp-accent);color:#fff;border:none;border-radius:var(--emp-radius);font-size:14px;font-family:inherit;cursor:pointer;font-weight:500}#emp-app .login-box button:hover{background:var(--emp-accent-text)}#emp-app .login-error{color:var(--emp-danger);font-size:12px;margin-top:8px;display:none}#emp-app header{background:var(--emp-surface);border-bottom:1px solid var(--emp-border);padding:0 16px;display:flex;align-items:center;gap:8px;height:52px;position:sticky;top:0;z-index:10;flex-wrap:wrap}#emp-app header h1{font-size:15px;font-weight:700;color:var(--emp-accent);flex:1;min-width:80px}#emp-app .nav-btn{padding:6px 11px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:transparent;color:var(--emp-text2);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}#emp-app .nav-btn.active{background:var(--emp-accent-light);color:var(--emp-accent-text);border-color:var(--emp-accent)}#emp-app .nav-btn:hover:not(.active){background:var(--emp-bg)}#emp-app main{padding:20px;max-width:1100px;width:100%;margin:0 auto}#emp-app .btn{padding:7px 16px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:var(--emp-surface);color:var(--emp-text);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500}#emp-app .btn:hover{background:var(--emp-bg)}#emp-app .btn-primary{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent)}#emp-app .btn-primary:hover{background:var(--emp-accent-text)}#emp-app .btn-danger{background:var(--emp-danger-light);color:var(--emp-danger);border-color:#e8b8b8}#emp-app .btn-sm{padding:4px 10px;font-size:12px}#emp-app .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}#emp-app .scard{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px 16px}#emp-app .scard-label{font-size:11px;color:var(--emp-text3);margin-bottom:4px}#emp-app .scard-val{font-size:24px;font-weight:700}#emp-app .search-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}#emp-app .search-bar input, #emp-app .search-bar select{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit;outline:none}#emp-app .search-bar input{flex:1;min-width:160px}#emp-app .table-wrap{overflow-x:auto;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg)}#emp-app table{width:100%;border-collapse:collapse;font-size:13px}#emp-app th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--emp-border);color:var(--emp-text2);font-weight:500;white-space:nowrap;background:var(--emp-bg)}#emp-app td{padding:10px 12px;border-bottom:1px solid var(--emp-border);vertical-align:middle}#emp-app tr:last-child td{border-bottom:none}#emp-app tr:hover td{background:#fafaf8}#emp-app .emp-name{font-weight:500;cursor:pointer;color:var(--emp-accent);text-decoration:underline;text-underline-offset:3px}#emp-app .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}#emp-app .badge-active{background:#e2f4ea;color:#1a5c30}#emp-app .badge-retired{background:#f0efec;color:#5a5855}#emp-app .badge-visa{background:var(--emp-info-light);color:var(--emp-info)}#emp-app .badge-warn{background:var(--emp-warn-light);color:var(--emp-warn)}#emp-app .badge-danger{background:var(--emp-danger-light);color:var(--emp-danger)}#emp-app .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--emp-border);background:var(--emp-bg);color:var(--emp-text2)}#emp-app .form-wrap{max-width:760px}#emp-app .section-title{font-size:11px;font-weight:700;color:var(--emp-text3);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--emp-border)}#emp-app .section-title:first-child{margin-top:0}#emp-app .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}#emp-app .field{display:flex;flex-direction:column;gap:4px}#emp-app .field label{font-size:12px;color:var(--emp-text2);font-weight:500}#emp-app .field input, #emp-app .field select, #emp-app .field textarea{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit;outline:none}#emp-app .field input:focus, #emp-app .field select:focus, #emp-app .field textarea:focus{border-color:var(--emp-accent)}#emp-app .field textarea{resize:vertical;min-height:80px}#emp-app /* 部署インライン追加ボタン */
-.dept-inline{display:flex;gap:6px;align-items:center}#emp-app .dept-inline select{flex:1}#emp-app .dept-add-btn{padding:7px 10px;border-radius:var(--emp-radius);border:1px solid var(--emp-accent);background:var(--emp-accent-light);color:var(--emp-accent-text);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}#emp-app .dept-add-btn:hover{background:var(--emp-accent);color:#fff}#emp-app /* 設定ページ */
-.settings-card{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:20px;max-width:600px}#emp-app .settings-card h3{font-size:15px;font-weight:700;margin-bottom:16px}#emp-app .dept-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--emp-border);border-radius:var(--emp-radius);margin-bottom:6px;flex-wrap:wrap}#emp-app .dept-row .d1{font-weight:500;font-size:13px;flex:1;min-width:100px}#emp-app .dept-row .d2{font-size:13px;color:var(--emp-text2);flex:1;min-width:100px}#emp-app .dept-edit-form{background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:14px;margin-top:10px}#emp-app .dept-edit-form input{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit;outline:none;background:var(--emp-surface);color:var(--emp-text)}#emp-app .dept-edit-form input:focus{border-color:var(--emp-accent)}#emp-app /* モーダル */
-#emp-app .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}#emp-app .modal-overlay.open{display:flex!important;}#emp-app .modal-box{background:var(--emp-surface);border-radius:var(--emp-radius-lg);border:1px solid var(--emp-border2);width:100%;max-width:420px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.15)}#emp-app .modal-box h3{font-size:15px;font-weight:700;margin-bottom:16px}#emp-app .modal-box .field{margin-bottom:12px}#emp-app .modal-box .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}#emp-app .detail-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}#emp-app .detail-header h2{font-size:18px;font-weight:700}#emp-app .tab-list{display:flex;gap:0;border-bottom:1px solid var(--emp-border);margin-bottom:16px;overflow-x:auto}#emp-app .itab{padding:9px 16px;font-size:13px;cursor:pointer;color:var(--emp-text2);border-bottom:2px solid transparent;background:transparent;border-top:none;border-left:none;border-right:none;font-family:inherit;white-space:nowrap}#emp-app .itab.active{color:var(--emp-accent);border-bottom-color:var(--emp-accent);font-weight:500}#emp-app .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}#emp-app .detail-field{display:flex;flex-direction:column;gap:3px}#emp-app .detail-label{font-size:11px;color:var(--emp-text3);font-weight:500}#emp-app .detail-val{font-size:14px}#emp-app .list-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--emp-border);border-radius:var(--emp-radius);font-size:13px;flex-wrap:wrap}#emp-app .list-item .dt{color:var(--emp-text2);font-size:12px;min-width:90px}#emp-app .add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding:14px;background:var(--emp-bg);border-radius:var(--emp-radius);border:1px solid var(--emp-border)}#emp-app .add-row input, #emp-app .add-row select{padding:6px 9px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit}#emp-app .sel-group{display:flex;gap:6px;flex-wrap:wrap}#emp-app .sel-btn{padding:6px 16px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:var(--emp-surface);color:var(--emp-text2);cursor:pointer;font-size:13px;font-family:inherit;transition:.15s}#emp-app .sel-btn:hover{background:var(--emp-accent-light);border-color:var(--emp-accent);color:var(--emp-accent-text)}#emp-app .sel-btn.selected{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent)}#emp-app .yukyu-form{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:24px;max-width:700px}#emp-app .yukyu-form .frow{display:flex;flex-direction:column;gap:5px;margin-bottom:18px}#emp-app .yukyu-form .frow label{font-size:12px;color:var(--emp-text2);font-weight:500}#emp-app .emp-search-wrap{position:relative}#emp-app .emp-search-input{width:100%;padding:8px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit;outline:none}#emp-app .emp-search-input:focus{border-color:var(--emp-accent)}#emp-app .emp-dropdown{position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);z-index:50;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none}#emp-app .emp-dropdown.show{display:block}#emp-app .emp-option{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--emp-border)}#emp-app .emp-option:last-child{border-bottom:none}#emp-app .emp-option:hover{background:var(--emp-accent-light)}#emp-app .emp-selected-box{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid var(--emp-accent);border-radius:var(--emp-radius);background:var(--emp-accent-light)}#emp-app .photo-upload{border:1.5px dashed var(--emp-border2);border-radius:var(--emp-radius);padding:16px;text-align:center;color:var(--emp-text2);font-size:12px;cursor:pointer;background:var(--emp-bg);transition:.15s}#emp-app .photo-upload.dragover{border-color:var(--emp-accent);background:var(--emp-accent-light);color:var(--emp-accent-text)}#emp-app .empty{text-align:center;color:var(--emp-text3);padding:36px 0;font-size:13px}#emp-app .page-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;padding-bottom:100px}#emp-app .loading{text-align:center;color:var(--emp-text3);padding:48px 0}#emp-app /* 固定戻るバー（上部） */
-.sticky-back{position:sticky;top:52px;z-index:9;background:var(--emp-surface);border-bottom:1px solid var(--emp-border);padding:8px 20px;display:flex;align-items:center;gap:10px;margin:-20px -20px 20px -20px;}#emp-app .sticky-back h2{font-size:15px;font-weight:700}#emp-app /* 固定フッターバー（下部） */
-.sticky-footer{position:fixed;bottom:0;left:0;right:0;z-index:9;background:var(--emp-surface);border-top:1px solid var(--emp-border);padding:10px 24px;display:flex;gap:8px;justify-content:flex-end;box-shadow:0 -2px 8px rgba(0,0,0,.06);}#emp-app /* ハンバーガーメニュー */
-.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:transparent;flex-shrink:0}#emp-app .hamburger span{display:block;width:22px;height:2px;background:var(--emp-text);border-radius:2px;transition:.2s}#emp-app .nav-menu{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}#emp-app .nav-divider{width:1px;height:20px;background:var(--emp-border);margin:0 4px;flex-shrink:0}#emp-app /* スマホ対応 */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+#emp-app-inner{font-family:'Noto Sans JP',sans-serif;background:var(--emp-bg);color:var(--emp-text);font-size:14px;line-height:1.6;min-height:100vh}
+#emp-login{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:40px 36px;width:100%;max-width:360px;text-align:center}
+.login-box h1{font-size:18px;font-weight:700;margin-bottom:6px;color:var(--emp-accent)}
+.login-box p{color:var(--emp-text2);font-size:13px;margin-bottom:28px}
+.login-box input{width:100%;padding:10px 14px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:14px;font-family:inherit;margin-bottom:12px;outline:none}
+.login-box input:focus{border-color:var(--emp-accent)}
+.login-box button{width:100%;padding:10px;background:var(--emp-accent);color:#fff;border:none;border-radius:var(--emp-radius);font-size:14px;font-family:inherit;cursor:pointer;font-weight:500}
+.login-box button:hover{background:var(--emp-accent-text)}
+.login-error{color:var(--emp-danger);font-size:12px;margin-top:8px;display:none}
+header{background:var(--emp-surface);border-bottom:1px solid var(--emp-border);padding:0 16px;display:flex;align-items:center;gap:8px;height:52px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+header h1{font-size:15px;font-weight:700;color:var(--emp-accent);flex:1;min-width:80px}
+.nav-btn{padding:6px 11px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:transparent;color:var(--emp-text2);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}
+.nav-btn.active{background:var(--emp-accent-light);color:var(--emp-accent-text);border-color:var(--emp-accent)}
+.nav-btn:hover:not(.active){background:var(--emp-bg)}
+main{padding:20px;max-width:1100px;width:100%;margin:0 auto}
+.btn{padding:7px 16px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:var(--emp-surface);color:var(--emp-text);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500}
+.btn:hover{background:var(--emp-bg)}
+.btn-primary{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent)}
+.btn-primary:hover{background:var(--emp-accent-text)}
+.btn-danger{background:var(--emp-danger-light);color:var(--emp-danger);border-color:#e8b8b8}
+.btn-sm{padding:4px 10px;font-size:12px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.scard{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px 16px}
+.scard-label{font-size:11px;color:var(--emp-text3);margin-bottom:4px}
+.scard-val{font-size:24px;font-weight:700}
+.search-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.search-bar input,.search-bar select{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit;outline:none}
+.search-bar input{flex:1;min-width:160px}
+.table-wrap{overflow-x:auto;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--emp-border);color:var(--emp-text2);font-weight:500;white-space:nowrap;background:var(--emp-bg)}
+td{padding:10px 12px;border-bottom:1px solid var(--emp-border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.emp-name{font-weight:500;cursor:pointer;color:var(--emp-accent);text-decoration:underline;text-underline-offset:3px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+.badge-active{background:#e2f4ea;color:#1a5c30}
+.badge-retired{background:#f0efec;color:#5a5855}
+.badge-visa{background:var(--emp-info-light);color:var(--emp-info)}
+.badge-warn{background:var(--emp-warn-light);color:var(--emp-warn)}
+.badge-danger{background:var(--emp-danger-light);color:var(--emp-danger)}
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--emp-border);background:var(--emp-bg);color:var(--emp-text2)}
+.form-wrap{max-width:760px}
+.section-title{font-size:11px;font-weight:700;color:var(--emp-text3);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--emp-border)}
+.section-title:first-child{margin-top:0}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--emp-text2);font-weight:500}
+.field input,.field select,.field textarea{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--emp-accent)}
+.field textarea{resize:vertical;min-height:80px}
+/* 部署インライン追加ボタン */
+.dept-inline{display:flex;gap:6px;align-items:center}
+.dept-inline select{flex:1}
+.dept-add-btn{padding:7px 10px;border-radius:var(--emp-radius);border:1px solid var(--emp-accent);background:var(--emp-accent-light);color:var(--emp-accent-text);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}
+.dept-add-btn:hover{background:var(--emp-accent);color:#fff}
+/* 設定ページ */
+.settings-card{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:20px;max-width:600px}
+.settings-card h3{font-size:15px;font-weight:700;margin-bottom:16px}
+.dept-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--emp-border);border-radius:var(--emp-radius);margin-bottom:6px;flex-wrap:wrap}
+.dept-row .d1{font-weight:500;font-size:13px;flex:1;min-width:100px}
+.dept-row .d2{font-size:13px;color:var(--emp-text2);flex:1;min-width:100px}
+.dept-edit-form{background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:14px;margin-top:10px}
+.dept-edit-form input{padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit;outline:none;background:var(--emp-surface);color:var(--emp-text)}
+.dept-edit-form input:focus{border-color:var(--emp-accent)}
+/* モーダル */
+#emp-app .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-box{background:var(--emp-surface);border-radius:var(--emp-radius-lg);border:1px solid var(--emp-border2);width:100%;max-width:420px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal-box h3{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal-box .field{margin-bottom:12px}
+.modal-box .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.detail-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.detail-header h2{font-size:18px;font-weight:700}
+.tab-list{display:flex;gap:0;border-bottom:1px solid var(--emp-border);margin-bottom:16px;overflow-x:auto}
+.itab{padding:9px 16px;font-size:13px;cursor:pointer;color:var(--emp-text2);border-bottom:2px solid transparent;background:transparent;border-top:none;border-left:none;border-right:none;font-family:inherit;white-space:nowrap}
+.itab.active{color:var(--emp-accent);border-bottom-color:var(--emp-accent);font-weight:500}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.detail-field{display:flex;flex-direction:column;gap:3px}
+.detail-label{font-size:11px;color:var(--emp-text3);font-weight:500}
+.detail-val{font-size:14px}
+.list-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--emp-border);border-radius:var(--emp-radius);font-size:13px;flex-wrap:wrap}
+.list-item .dt{color:var(--emp-text2);font-size:12px;min-width:90px}
+.add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding:14px;background:var(--emp-bg);border-radius:var(--emp-radius);border:1px solid var(--emp-border)}
+.add-row input,.add-row select{padding:6px 9px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);background:var(--emp-surface);color:var(--emp-text);font-size:13px;font-family:inherit}
+.sel-group{display:flex;gap:6px;flex-wrap:wrap}
+.sel-btn{padding:6px 16px;border-radius:var(--emp-radius);border:1px solid var(--emp-border2);background:var(--emp-surface);color:var(--emp-text2);cursor:pointer;font-size:13px;font-family:inherit;transition:.15s}
+.sel-btn:hover{background:var(--emp-accent-light);border-color:var(--emp-accent);color:var(--emp-accent-text)}
+.sel-btn.selected{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent)}
+.yukyu-form{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:24px;max-width:700px}
+.yukyu-form .frow{display:flex;flex-direction:column;gap:5px;margin-bottom:18px}
+.yukyu-form .frow label{font-size:12px;color:var(--emp-text2);font-weight:500}
+.emp-search-wrap{position:relative}
+.emp-search-input{width:100%;padding:8px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit;outline:none}
+.emp-search-input:focus{border-color:var(--emp-accent)}
+.emp-dropdown{position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);z-index:50;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none}
+.emp-dropdown.show{display:block}
+.emp-option{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--emp-border)}
+.emp-option:last-child{border-bottom:none}
+.emp-option:hover{background:var(--emp-accent-light)}
+.emp-selected-box{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid var(--emp-accent);border-radius:var(--emp-radius);background:var(--emp-accent-light)}
+.photo-upload{border:1.5px dashed var(--emp-border2);border-radius:var(--emp-radius);padding:16px;text-align:center;color:var(--emp-text2);font-size:12px;cursor:pointer;background:var(--emp-bg);transition:.15s}
+.photo-upload.dragover{border-color:var(--emp-accent);background:var(--emp-accent-light);color:var(--emp-accent-text)}
+.empty{text-align:center;color:var(--emp-text3);padding:36px 0;font-size:13px}
+.page-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;padding-bottom:100px}
+.loading{text-align:center;color:var(--emp-text3);padding:48px 0}
+
+/* 固定戻るバー（上部） */
+.sticky-back{position:sticky;top:52px;z-index:9;background:var(--emp-surface);border-bottom:1px solid var(--emp-border);padding:8px 20px;display:flex;align-items:center;gap:10px;margin:-20px -20px 20px -20px;}
+.sticky-back h2{font-size:15px;font-weight:700}
+
+/* 固定フッターバー（下部） */
+.sticky-footer{position:fixed;bottom:0;left:0;right:0;z-index:9;background:var(--emp-surface);border-top:1px solid var(--emp-border);padding:10px 24px;display:flex;gap:8px;justify-content:flex-end;box-shadow:0 -2px 8px rgba(0,0,0,.06);}
+
+/* ハンバーガーメニュー */
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:transparent;flex-shrink:0}
+.hamburger span{display:block;width:22px;height:2px;background:var(--emp-text);border-radius:2px;transition:.2s}
+.nav-menu{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}
+.nav-divider{width:1px;height:20px;background:var(--emp-border);margin:0 4px;flex-shrink:0}
+
+/* スマホ対応 */
 @media(max-width:768px){
   header{height:52px;padding:0 12px;flex-wrap:nowrap;overflow:hidden}
   header h1{font-size:13px;white-space:nowrap}
@@ -445,9 +562,15 @@ body.theme-light #emp-back-btn{display:block;}
   .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--emp-border);margin-top:4px;flex-wrap:wrap;gap:6px;}
   .table-wrap td:last-child::before{display:none;}
   .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
-}#emp-app /* トースト通知 */
-#emp-toast-wrap{position:fixed;bottom:24px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}#emp-app .j-toast{background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}#emp-app .j-toast.success{border-left:3px solid #1a5c30;}#emp-app .j-toast.error{border-left:3px solid var(--emp-danger);}#emp-app .j-toast.warn{border-left:3px solid var(--emp-warn);}
+}
+/* トースト通知 */
+#emp-toast-wrap{position:fixed;bottom:24px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.j-toast{background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.j-toast.success{border-left:3px solid #1a5c30;}
+.j-toast.error{border-left:3px solid var(--emp-danger);}
+.j-toast.warn{border-left:3px solid var(--emp-warn);}
 
+#emp-app .modal-overlay.open{display:flex!important;}
         </style>
         <div id="emp-login">
   <div class="login-box">
@@ -977,13 +1100,15 @@ const NAV_BTNS={
 };
 function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.mnav-item').forEach(n=>n.classList.remove('active'));
-  // テーマ切り替え
   if(page!=='jugyoin'){
     document.body.classList.remove('theme-light');
     document.body.classList.add('theme-dark');
+  } else {
+    document.body.classList.remove('theme-dark');
+    document.body.classList.add('theme-light');
   }
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.mnav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('page-title').textContent=NAV_TITLES[page]||page;
   document.getElementById('topbar-actions').innerHTML=NAV_BTNS[page]||'';
@@ -997,17 +1122,13 @@ function navigate(page){
   else if(page==='billing'){initBillingMonths();loadBilling();}
   else if(page==='records') loadRecords();
   else if(page==='jugyoin'){
-    // テーマを明るいモードに切り替え
-    document.body.classList.remove('theme-dark');
-    document.body.classList.add('theme-light');
-    // 派遣管理でログイン済みなら自動認証
     if(sessionStorage.getItem('dauth') && sessionStorage.getItem('emp_auth')!=='1'){
       sessionStorage.setItem('emp_auth','1');
     }
     if(sessionStorage.getItem('emp_auth')==='1'){
       document.getElementById('emp-login').style.display='none';
       document.getElementById('emp-app-inner').style.display='flex';
-      if(!window._empLoaded){window._empLoaded=true;emp_loadAndRender();}
+      if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
     } else {
       document.getElementById('emp-login').style.display='flex';
       document.getElementById('emp-app-inner').style.display='none';
@@ -1964,7 +2085,18 @@ function openPdfWindow(title, bodyHtml, filename){
   const w = window.open('','_blank','width=900,height=1100');
   if(!w){toast('ポップアップがブロックされました。ブラウザの設定でこのサイトのポップアップを許可してください。','error');return;}
   w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${esc(title)}</title><style>${css}</style>
-</head><body class="theme-dark">
+<style>
+/* テーマ切り替え */
+body.theme-dark{background:var(--bg,#0f1117);color:var(--text,#e2e8f0);}
+body.theme-light{background:#f5f4f0;color:#1a1a18;}
+body.theme-light #sidebar{display:none!important;}
+body.theme-light .topbar{display:none!important;}
+body.theme-light #main{margin-left:0!important;padding:0!important;}
+body.theme-light #main .page{display:none!important;}
+body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
+#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
+body.theme-light #emp-back-btn{display:block;}
+</style></head><body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>${bodyHtml}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   w.document.close();
 }
@@ -2600,7 +2732,6 @@ async function saveSettings(){
 
 // ===== HELPERS =====
 function openModal(id){
-  // 他の開いているモーダルをすべて閉じてから開く
   document.querySelectorAll('.modal-overlay.open').forEach(m=>{if(m.id!==id)m.classList.remove('open');});
   document.getElementById(id).classList.add('open');
 }
@@ -2632,16 +2763,16 @@ const KUBUN=['計画','突発'];
 const INPUT_BY=['三上','金森','岩本'];
 
 // ---- XSS エスケープ ----
-function emp_emp_esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
+function emp_esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 
 // ---- トースト通知 ----
-function emp_emp__ensureToastWrap(){
+function _ensureToastWrap(){
   if(document.getElementById('emp-toast-wrap'))return;
   const wrap=document.createElement('div');wrap.id='emp-toast-wrap';
   document.body.appendChild(wrap);
 }
-function emp_emp_showToast(msg,type='success'){
-  emp__ensureToastWrap();
+function showToast(msg,type='success'){
+  _ensureToastWrap();
   const el=document.createElement('div');
   el.className='j-toast '+type;
   const icon=type==='success'?'✓':type==='error'?'✕':'⚠';
@@ -2699,15 +2830,15 @@ let visibleCols=ALL_COLS.filter(c=>c.default).map(c=>c.key);
 try{const s=localStorage.getItem('emp_cols');if(s)visibleCols=JSON.parse(s);}catch(e){}
 
 // ---- Auth ----
-function emp_emp_doLogin(){
+function emp_doLogin(){
   if(document.getElementById('pwInput').value===APP_PASSWORD){
     sessionStorage.setItem('emp_auth','1');
-    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('emp-login').style.display='none';
     document.getElementById('appScreen').style.display='flex';
     loadAndRender();
   } else {document.getElementById('loginErr').style.display='block';}
 }
-function doLogout(){sessionStorage.removeItem('emp_auth');location.reload();}
+function doLogout(){sessionStorage.removeItem('emp_auth');document.getElementById('emp-login').style.display='flex';document.getElementById('emp-app-inner').style.display='none';}
 
 // ---- ハンバーガーメニュー ----
 function toggleMenu(){
@@ -2734,7 +2865,7 @@ if(new URLSearchParams(location.search).get('autologin')==='1'){
   sessionStorage.setItem('emp_auth','1');
 }
 if(sessionStorage.getItem('emp_auth')==='1'){
-  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('emp-login').style.display='none';
   document.getElementById('appScreen').style.display='flex';
   loadAndRender();
 }
@@ -2771,7 +2902,7 @@ async function loadAndRender(){
   const results=await Promise.allSettled(tasks.map(t=>t.fn()));
   const failed=results.map((r,i)=>r.status==='rejected'?tasks[i].name:null).filter(Boolean);
   if(failed.length){
-    emp_showToast(`データ読み込み失敗：${failed.join('、')}`, 'error');
+    showToast(`データ読み込み失敗：${failed.join('、')}`, 'error');
     console.error('Load errors:', results.filter(r=>r.status==='rejected').map(r=>r.reason));
   }
   syncFromST();
@@ -2871,7 +3002,7 @@ function closeDeptModal(){document.getElementById('deptModal').style.display='no
 async function saveDeptModal(){
   const s1=document.getElementById('dm_s1').value.trim();
   const s2=document.getElementById('dm_s2').value.trim();
-  if(!s1){emp_showToast('所属1は必須です','error');return;}
+  if(!s1){showToast('所属1は必須です','error');return;}
   try{
     if(deptModalMode==='add'){
       const res=await sb('departments','POST',{shozoku1:s1,shozoku2:s2});
@@ -2887,7 +3018,7 @@ async function saveDeptModal(){
       if(currentView==='settings')renderSettings();
       else render();
     }
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- Nav ----
@@ -3531,7 +3662,7 @@ function df(label,val,full){
 async function saveMemo(id){
   const e=employees.find(x=>x.id===id);
   e.memo=document.getElementById('memoText').value;e.updated_at=new Date().toISOString().slice(0,10);
-  await sb('employees?id=eq.'+id,'PATCH',{memo:e.memo,updated_at:e.updated_at});emp_showToast('保存しました');
+  await sb('employees?id=eq.'+id,'PATCH',{memo:e.memo,updated_at:e.updated_at});showToast('保存しました');
 }
 
 // ---- 派遣契約読み込み ----
@@ -3621,7 +3752,7 @@ async function addRcImg(empId,input){
   const f=input.files[0];if(!f)return;
   const e=employees.find(x=>x.id===empId);
   e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){emp_showToast('最大4枚です','warn');return;}
+  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
   let data;
   if(f.type.startsWith('image/')){data=await compressImage(f);}
   else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
@@ -3634,7 +3765,7 @@ async function addRcImg(empId,input){
 async function addRcImgDrop(empId,data){
   const e=employees.find(x=>x.id===empId);
   e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){emp_showToast('最大4枚です','warn');return;}
+  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
   e.residence_card_imgs.push(data);
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+empId,'PATCH',{residence_card_imgs:e.residence_card_imgs,updated_at:e.updated_at});
@@ -3654,7 +3785,7 @@ async function addLicImg(empId,input){
   const f=input.files[0];if(!f)return;
   const e=employees.find(x=>x.id===empId);
   e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){emp_showToast('最大4枚です','warn');return;}
+  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
   let data;
   if(f.type.startsWith('image/')){data=await compressImage(f);}
   else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
@@ -3667,7 +3798,7 @@ async function addLicImg(empId,input){
 async function addLicImgDrop(empId,data){
   const e=employees.find(x=>x.id===empId);
   e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){emp_showToast('最大4枚です','warn');return;}
+  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
   e.license_imgs.push(data);
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+empId,'PATCH',{license_imgs:e.license_imgs,updated_at:e.updated_at});
@@ -3697,7 +3828,7 @@ async function saveLicense(id){
   };
   Object.assign(e,patch);
   await sb('employees?id=eq.'+id,'PATCH',patch);
-  emp_showToast('保存しました');renderDT();
+  showToast('保存しました');renderDT();
   setTimeout(()=>{
     setupDrop('licDetailDrop',(d)=>addLicImgDrop(id,d));
     setupDrop('rcDetailDrop',(d)=>addRcImgDrop(id,d));
@@ -3706,7 +3837,7 @@ async function saveLicense(id){
 async function addShikaku(id){
   const e=employees.find(x=>x.id===id);
   const name=document.getElementById('sk_name')?.value.trim();
-  if(!name){emp_showToast('資格名を入力してください','error');return;}
+  if(!name){showToast('資格名を入力してください','error');return;}
   e.shikaku_list=e.shikaku_list||[];
   e.shikaku_list.push({name,date:document.getElementById('sk_date')?.value||'',expiry:document.getElementById('sk_expiry')?.value||'',img:skImgData});
   skImgData='';e.updated_at=new Date().toISOString().slice(0,10);
@@ -3729,7 +3860,7 @@ function previewKI(input){
 }
 async function addKenko(id){
   const e=employees.find(x=>x.id===id),d=document.getElementById('kd').value;
-  if(!d){emp_showToast('受診日を入力してください','error');return;}
+  if(!d){showToast('受診日を入力してください','error');return;}
   e.kenkou_list.push({date:d,result:document.getElementById('kr').value,img:kenkoImgData});
   kenkoImgData='';e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+id,'PATCH',{kenkou_list:e.kenkou_list,updated_at:e.updated_at});renderDT();
@@ -3837,7 +3968,7 @@ function openWorkPatternModal(id=null){
 function closeWpModal(){document.getElementById('wpModal').style.display='none';}
 async function saveWpModal(){
   const name=document.getElementById('wp_name').value.trim();
-  if(!name){emp_showToast('パターン名は必須です','error');return;}
+  if(!name){showToast('パターン名は必須です','error');return;}
   const data={
     name,
     start_time:document.getElementById('wp_start').value||null,
@@ -3851,7 +3982,7 @@ async function saveWpModal(){
     if(wpEditId){await sb('work_patterns?id=eq.'+wpEditId,'PATCH',data);}
     else{await sb('work_patterns','POST',{...data,sort_order:workPatterns.length+1});}
     await loadWorkPatterns();closeWpModal();renderSettings();
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function deleteWorkPattern(id){
   if(!confirm('この勤務パターンを削除しますか？'))return;
@@ -3871,15 +4002,15 @@ async function saveCompanyInfo(){
   try{
     await sb('company_info?id=eq.1','PATCH',data);
     companyInfo={...companyInfo,...data};
-    emp_showToast('保存しました');
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+    showToast('保存しました');
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- 証明書生成 ----
 function generateCertificate(empId,type){
   const e=employees.find(x=>x.id===empId);
-  if(!e){emp_showToast('従業員が見つかりません','error');return;}
-  if(!companyInfo.company_name){emp_showToast('設定画面で発行元情報を登録してください','warn');return;}
+  if(!e){showToast('従業員が見つかりません','error');return;}
+  if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
 
   const today=new Date();
   const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
@@ -3907,7 +4038,18 @@ function generateCertificate(empId,type){
   @media print{body{padding:20px}}
 </style>
 
-</head>
+<style>
+/* テーマ切り替え */
+body.theme-dark{background:var(--bg,#0f1117);color:var(--text,#e2e8f0);}
+body.theme-light{background:#f5f4f0;color:#1a1a18;}
+body.theme-light #sidebar{display:none!important;}
+body.theme-light .topbar{display:none!important;}
+body.theme-light #main{margin-left:0!important;padding:0!important;}
+body.theme-light #main .page{display:none!important;}
+body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
+#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
+body.theme-light #emp-back-btn{display:block;}
+</style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
   <div class="date">発行日：${todayStr}</div>
@@ -3954,11 +4096,11 @@ function generateCertificate(empId,type){
 
 // ---- 雇用契約書 ----
 let contractEmpId=null;
-function emp_emp_openContractModal(empId){
+function emp_openContractModal(empId){
   contractEmpId=empId;
   const e=employees.find(x=>x.id===empId);
   if(!e)return;
-  if(!companyInfo.company_name){emp_showToast('設定画面で発行元情報を登録してください','warn');return;}
+  if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
   const isFixed=e.employment_type!=='permanent';
   const dept=departments.find(d=>d.id===Number(e.dept_id));
   document.getElementById('contractModalBody').innerHTML=`
@@ -4034,7 +4176,18 @@ function generateContract(){
   @media print{body{padding:15px 25px}h1{font-size:18px}}
 </style>
 
-</head>
+<style>
+/* テーマ切り替え */
+body.theme-dark{background:var(--bg,#0f1117);color:var(--text,#e2e8f0);}
+body.theme-light{background:#f5f4f0;color:#1a1a18;}
+body.theme-light #sidebar{display:none!important;}
+body.theme-light .topbar{display:none!important;}
+body.theme-light #main{margin-left:0!important;padding:0!important;}
+body.theme-light #main .page{display:none!important;}
+body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
+#emp-back-btn{position:fixed;top:10px;left:10px;z-index:1000;background:#2d5a3d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;display:none;}
+body.theme-light #emp-back-btn{display:block;}
+</style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('dashboard')">← 派遣管理に戻る</button>
   <div class="date">作成日：${todayStr}</div>
@@ -4360,11 +4513,11 @@ async function deptDrop(e,targetId){
   try{
     await Promise.all(departments.map((d,i)=>sb('departments?id=eq.'+d.id,'PATCH',{sort_order:i+1})));
     await loadDepts();renderSettings();
-  }catch(err){emp_showToast('並び替えの保存に失敗しました：'+err.message,'error');}
+  }catch(err){showToast('並び替えの保存に失敗しました：'+err.message,'error');}
 }
 async function deleteDept(id){
   const inUse=employees.some(e=>Number(e.dept_id)===id);
-  if(inUse){emp_showToast('この部署は使用中です。先に従業員の部署を変更してください。','warn');return;}
+  if(inUse){showToast('この部署は使用中です。先に従業員の部署を変更してください。','warn');return;}
   if(!confirm('この部署を削除しますか？'))return;
   await sb('departments?id=eq.'+id,'DELETE');
   await loadDepts();renderSettings();
@@ -4381,16 +4534,16 @@ function openVisaModal(mode,id=null,name=''){
 function closeVisaModal(){document.getElementById('visaModal').style.display='none';}
 async function saveVisaModal(){
   const name=document.getElementById('vm_name').value.trim();
-  if(!name){emp_showToast('在留資格名を入力してください','error');return;}
+  if(!name){showToast('在留資格名を入力してください','error');return;}
   try{
     if(visaModalMode==='add'){await sb('visa_types','POST',{name});}
     else{await sb('visa_types?id=eq.'+visaModalId,'PATCH',{name});}
     await loadVisaTypes();closeVisaModal();renderSettings();
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function deleteVisaType(id){
   const inUse=employees.some(e=>e.visa===visaTypes.find(v=>v.id===id)?.name);
-  if(inUse){emp_showToast('この在留資格は使用中のため削除できません。','warn');return;}
+  if(inUse){showToast('この在留資格は使用中のため削除できません。','warn');return;}
   if(!confirm('この在留資格を削除しますか？'))return;
   await sb('visa_types?id=eq.'+id,'DELETE');
   await loadVisaTypes();renderSettings();
@@ -4503,9 +4656,9 @@ function previewKfImg(input){
 }
 async function addKenkoFromList(){
   const empId=document.getElementById('kfEmp')?.value;
-  if(!empId){emp_showToast('従業員を選択してください','error');return;}
+  if(!empId){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('kfDate')?.value;
-  if(!d){emp_showToast('受診日を入力してください','error');return;}
+  if(!d){showToast('受診日を入力してください','error');return;}
   const result=document.getElementById('kfResult')?.value;
   const e=employees.find(x=>x.id===Number(empId));
   e.kenkou_list=e.kenkou_list||[];
@@ -4620,7 +4773,7 @@ async function saveKousokuDate(id,clear=false){
   e.kousoku_start_date=d;
   e.updated_at=new Date().toISOString().slice(0,10);
   await sb('employees?id=eq.'+id,'PATCH',{kousoku_start_date:d||null,updated_at:e.updated_at});
-  if(!clear)emp_showToast('保存しました');
+  if(!clear)showToast('保存しました');
   renderDT();
 }
 
@@ -4645,7 +4798,7 @@ function openGrantModal(empId,editGrantId=null){
 function closeGrantModal(){document.getElementById('grantModal').style.display='none';}
 async function saveGrant(){
   const d=document.getElementById('gm_date').value;
-  if(!d){emp_showToast('付与日は必須です','error');return;}
+  if(!d){showToast('付与日は必須です','error');return;}
   const daysVal=document.getElementById('gm_days').value;
   const days=daysVal!==''?Number(daysVal):null;
   let expire=document.getElementById('gm_expire').value;
@@ -4660,7 +4813,7 @@ async function saveGrant(){
       await sb('yukyu_grants','POST',{employee_id:grantEmpId,grant_date:d,days,expire_date:expire});
     }
     await loadGrants();closeGrantModal();renderDT();
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 async function delGrant(id,empId){
   if(!confirm('この付与記録を削除しますか？'))return;
@@ -4723,19 +4876,19 @@ function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const 
 function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
 function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
 async function saveYR(){
-  if(!yf.employee_id){emp_showToast('従業員を選択してください','error');return;}
+  if(!yf.employee_id){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('yDate')?.value;
-  if(!d){emp_showToast('使用日を入力してください','error');return;}
-  if(!yf.use_type){emp_showToast('使用内容を選択してください','error');return;}
-  if(!yf.shubetsu){emp_showToast('種別を選択してください','error');return;}
-  if(!yf.kubun){emp_showToast('区分を選択してください','error');return;}
-  if(!yf.input_by){emp_showToast('入力者を選択してください','error');return;}
+  if(!d){showToast('使用日を入力してください','error');return;}
+  if(!yf.use_type){showToast('使用内容を選択してください','error');return;}
+  if(!yf.shubetsu){showToast('種別を選択してください','error');return;}
+  if(!yf.kubun){showToast('区分を選択してください','error');return;}
+  if(!yf.input_by){showToast('入力者を選択してください','error');return;}
   try{
     await sb('yukyu_records','POST',{employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,touroku_date:new Date().toISOString().slice(0,10),biko:document.getElementById('yBiko')?.value||''});
-    await loadYukyu();emp_showToast('登録しました');
+    await loadYukyu();showToast('登録しました');
     if(yfFromDetail){detailTab='yukyu';currentView='detail';yfFromDetail=false;render();}
     else showView('yukyu_list');
-  }catch(e){emp_showToast('登録に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('登録に失敗しました：'+e.message,'error');}
 }
 
 // ---- 従業員フォーム ----
@@ -4939,8 +5092,8 @@ function setupFormDropZones(){
 
 async function saveForm(isEdit,id){
   const g=k=>{const el=document.getElementById('f_'+k);return el?el.value:'';};
-  if(!g('sei')||!g('mei')){emp_showToast('姓・名は必須です','error');return;}
-  if(!g('company')){emp_showToast('会社（セレクト／覚善）を選択してください','error');return;}
+  if(!g('sei')||!g('mei')){showToast('姓・名は必須です','error');return;}
+  if(!g('company')){showToast('会社（セレクト／覚善）を選択してください','error');return;}
   const deptId=document.getElementById('f_dept_id')?.value;
   const emp={
     shain_no:g('shain_no'),
@@ -4988,7 +5141,7 @@ async function saveForm(isEdit,id){
     }
     licFormImgData='';skFormImgData=['','',''];
     await loadEmployees();currentView='list';render();
-  }catch(e){emp_showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- CSV インポート ----
@@ -5003,7 +5156,7 @@ async function importCSV(input){
   const file=input.files[0];if(!file)return;
   const text=await file.text();
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-  if(lines.length<2){emp_showToast('データがありません','warn');return;}
+  if(lines.length<2){showToast('データがありません','warn');return;}
   const headers=parseCSVLine(lines[0]);
   const idx=col=>headers.indexOf(col);
   const rows=lines.slice(1).map(l=>parseCSVLine(l));
@@ -5030,7 +5183,7 @@ async function importCSV(input){
   }
   input.value='';
   await loadEmployees();render();
-  emp_showToast(`インポート完了！　成功：${ok}件${err?' / エラー：'+err+'件':''}`,ok&&!err?'success':'warn');
+  showToast(`インポート完了！　成功：${ok}件${err?' / エラー：'+err+'件':''}`,ok&&!err?'success':'warn');
 }
 function parseCSVLine(line){
   const result=[];let cur='',inQ=false;
@@ -5065,14 +5218,7 @@ function dlCSV(data,name){
 
 // ===== INIT =====
 checkLogin();
-// Employee app init
-(function(){
-  if(sessionStorage.getItem('emp_auth')==='1'){
-    document.getElementById('emp-login').style.display='none';
-    document.getElementById('emp-app-inner').style.display='flex';
-    window._empLoaded=false; // loadAndRenderはtab切り替え時に実行
-  }
-})();
+
 </script>
 </body>
 </html>
