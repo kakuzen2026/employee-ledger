@@ -2017,8 +2017,8 @@ function buildKobetsuHtml(ph){
   const S='border:1px solid #666;padding:2px 5px;font-size:8.5pt;line-height:1.55;vertical-align:top;';
   const L=S+'background:#f0f0f0;font-weight:bold;white-space:nowrap;';
   const V=S;
-  const labelStyle = S+'background:#f0f0f0;font-weight:bold;white-space:nowrap;width:34%;';
-  const valStyle = S+'width:66%;';
+  const labelStyle = S+'background:#f0f0f0;font-weight:bold;white-space:nowrap;width:26%;';
+  const valStyle = S+'width:74%;';
   const tbl = (rows) => `<table style="width:100%;border-collapse:collapse;margin:0;">${rows}</table>`;
   const r = (label, val) => `<tr><td style="${labelStyle}">${label}</td><td style="${valStyle}">${val||'　'}</td></tr>`;
   const r2 = (l1,v1,l2,v2) => `<tr><td style="${L};width:18%;">${l1}</td><td style="${V};width:32%;">${v1||'　'}</td><td style="${L};width:18%;">${l2}</td><td style="${V};width:32%;">${v2||'　'}</td></tr>`;
@@ -2054,16 +2054,11 @@ ${secEnd()}
 
 ${secStart()}
 ${secHead('限定区分 / 協定対象 / 派遣人員')}
-<table style="width:100%;border-collapse:collapse;">
-  <tr>
-    <td style="${L};width:24%;">無期雇用・60歳以上限定</td>
-    <td style="${V};width:42%;">${ph.MUKIROGEN==='mukirogen'?'☑':'□'} 無期雇用又は60歳以上に限定　${ph.MUKIROGEN==='none'?'☑':'□'} 限定なし</td>
-    <td style="${L};width:18%;white-space:nowrap;">協定対象限定</td>
-    <td style="${V};width:10%;">${ph.KYOTEI==='yes'?'☑':'□'} 限定　${ph.KYOTEI==='no'?'☑':'□'} なし</td>
-    <td style="${L};width:10%;white-space:nowrap;">派遣人員</td>
-    <td style="${V};width:8%;white-space:nowrap;">${e(ph.STAFF_COUNT)}人</td>
-  </tr>
-</table>
+${tbl(`
+  ${r('無期雇用・60歳以上限定', (ph.MUKIROGEN==='mukirogen'?'☑':'□')+' 無期雇用又は60歳以上に限定　'+(ph.MUKIROGEN==='none'?'☑':'□')+' 限定なし')}
+  ${r('協定対象派遣労働者に限定', (ph.KYOTEI==='yes'?'☑':'□')+' 限定　'+(ph.KYOTEI==='no'?'☑':'□')+' なし')}
+  ${r('派遣人員', e(ph.STAFF_COUNT)+'人')}
+`)}
 ${secEnd()}
 
 ${secStart()}
