@@ -3026,16 +3026,16 @@ function renderList(){
       <tbody>${list.map(e=>{
         const dept=departments.find(d=>d.id===Number(e.dept_id));
         const exp=e.visa_expiry?new Date(e.visa_expiry):null,dl=exp?Math.round((exp-today)/86400000):null;
-        const vb=e.visa?(dl!==null&&dl<0?`<span class="badge badge-danger">${e.visa}</span>`:(dl!==null&&dl<90?`<span class="badge badge-warn">${e.visa}</span>`:`<span class="badge badge-visa">${e.visa}</span>`)):'<span style="color:var(--text3)">—</span>';
-        const el=e.visa_expiry?(dl<0?`<span style="color:var(--danger);font-size:12px">${e.visa_expiry}（期限切れ）</span>`:(dl<90?`<span style="color:var(--warn);font-size:12px">${e.visa_expiry}（残${dl}日）</span>`:`<span style="font-size:12px">${e.visa_expiry}</span>`)):'<span style="color:var(--text3)">—</span>';
+        const vb=e.visa?(dl!==null&&dl<0?`<span class="badge badge-danger">${e.visa}</span>`:(dl!==null&&dl<90?`<span class="badge badge-warn">${e.visa}</span>`:`<span class="badge badge-visa">${e.visa}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
+        const el=e.visa_expiry?(dl<0?`<span style="color:var(--emp-danger);font-size:12px">${e.visa_expiry}（期限切れ）</span>`:(dl<90?`<span style="color:var(--emp-warn);font-size:12px">${e.visa_expiry}（残${dl}日）</span>`:`<span style="font-size:12px">${e.visa_expiry}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
         const licExp=e.license_expiry?new Date(e.license_expiry):null,licDl=licExp?Math.round((licExp-today)/86400000):null;
-        const ll=e.license_expiry?(licDl<0?`<span style="color:var(--danger);font-size:12px">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--warn);font-size:12px">${e.license_expiry}（残${licDl}日）</span>`:`<span style="font-size:12px">${e.license_expiry}</span>`)):'<span style="color:var(--text3)">—</span>';
+        const ll=e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger);font-size:12px">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn);font-size:12px">${e.license_expiry}（残${licDl}日）</span>`:`<span style="font-size:12px">${e.license_expiry}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
         const isExpired=(dl!==null&&dl<0)||(licDl!==null&&licDl<0);
         const isWarn=(dl!==null&&dl>=0&&dl<90)||(licDl!==null&&licDl>=0&&licDl<90);
         const rowBg=isExpired?'background:#fdf0f0':isWarn?'background:#fdf3e7':'';
-        const companyBadge=e.company==='セレクト'?`<span class="badge badge-visa">セレクト</span>`:e.company==='覚善'?`<span class="badge badge-active">覚善</span>`:'<span style="color:var(--text3)">—</span>';
+        const companyBadge=e.company==='セレクト'?`<span class="badge badge-visa">セレクト</span>`:e.company==='覚善'?`<span class="badge badge-active">覚善</span>`:'<span style="color:var(--emp-text3)">—</span>';
         return`<tr style="${rowBg}">
-          <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><span style="font-size:11px;color:var(--text2);font-weight:400">${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span></span>${e.shain_no&&!showCol('shain_no')?`<br><span style="font-size:11px;color:var(--text3)">No. ${emp_esc(e.shain_no)}</span>`:''}</td>
+          <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><span style="font-size:11px;color:var(--emp-text2);font-weight:400">${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span></span>${e.shain_no&&!showCol('shain_no')?`<br><span style="font-size:11px;color:var(--emp-text3)">No. ${emp_esc(e.shain_no)}</span>`:''}</td>
           ${showCol('company')?`<td data-label="会社">${companyBadge}</td>`:''}
           ${showCol('shozoku1')?`<td data-label="所属1">${emp_esc(dept?.shozoku1||'—')}</td>`:''}
           ${showCol('shozoku2')?`<td data-label="所属2">${emp_esc(dept?.shozoku2||'—')}</td>`:''}
@@ -3045,8 +3045,8 @@ function renderList(){
           ${showCol('visa_expiry')?`<td data-label="在留期限">${el}</td>`:''}
           ${showCol('license_expiry')?`<td data-label="免許期限">${ll}</td>`:''}
           ${showCol('nyusha_date')?`<td data-label="入社日" style="font-size:12px">${emp_esc(e.nyusha_date||'—')}</td>`:''}
-          ${showCol('shain_no')?`<td data-label="社員番号" style="font-size:12px;color:var(--text2)">${emp_esc(e.shain_no||'—')}</td>`:''}
-          ${showCol('updated_at')?`<td data-label="更新日" style="font-size:12px;color:var(--text3)">${emp_esc(e.updated_at||'—')}</td>`:''}
+          ${showCol('shain_no')?`<td data-label="社員番号" style="font-size:12px;color:var(--emp-text2)">${emp_esc(e.shain_no||'—')}</td>`:''}
+          ${showCol('updated_at')?`<td data-label="更新日" style="font-size:12px;color:var(--emp-text3)">${emp_esc(e.updated_at||'—')}</td>`:''}
           <td class="no-label" style="white-space:nowrap">
             <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
             <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')" style="margin-left:4px">在職証明</button>
@@ -3107,9 +3107,9 @@ function renderDetail(id){
       <h2>${emp_esc(e.sei)} ${emp_esc(e.mei)}</h2>
       <span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${emp_esc(e.status||'—')}</span>
       ${dl!==null&&dl<90?`<span class="badge badge-warn">在留${dl<0?'期限切れ':'残'+dl+'日'}</span>`:''}
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">最終更新: ${emp_esc(e.updated_at||'—')}</span>
+      <span style="font-size:12px;color:var(--emp-text3);margin-left:auto">最終更新: ${emp_esc(e.updated_at||'—')}</span>
       <button class="btn btn-sm" ${prevEmp?`onclick="viewDetail(${prevEmp.id})"`:'disabled'} style="${!prevEmp?'opacity:.4':''}">◀ 前へ</button>
-      <span style="font-size:12px;color:var(--text3)">${idx+1}/${currentFilteredList.length}</span>
+      <span style="font-size:12px;color:var(--emp-text3)">${idx+1}/${currentFilteredList.length}</span>
       <button class="btn btn-sm" ${nextEmp?`onclick="viewDetail(${nextEmp.id})"`:'disabled'} style="${!nextEmp?'opacity:.4':''}">次へ ▶</button>
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
@@ -3190,7 +3190,7 @@ async function renderAlert(){
     const visaLabel=e.visa_expiry?(vd<0?`<span class="badge badge-danger">在留 期限切れ</span>`:`<span class="badge badge-warn">在留 残${vd}日</span>`):'';
     const licLabel=e.license_expiry&&ld<90?(ld<0?`<span class="badge badge-danger">免許 期限切れ</span>`:`<span class="badge badge-warn">免許 残${ld}日</span>`):'';
     return`<tr style="${rowBg}">
-      <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}<br><span style="font-size:11px;color:var(--text2)">${e.seikana||''} ${e.meikana||''}</span></span></td>
+      <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}<br><span style="font-size:11px;color:var(--emp-text2)">${e.seikana||''} ${e.meikana||''}</span></span></td>
       <td>${dept?.shozoku1||'—'}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding-top:12px">${visaLabel}${licLabel}</td>
       <td style="font-size:12px">${e.visa_expiry&&vd<90?e.visa_expiry:'—'}</td>
@@ -3206,7 +3206,7 @@ async function renderAlert(){
 
     ${contractAlerts.length>0?`
     <div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--danger)">⚠ 雇用契約書アラート（${contractAlerts.length}名）</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-danger)">⚠ 雇用契約書アラート（${contractAlerts.length}名）</div>
       <div class="table-wrap"><table>
         <thead><tr><th>氏名</th><th>所属</th><th>状態</th><th>契約終了日</th><th></th></tr></thead>
         <tbody>${contractAlerts.map(e=>{
@@ -3231,7 +3231,7 @@ async function renderAlert(){
 
     ${yukyuAlerts.length>0?`
     <div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--warn)">⚠ 有給付与日数が未設定の従業員（${yukyuAlerts.length}名）</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-warn)">⚠ 有給付与日数が未設定の従業員（${yukyuAlerts.length}名）</div>
       <div class="table-wrap"><table>
         <thead><tr><th>氏名</th><th>所属</th><th>未設定の付与日</th><th></th></tr></thead>
         <tbody>${yukyuAlerts.map(e=>{
@@ -3250,8 +3250,8 @@ async function renderAlert(){
 
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">期限切れ・期限間近（在留・免許）</div>
     <div class="summary-grid" style="max-width:400px;margin-bottom:12px">
-      <div class="scard"><div class="scard-label">期限切れ</div><div class="scard-val" style="color:var(--danger)">${expired.length}</div></div>
-      <div class="scard"><div class="scard-label">90日以内</div><div class="scard-val" style="color:var(--warn)">${warning.length}</div></div>
+      <div class="scard"><div class="scard-label">期限切れ</div><div class="scard-val" style="color:var(--emp-danger)">${expired.length}</div></div>
+      <div class="scard"><div class="scard-label">90日以内</div><div class="scard-val" style="color:var(--emp-warn)">${warning.length}</div></div>
     </div>
     ${alertList.length===0?`<div class="empty" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 0">期限切れ・期限間近の従業員はいません</div>`:`
     <div class="table-wrap"><table>
@@ -3293,8 +3293,8 @@ async function loadDispatchAlerts(){
           const name=emp?`${emp_esc(emp.sei)} ${emp_esc(emp.mei)}`:`ID:${ct.employee_id}`;
           const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
           const rowBg=days<0?'background:var(--danger-light);':days<=14?'background:var(--warn-light);':'';
-          const dayLabel=days<0?`<span style="color:var(--danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
-            :`<span style="color:var(--warn);font-weight:600;">${days}日</span>`;
+          const dayLabel=days<0?`<span style="color:var(--emp-danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
+            :`<span style="color:var(--emp-warn);font-weight:600;">${days}日</span>`;
           const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${emp_esc(ct.dispatch_app_contract_id)}`;
           return`<tr style="${rowBg}">
             <td data-label="氏名"><span class="emp-name" onclick="detailTab='dispatch';viewDetail(${ct.employee_id})">${name}</span></td>
@@ -3342,7 +3342,7 @@ function renderDT(){
       <div class="detail-grid">${df('電話',e.tel)}${df('メール',e.email)}</div>
       <div class="section-title">雇用情報</div>
       <div class="detail-grid">
-        <div class="detail-field"><div class="detail-label">会社</div><div class="detail-val">${e.company==='セレクト'?'<span class="badge badge-visa">セレクト</span>':e.company==='覚善'?'<span class="badge badge-active">覚善</span>':'<span style="color:var(--text3)">—</span>'}</div></div>
+        <div class="detail-field"><div class="detail-label">会社</div><div class="detail-val">${e.company==='セレクト'?'<span class="badge badge-visa">セレクト</span>':e.company==='覚善'?'<span class="badge badge-active">覚善</span>':'<span style="color:var(--emp-text3)">—</span>'}</div></div>
         ${df('所属1（勤務先）',dept?.shozoku1)}${df('所属2（工場名）',dept?.shozoku2)}
         ${df('役職',e.position)}${df('雇用形態',e.koyou)}
         ${df('雇用期間の定め',e.employment_type==='permanent'?'無期（期間の定めなし）':e.employment_type==='fixed'?'有期（期間の定めあり）':null)}
@@ -3360,7 +3360,7 @@ function renderDT(){
     c.innerHTML=`
       <div class="detail-grid">${df('在留資格',e.visa)}${df('在留カード番号',e.visa_no)}${df('在留期限',e.visa_expiry)}</div>
       <div style="margin-top:14px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500">在留カード写真（最大4枚）</div>
+        <div style="font-size:12px;color:var(--emp-text2);margin-bottom:8px;font-weight:500">在留カード写真（最大4枚）</div>
         <div id="rcImgGrid">${multiImgGrid(rcImgs,'delRcImg')}</div>        ${rcImgs.length<4?`
         <div class="photo-upload" id="rcDetailDrop" style="margin-top:8px;min-height:60px;display:flex;align-items:center;justify-content:center" onclick="document.getElementById('rcDetailInput').click()">
           <input type="file" id="rcDetailInput" accept="image/*,application/pdf" style="display:none" onchange="addRcImg(${e.id},this)">
@@ -3396,17 +3396,17 @@ function renderDT(){
       </div>
 
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text2);font-weight:500;margin-bottom:10px">以前の勤続年数を参照しますか？</div>
+        <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:10px">以前の勤続年数を参照しますか？</div>
         <div class="sel-group" style="margin-bottom:10px">
           <button class="sel-btn ${e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${e.id},true,this)">参照する</button>
           <button class="sel-btn ${!e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${e.id},false,this)">参照しない</button>
         </div>
         <div id="kousokuDateRow" style="display:${e.kousoku_start_date?'flex':'none'};gap:8px;align-items:center;flex-wrap:wrap">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">以前の勤務先の入社日</div>
+          <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">以前の勤務先の入社日</div>
           <input type="date" id="kousokuInput" value="${e.kousoku_start_date||''}" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
           <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${e.id})">保存</button>
         </div>
-        ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--text3)">→ 本人の入社日（${e.nyusha_date||'未登録'}）で計算します</div>`:''}
+        ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--emp-text3)">→ 本人の入社日（${e.nyusha_date||'未登録'}）で計算します</div>`:''}
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -3417,8 +3417,8 @@ function renderDT(){
         ${grants.length===0?'<div class="empty" style="padding:12px 0">付与記録がありません</div>':grants.map(g=>`
           <div class="list-item" style="${(!g.days&&g.days!==0)?'background:var(--warn-light);border-color:#f5d9a8':''}">
             <span class="dt">${g.grant_date}</span>
-            <span style="font-weight:500">${g.days!=null&&g.days!==''?`＋${g.days}日付与`:`<span style="color:var(--warn)">⚠ 日数未設定</span>`}</span>
-            ${g.expire_date?`<span style="font-size:12px;color:var(--text2)">期限：${g.expire_date}</span>`:''}
+            <span style="font-weight:500">${g.days!=null&&g.days!==''?`＋${g.days}日付与`:`<span style="color:var(--emp-warn)">⚠ 日数未設定</span>`}</span>
+            ${g.expire_date?`<span style="font-size:12px;color:var(--emp-text2)">期限：${g.expire_date}</span>`:''}
             <div style="margin-left:auto;display:flex;gap:4px">
               <button class="btn btn-sm" onclick="openGrantModal(${e.id},${g.id})">編集</button>
               <button class="btn btn-sm btn-danger" onclick="delGrant(${g.id},${e.id})">削除</button>
@@ -3437,8 +3437,8 @@ function renderDT(){
             <span class="badge badge-visa">${r.use_type||'—'}</span>
             <span class="chip">${r.shubetsu||'—'}</span>
             <span class="chip">${r.kubun||'—'}</span>
-            <span style="font-size:12px;color:var(--text2)">入力：${r.input_by||'—'}</span>
-            ${r.biko?`<span style="font-size:12px;color:var(--text2)">備考：${r.biko}</span>`:''}
+            <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
+            ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
             <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
           </div>`).join('')}
       </div>`;
@@ -3453,9 +3453,9 @@ function renderDT(){
           <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delKenko(${e.id},${i})">削除</button></div>`).join('')}
       </div>
       <div class="add-row">
-        <div><label style="font-size:12px;color:var(--text2)">受診日</label><br><input type="date" id="kd" style="width:150px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">結果</label><br><select id="kr" style="margin-top:4px">${CHECKRES.map(r=>`<option>${r}</option>`).join('')}</select></div>
-        <div><label style="font-size:12px;color:var(--text2)">写真</label><br><label class="btn btn-sm" style="cursor:pointer;display:inline-block;margin-top:4px">添付<input type="file" accept="image/*,application/pdf" id="kimg" style="display:none" onchange="previewKI(this)"></label> <span id="kimgName" style="font-size:12px;color:var(--text2)"></span></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">受診日</label><br><input type="date" id="kd" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">結果</label><br><select id="kr" style="margin-top:4px">${CHECKRES.map(r=>`<option>${r}</option>`).join('')}</select></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">写真</label><br><label class="btn btn-sm" style="cursor:pointer;display:inline-block;margin-top:4px">添付<input type="file" accept="image/*,application/pdf" id="kimg" style="display:none" onchange="previewKI(this)"></label> <span id="kimgName" style="font-size:12px;color:var(--emp-text2)"></span></div>
         <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addKenko(${e.id})">追加</button></div>
       </div>`;
   } else if(detailTab==='license'){
@@ -3469,11 +3469,11 @@ function renderDT(){
       <div class="detail-grid">
         ${df('免許証番号',e.license_no)}${df('取得日',e.license_date)}
         <div class="detail-field"><div class="detail-label">有効期限</div><div class="detail-val">
-          ${e.license_expiry?(licDl<0?`<span style="color:var(--danger)">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--warn)">${e.license_expiry}（残${licDl}日）</span>`:e.license_expiry)):('<span style="color:var(--text3)">—</span>')}
+          ${e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger)">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn)">${e.license_expiry}（残${licDl}日）</span>`:e.license_expiry)):('<span style="color:var(--emp-text3)">—</span>')}
         </div></div>
       </div>
       <div style="margin-top:12px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500">免許証写真（最大4枚）</div>
+        <div style="font-size:12px;color:var(--emp-text2);margin-bottom:8px;font-weight:500">免許証写真（最大4枚）</div>
         <div id="licImgGrid">${multiImgGrid(licImgs,'delLicImg')}</div>
         ${licImgs.length<4?`
         <div class="photo-upload" id="licDetailDrop" style="margin-top:8px;min-height:60px;display:flex;align-items:center;justify-content:center" onclick="document.getElementById('licDetailInput').click()">
@@ -3482,9 +3482,9 @@ function renderDT(){
         </div>`:''}
       </div>
       <div class="add-row" style="margin-top:12px">
-        <div><label style="font-size:12px;color:var(--text2)">免許証番号</label><br><input type="text" id="lic_no" value="${e.license_no||''}" style="width:160px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">取得日</label><br><input type="date" id="lic_date" value="${e.license_date||''}" style="width:150px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">有効期限</label><br><input type="date" id="lic_expiry" value="${e.license_expiry||''}" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">免許証番号</label><br><input type="text" id="lic_no" value="${e.license_no||''}" style="width:160px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="lic_date" value="${e.license_date||''}" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="lic_expiry" value="${e.license_expiry||''}" style="width:150px;margin-top:4px"></div>
         <div style="align-self:flex-end"><button class="btn btn-primary" onclick="saveLicense(${e.id})">保存</button></div>
       </div>
 
@@ -3496,17 +3496,17 @@ function renderDT(){
           return`<div class="list-item">
             <span style="font-weight:500;min-width:120px">${x.name||'—'}</span>
             <span class="dt">取得：${x.date||'—'}</span>
-            <span class="dt">有効期限：${x.expiry?(sDl<0?`<span style="color:var(--danger)">${x.expiry}（切れ）</span>`:(sDl<90?`<span style="color:var(--warn)">${x.expiry}（残${sDl}日）</span>`:x.expiry)):'なし'}</span>
+            <span class="dt">有効期限：${x.expiry?(sDl<0?`<span style="color:var(--emp-danger)">${x.expiry}（切れ）</span>`:(sDl<90?`<span style="color:var(--emp-warn)">${x.expiry}（残${sDl}日）</span>`:x.expiry)):'なし'}</span>
             ${x.img?`<img src="${x.img}" style="height:32px;border-radius:4px">`:''}
             <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delShikaku(${e.id},${i})">削除</button>
           </div>`;
         }).join('')}
       </div>
       <div class="add-row" style="margin-top:10px">
-        <div><label style="font-size:12px;color:var(--text2)">資格名</label><br><input type="text" id="sk_name" placeholder="例：フォークリフト" style="width:160px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">取得日</label><br><input type="date" id="sk_date" style="width:150px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">有効期限</label><br><input type="date" id="sk_expiry" style="width:150px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--text2)">写真</label><br><label class="btn btn-sm" style="cursor:pointer;display:inline-block;margin-top:4px">添付<input type="file" accept="image/*" id="sk_img" style="display:none" onchange="previewSkImg(this)"></label> <span id="skImgName" style="font-size:12px;color:var(--text2)"></span></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">資格名</label><br><input type="text" id="sk_name" placeholder="例：フォークリフト" style="width:160px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="sk_date" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="sk_expiry" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">写真</label><br><label class="btn btn-sm" style="cursor:pointer;display:inline-block;margin-top:4px">添付<input type="file" accept="image/*" id="sk_img" style="display:none" onchange="previewSkImg(this)"></label> <span id="skImgName" style="font-size:12px;color:var(--emp-text2)"></span></div>
         <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addShikaku(${e.id})">追加</button></div>
       </div>`;
   } else if(detailTab==='memo'){
@@ -3520,7 +3520,7 @@ function renderDT(){
         return;
       }
       c.innerHTML=`
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">派遣管理台帳に登録された契約履歴です。クリックすると派遣管理アプリの詳細へ移動します。</div>
+        <div style="font-size:13px;color:var(--emp-text2);margin-bottom:12px;">派遣管理台帳に登録された契約履歴です。クリックすると派遣管理アプリの詳細へ移動します。</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${contracts.map(ct=>{
             const start=new Date(ct.contract_start);
@@ -3543,8 +3543,8 @@ function renderDT(){
                   <span style="font-weight:600;font-size:13px;">${ct.contract_no||'—'}</span>
                   ${statusBadge}
                 </div>
-                <div style="font-size:12px;color:var(--text2);">📍 ${ct.client_name||'—'} / ${ct.site_name||'—'}</div>
-                <div style="font-size:12px;color:var(--text2);margin-top:2px;">📅 ${ct.contract_start} 〜 ${ct.contract_end}${days>=0?` （残${days}日）`:' （期限切れ）'}</div>
+                <div style="font-size:12px;color:var(--emp-text2);">📍 ${ct.client_name||'—'} / ${ct.site_name||'—'}</div>
+                <div style="font-size:12px;color:var(--emp-text2);margin-top:2px;">📅 ${ct.contract_start} 〜 ${ct.contract_end}${days>=0?` （残${days}日）`:' （期限切れ）'}</div>
               </div>
               <span style="font-size:11px;color:var(--info);white-space:nowrap;">詳細 →</span>
             </div>`;
@@ -3559,7 +3559,7 @@ function renderDT(){
   },50);
 }
 function df(label,val,full){
-  return`<div class="detail-field" ${full?'style="grid-column:1/-1"':''}><div class="detail-label">${label}</div><div class="detail-val">${val||'<span style="color:var(--text3)">—</span>'}</div></div>`;
+  return`<div class="detail-field" ${full?'style="grid-column:1/-1"':''}><div class="detail-label">${label}</div><div class="detail-val">${val||'<span style="color:var(--emp-text3)">—</span>'}</div></div>`;
 }
 async function saveMemo(id){
   const e=employees.find(x=>x.id===id);
@@ -3584,15 +3584,15 @@ function filePreviewHtml(src,height='100px'){
     return`<img src="${src}" style="max-height:${height};border-radius:var(--radius);border:1px solid var(--border);cursor:pointer" onclick="window.open('${src}')">`;
   }
   // 不明なファイル形式
-  return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);color:var(--text2);border-radius:var(--radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📎 ファイルを開く</a>`;
+  return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);color:var(--emp-text2);border-radius:var(--radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📎 ファイルを開く</a>`;
 }
 
 function multiImgGrid(imgs,onDelete){
-  if(!imgs||imgs.length===0)return'<span style="color:var(--text3);font-size:13px">未登録</span>';
+  if(!imgs||imgs.length===0)return'<span style="color:var(--emp-text3);font-size:13px">未登録</span>';
   return`<div style="display:flex;gap:8px;flex-wrap:wrap">${imgs.map((src,i)=>`
     <div style="position:relative;display:inline-block">
       ${filePreviewHtml(src,'120px')}
-      ${onDelete?`<button onclick="${onDelete}(${i})" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;padding:2px 5px">✕</button>`:''}
+      ${onDelete?`<button onclick="${onDelete}(${i})" style="position:absolute;top:2px;right:2px;background:var(--emp-danger);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;padding:2px 5px">✕</button>`:''}
     </div>`).join('')}</div>`;
 }
 
@@ -3789,7 +3789,7 @@ function renderSettings(){
       <div class="settings-card" style="margin-bottom:20px">
         <h3>部署マスター管理</h3>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <span style="font-size:12px;color:var(--text3)">☰ ドラッグで並び替え</span>
+          <span style="font-size:12px;color:var(--emp-text3)">☰ ドラッグで並び替え</span>
           <button class="btn btn-primary btn-sm" onclick="openDeptModal('add')">＋ 部署を追加</button>
         </div>
         ${departments.length===0?'<div class="empty" style="padding:20px 0">部署が登録されていません</div>':`
@@ -3801,9 +3801,9 @@ function renderSettings(){
               ondragover="deptDragOver(event)"
               ondrop="deptDrop(event,${d.id})"
               ondragend="deptDragEnd(event)">
-              <span style="color:var(--text3);font-size:16px;margin-right:4px">☰</span>
+              <span style="color:var(--emp-text3);font-size:16px;margin-right:4px">☰</span>
               <div class="d1">${d.shozoku1}</div>
-              <div class="d2">${d.shozoku2||'<span style="color:var(--text3)">所属2なし</span>'}</div>
+              <div class="d2">${d.shozoku2||'<span style="color:var(--emp-text3)">所属2なし</span>'}</div>
               <button class="btn btn-sm" onclick="openDeptModal('edit',${d.id})">編集</button>
               <button class="btn btn-sm btn-danger" onclick="deleteDept(${d.id})">削除</button>
             </div>`).join('')}
@@ -3831,7 +3831,7 @@ function renderSettings(){
           workPatterns.map(p=>`
             <div class="dept-row" style="flex-wrap:wrap">
               <div style="font-weight:500;font-size:13px;flex:1;min-width:120px">${p.name}</div>
-              <div style="font-size:12px;color:var(--text2);flex:2;min-width:200px">
+              <div style="font-size:12px;color:var(--emp-text2);flex:2;min-width:200px">
                 ${p.start_time||''}〜${p.end_time||''} 休憩${p.break_minutes||60}分 
                 週${p.work_days_per_week||''}日 休日：${p.holidays||''}
               </div>
@@ -4006,12 +4006,12 @@ function emp_openContractModal(empId){
   const isFixed=e.employment_type!=='permanent';
   const dept=departments.find(d=>d.id===Number(e.dept_id));
   document.getElementById('contractModalBody').innerHTML=`
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+    <div style="font-size:12px;color:var(--emp-text2);margin-bottom:12px">
       従業員データから自動入力されています。必要に応じて修正してください。
     </div>
     <div class="field-grid" style="gap:8px">
-      <div class="field"><label>契約開始日 <span style="color:var(--danger)">*</span></label><input type="date" id="cm_start" value="${e.nyusha_date||''}"></div>
-      ${isFixed?`<div class="field"><label>契約終了日 <span style="color:var(--danger)">*</span></label><input type="date" id="cm_end" value=""></div>`:''}
+      <div class="field"><label>契約開始日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_start" value="${e.nyusha_date||''}"></div>
+      ${isFixed?`<div class="field"><label>契約終了日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_end" value=""></div>`:''}
       <div class="field"><label>就業場所</label><input type="text" id="cm_place" value="${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join(' '):''}"></div>
       <div class="field"><label>業務内容</label><input type="text" id="cm_work" value="" placeholder="例：製造業務全般"></div>
       <div class="field"><label>始業時刻</label><input type="text" id="cm_start_time" value="08:00"></div>
@@ -4270,7 +4270,7 @@ async function renderContractList(){
 
     ${alertEmps.length>0?`
     <div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--danger)">⚠ 雇用契約書アラート（${alertEmps.length}名）</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-danger)">⚠ 雇用契約書アラート（${alertEmps.length}名）</div>
       <div class="table-wrap"><table>
         <thead><tr><th>氏名</th><th>所属</th><th>状態</th><th>契約終了日</th><th></th></tr></thead>
         <tbody>${alertEmps.map(e=>{
@@ -4310,7 +4310,7 @@ async function renderContractList(){
         <td data-label="契約開始" style="font-size:12px">${emp_esc(r.contract_start||'—')}</td>
         <td data-label="契約終了" style="font-size:12px">${emp_esc(r.contract_end||'無期')}</td>
         <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
-        <td data-label="発行元" style="font-size:12px;color:var(--text2)">${emp_esc(r.issued_by||'—')}</td>
+        <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
           <button class="btn btn-sm" onclick="emp_openContractModal(${r.employee_id})">再発行</button>
           <button class="btn btn-sm btn-danger" onclick="deleteEmploymentContract(${r.id})" style="margin-left:4px">削除</button>
@@ -4344,7 +4344,7 @@ function renderCertList(){
       <div class="summary-grid" style="max-width:360px;margin:0">
         <div class="scard"><div class="scard-label">発行総数</div><div class="scard-val">${list.length}</div></div>
         <div class="scard"><div class="scard-label">在職証明</div><div class="scard-val" style="color:var(--info)">${certificates.filter(c=>c.cert_type==='在職証明書').length}</div></div>
-        <div class="scard"><div class="scard-label">退職証明</div><div class="scard-val" style="color:var(--text2)">${certificates.filter(c=>c.cert_type==='退職証明書').length}</div></div>
+        <div class="scard"><div class="scard-label">退職証明</div><div class="scard-val" style="color:var(--emp-text2)">${certificates.filter(c=>c.cert_type==='退職証明書').length}</div></div>
       </div>
     </div>
     <div class="search-bar">
@@ -4366,7 +4366,7 @@ function renderCertList(){
         <td data-label="発行日" style="font-size:13px">${emp_esc(r.issued_date||'—')}</td>
         <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</span></td>
         <td data-label="種別"><span class="badge ${r.cert_type==='在職証明書'?'badge-visa':'badge-retired'}">${emp_esc(r.cert_type||'—')}</span></td>
-        <td data-label="発行元" style="font-size:12px;color:var(--text2)">${emp_esc(r.issued_by||'—')}</td>
+        <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
           <button class="btn btn-sm" onclick="${r.cert_type==='雇用契約書'?`emp_openContractModal(${r.employee_id})`:`reissueCert(${r.employee_id},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')`}">再発行</button>
           <button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button>
@@ -4489,8 +4489,8 @@ function renderKenkoList(){
     <div class="summary-grid" style="max-width:500px;margin-bottom:16px">
       <div class="scard"><div class="scard-label">記録総数</div><div class="scard-val">${total}</div></div>
       <div class="scard"><div class="scard-label">異常なし</div><div class="scard-val" style="color:#1a5c30">${ijou}</div></div>
-      <div class="scard"><div class="scard-label">要経過観察</div><div class="scard-val" style="color:var(--warn)">${youkeka}</div></div>
-      <div class="scard"><div class="scard-label">要精密検査</div><div class="scard-val" style="color:var(--danger)">${yousei}</div></div>
+      <div class="scard"><div class="scard-label">要経過観察</div><div class="scard-val" style="color:var(--emp-warn)">${youkeka}</div></div>
+      <div class="scard"><div class="scard-label">要精密検査</div><div class="scard-val" style="color:var(--emp-danger)">${yousei}</div></div>
     </div>
 
     <!-- 新規登録フォーム -->
@@ -4498,26 +4498,26 @@ function renderKenkoList(){
       <div style="font-size:13px;font-weight:500;margin-bottom:12px">＋ 健康診断を登録</div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
         <div style="min-width:180px;flex:1">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">従業員</div>
+          <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">従業員</div>
           <select id="kfEmp" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
             <option value="">選択してください</option>
             ${employees.filter(e=>e.status==='在籍').map(e=>`<option value="${e.id}">${e.sei} ${e.mei}</option>`).join('')}
           </select>
         </div>
         <div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">受診日</div>
+          <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">受診日</div>
           <input type="date" id="kfDate" value="${new Date().toISOString().slice(0,10)}" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
         </div>
         <div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">結果</div>
+          <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">結果</div>
           <select id="kfResult" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
             ${CHECKRES.map(r=>`<option>${r}</option>`).join('')}
           </select>
         </div>
         <div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">写真</div>
+          <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">写真</div>
           <label class="btn btn-sm" style="cursor:pointer;display:inline-block">添付<input type="file" accept="image/*" id="kfImg" style="display:none" onchange="previewKfImg(this)"></label>
-          <span id="kfImgName" style="font-size:12px;color:var(--text2);margin-left:4px"></span>
+          <span id="kfImgName" style="font-size:12px;color:var(--emp-text2);margin-left:4px"></span>
         </div>
         <button class="btn btn-primary" onclick="addKenkoFromList()">登録</button>
       </div>
@@ -4541,7 +4541,7 @@ function renderKenkoList(){
       <thead><tr><th>受診日</th><th>氏名</th><th>結果</th><th>写真</th><th></th></tr></thead>
       <tbody>${allRecs.map(r=>`<tr>
         <td data-label="受診日" style="font-size:13px">${emp_esc(r.date||'—')}</td>
-        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.empId})">${emp_esc(r.empName)}<br><span style="font-size:11px;color:var(--text2)">${emp_esc(r.empKana.trim())}</span></span></td>
+        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.empId})">${emp_esc(r.empName)}<br><span style="font-size:11px;color:var(--emp-text2)">${emp_esc(r.empKana.trim())}</span></span></td>
         <td data-label="結果"><span class="badge ${r.result==='異常なし'?'badge-active':r.result==='要精密検査'?'badge-danger':'badge-warn'}">${emp_esc(r.result||'—')}</span></td>
         <td data-label="写真">${r.img?`<img src="${emp_esc(r.img)}" style="height:36px;border-radius:4px;cursor:pointer" onclick="window.open(this.src)">`:'—'}</td>
         <td class="no-label"><button class="btn btn-sm btn-danger" onclick="delKenkoFromList(${r.empId},${r.idx})">削除</button></td>
@@ -4615,10 +4615,10 @@ function renderYukyuList(){
         const info=calcYukyuInfo(e.id);
         return`<tr>
           <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
-          <td data-label="残日数"><span style="font-weight:700;color:${info.remaining>0?'#1a5c30':'var(--text2)'}">${info.remaining}日</span></td>
+          <td data-label="残日数"><span style="font-weight:700;color:${info.remaining>0?'#1a5c30':'var(--emp-text2)'}">${info.remaining}日</span></td>
           <td data-label="付与合計" style="font-size:13px">${info.granted}日</td>
           <td data-label="取得合計" style="font-size:13px">${info.used}日</td>
-          <td data-label="次回付与日" style="font-size:12px;color:var(--text2)">${emp_esc(info.nextDate||'—')}</td>
+          <td data-label="次回付与日" style="font-size:12px;color:var(--emp-text2)">${emp_esc(info.nextDate||'—')}</td>
           <td class="no-label"><button class="btn btn-sm" onclick="detailTab='yukyu';viewingId=${e.id};currentView='detail';render()">詳細</button></td>
         </tr>`;
       }).join('')}
@@ -4643,8 +4643,8 @@ function renderYukyuList(){
         <td data-label="種別"><span class="chip">${emp_esc(r.shubetsu||'—')}</span></td>
         <td data-label="区分"><span class="chip">${emp_esc(r.kubun||'—')}</span></td>
         <td data-label="入力者">${emp_esc(r.input_by||'—')}</td>
-        <td data-label="登録日" style="font-size:12px;color:var(--text3)">${emp_esc(r.touroku_date||'—')}</td>
-        <td data-label="備考" style="font-size:12px;color:var(--text2);max-width:140px">${emp_esc(r.biko||'')}</td>
+        <td data-label="登録日" style="font-size:12px;color:var(--emp-text3)">${emp_esc(r.touroku_date||'—')}</td>
+        <td data-label="備考" style="font-size:12px;color:var(--emp-text2);max-width:140px">${emp_esc(r.biko||'')}</td>
         <td class="no-label"><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></td>
       </tr>`).join('')}</tbody>
     </table></div>`}`;
@@ -4737,7 +4737,7 @@ function renderYukyuAdd(){
     </div>
     <div class="yukyu-form">
       <div class="frow">
-        <label>従業員を選択 <span style="color:var(--danger)">*</span></label>
+        <label>従業員を選択 <span style="color:var(--emp-danger)">*</span></label>
         ${yf.employee_id?`
           <div class="emp-selected-box">
             <span style="font-weight:500;font-size:14px">${yf.employee_name}</span>
@@ -4748,11 +4748,11 @@ function renderYukyuAdd(){
             <div class="emp-dropdown" id="empDD">${empDDItems('')}</div>
           </div>`}
       </div>
-      <div class="frow"><label>使用日 <span style="color:var(--danger)">*</span></label><input type="date" id="yDate" value="${new Date().toISOString().slice(0,10)}" style="max-width:200px"></div>
-      <div class="frow"><label>使用内容 <span style="color:var(--danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>種別 <span style="color:var(--danger)">*</span></label><div class="sel-group">${SHUBETSU.map(t=>`<button class="sel-btn ${yf.shubetsu===t?'selected':''}" onclick="selYF('shubetsu','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>区分 <span style="color:var(--danger)">*</span></label><div class="sel-group">${KUBUN.map(t=>`<button class="sel-btn ${yf.kubun===t?'selected':''}" onclick="selYF('kubun','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>入力者 <span style="color:var(--danger)">*</span></label><div class="sel-group">${INPUT_BY.map(t=>`<button class="sel-btn ${yf.input_by===t?'selected':''}" onclick="selYF('input_by','${t}',this)">${t}</button>`).join('')}</div></div>
+      <div class="frow"><label>使用日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${new Date().toISOString().slice(0,10)}" style="max-width:200px"></div>
+      <div class="frow"><label>使用内容 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
+      <div class="frow"><label>種別 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${SHUBETSU.map(t=>`<button class="sel-btn ${yf.shubetsu===t?'selected':''}" onclick="selYF('shubetsu','${t}',this)">${t}</button>`).join('')}</div></div>
+      <div class="frow"><label>区分 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${KUBUN.map(t=>`<button class="sel-btn ${yf.kubun===t?'selected':''}" onclick="selYF('kubun','${t}',this)">${t}</button>`).join('')}</div></div>
+      <div class="frow"><label>入力者 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${INPUT_BY.map(t=>`<button class="sel-btn ${yf.input_by===t?'selected':''}" onclick="selYF('input_by','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>備考</label><textarea id="yBiko" rows="3" style="max-width:500px"></textarea></div>
       <div style="height:80px"></div>
     </div>
@@ -4765,7 +4765,7 @@ function empDDItems(q){
   return employees.filter(e=>e.status==='在籍'&&(!q||(e.sei+e.mei+(e.seikana||'')+(e.meikana||'')+(e.shain_no||'')).toLowerCase().includes(q.toLowerCase())))
     .map(e=>`<div class="emp-option" onclick="pickEmp(${e.id},'${e.sei} ${e.mei}')">
       <div style="font-weight:500">${e.sei} ${e.mei}</div>
-      <div style="font-size:11px;color:var(--text3);display:flex;gap:8px;margin-top:2px">
+      <div style="font-size:11px;color:var(--emp-text3);display:flex;gap:8px;margin-top:2px">
         ${e.seikana||e.meikana?`<span>${e.seikana||''} ${e.meikana||''}</span>`:''}
         ${e.shain_no?`<span>No.${e.shain_no}</span>`:''}
         <span>${deptLabelById(e.dept_id)||''}</span>
@@ -4823,7 +4823,7 @@ function renderForm(id){
       </div>
       <div class="field">
         <label>年齢</label>
-        <div id="ageDisplay" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:13px;color:var(--text2)">${e.birthday?calcAgeVal(e.birthday)+'歳':'生年月日を入力してください'}</div>
+        <div id="ageDisplay" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:13px;color:var(--emp-text2)">${e.birthday?calcAgeVal(e.birthday)+'歳':'生年月日を入力してください'}</div>
       </div>
       <div class="field"><label>性別</label><select id="f_gender">${['男','女','その他'].map(x=>`<option ${e.gender===x?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="field"><label>国籍</label>
@@ -4838,7 +4838,7 @@ function renderForm(id){
     <div class="section-title">雇用情報</div>
     <div class="field-grid">
       <div class="field" style="grid-column:1/-1">
-        <label>会社（大分類）<span style="color:var(--danger)"> *</span></label>
+        <label>会社（大分類）<span style="color:var(--emp-danger)"> *</span></label>
         <div class="sel-group">
           <button type="button" class="sel-btn ${e.company==='セレクト'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='セレクト'">セレクト</button>
           <button type="button" class="sel-btn ${e.company==='覚善'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='覚善'">覚善</button>
@@ -4917,7 +4917,7 @@ function renderForm(id){
     ${[0,1,2].map(i=>{
       const sk=(e.shikaku_list||[])[i]||{};
       return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
-        <div style="font-size:12px;color:var(--text2);font-weight:500;margin-bottom:8px">資格 ${i+1}</div>
+        <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:8px">資格 ${i+1}</div>
         <div class="field-grid">
           <div class="field"><label>資格名</label><input type="text" id="f_sk${i}_name" value="${sk.name||''}"></div>
           <div class="field">
