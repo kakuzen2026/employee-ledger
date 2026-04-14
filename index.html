@@ -802,6 +802,7 @@ async function renderAlert(){
   });
   const contractAlerts=employees.filter(e=>{
     if(e.status!=='在籍')return false;
+    if(e.contract_other_system)return false; // 他システム管理はアラート対象外
     const ct=empContractMap[e.id];
     if(!ct)return true;
     if(!ct.contract_end)return false;
@@ -2492,6 +2493,12 @@ function renderForm(id){
         <option value="permanent" ${e.employment_type==='permanent'?'selected':''}>無期</option>
       </select></div>
     </div>
+    <div style="margin-top:8px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="f_contract_other_system" ${e.contract_other_system?'checked':''} style="width:16px;height:16px;">
+        <span>雇用契約書は他システムで管理（アラート対象外にする）</span>
+      </label>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
       ${fi('nyusha_date','入社日',e.nyusha_date,'date')}
       <div class="field">
@@ -2625,6 +2632,7 @@ async function saveForm(isEdit,id){
     birthday:document.getElementById('f_birthday')?.value||'',gender:g('gender'),
     nationality:(()=>{const s=document.getElementById('f_nationality')?.value;return s==='その他'?(document.getElementById('f_nationality_other')?.value||'その他'):s||'';})(),
     address:g('address'),tel:g('tel'),email:g('email'),
+    contract_other_system:document.getElementById('f_contract_other_system')?.checked||false,
     company:g('company'),
     dept_id:deptId?Number(deptId):null,
     position:g('position'),koyou:g('koyou'),employment_type:g('employment_type')||'fixed',nyusha_date:g('nyusha_date'),
