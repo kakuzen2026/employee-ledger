@@ -989,7 +989,7 @@ function renderDT(){
         ${df('姓カナ',e.seikana)}${df('名カナ',e.meikana)}
       </div>
       <div class="detail-grid" style="margin-top:10px">
-        ${df('生年月日',e.birthday)}${df('年齢',e.birthday?calcAgeVal(e.birthday)+'歳':null)}${df('性別',e.gender)}
+        ${df('生年月日',e.birthday)}${df('年齢',e.birthday?calcAgeVal(e.birthday)+'歳':null)}${df('性別',e.gender)}${df('国籍',e.nationality)}
       </div>
       ${df('住所',e.address,'full')}
       <div class="detail-grid">${df('電話',e.tel)}${df('メール',e.email)}</div>
@@ -2453,6 +2453,12 @@ function renderForm(id){
         <div id="ageDisplay" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:13px;color:var(--text2)">${e.birthday?calcAgeVal(e.birthday)+'歳':'生年月日を入力してください'}</div>
       </div>
       <div class="field"><label>性別</label><select id="f_gender">${['男','女','その他'].map(x=>`<option ${e.gender===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>国籍</label>
+        <select id="f_nationality" onchange="document.getElementById('f_nationality_other').style.display=this.value==='その他'?'block':'none'">
+          ${['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].map(x=>`<option value="${x}" ${(e.nationality||'')==x?'selected':(!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality||'')&&x==='その他')?'selected':''}>${x||'選択してください'}</option>`).join('')}
+        </select>
+        <input type="text" id="f_nationality_other" placeholder="国籍を入力" value="${!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality||'')?e.nationality||'':''}" style="margin-top:6px;display:${(e.nationality&&!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality))||e.nationality==='その他'?'block':'none'}">
+      </div>
     </div>
     ${fi('address','住所',e.address,'text',false,true)}
     <div class="field-grid">${fi('tel','電話番号',e.tel)}${fi('email','メールアドレス',e.email)}</div>
@@ -2616,7 +2622,9 @@ async function saveForm(isEdit,id){
     shain_no:g('shain_no'),
     my_number:g('my_number'),
     sei:g('sei'),mei:g('mei'),seikana:g('seikana'),meikana:g('meikana'),
-    birthday:document.getElementById('f_birthday')?.value||'',gender:g('gender'),address:g('address'),tel:g('tel'),email:g('email'),
+    birthday:document.getElementById('f_birthday')?.value||'',gender:g('gender'),
+    nationality:(()=>{const s=document.getElementById('f_nationality')?.value;return s==='その他'?(document.getElementById('f_nationality_other')?.value||'その他'):s||'';})(),
+    address:g('address'),tel:g('tel'),email:g('email'),
     company:g('company'),
     dept_id:deptId?Number(deptId):null,
     position:g('position'),koyou:g('koyou'),employment_type:g('employment_type')||'fixed',nyusha_date:g('nyusha_date'),
