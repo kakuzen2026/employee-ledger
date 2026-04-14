@@ -2048,8 +2048,8 @@ function buildKobetsuHtml(ph){
 ${secStart()}
 ${secHead('派遣先事業所 / 就業場所')}
 ${tbl(`
-  ${r('派遣先事業所', e(ph.CLIENT_SITE_NAME)+'<br>'+e(ph.CLIENT_SITE_ADDRESS))}
-  ${r('就業場所', e(ph.WORK_LOCATION_NAME)+'<br>'+e(ph.WORK_LOCATION_ADDRESS)+(ph.WORK_DEPT?'<br>（部署）'+e(ph.WORK_DEPT):'')+(ph.WORK_TEL?'　（電話）'+e(ph.WORK_TEL):''))}
+  ${r('派遣先事業所', e(ph.CLIENT_SITE_NAME)+'　'+e(ph.CLIENT_SITE_ADDRESS))}
+  ${r('就業場所', e(ph.WORK_LOCATION_NAME)+'　'+e(ph.WORK_LOCATION_ADDRESS)+(ph.WORK_DEPT?'（部署）'+e(ph.WORK_DEPT):'')+(ph.WORK_TEL?'（電話）'+e(ph.WORK_TEL):''))}
 `)}
 ${secEnd()}
 
@@ -2084,24 +2084,10 @@ ${secEnd()}
 
 ${secStart()}
 ${secHead('派遣先責任者 / 派遣元責任者')}
-<div style="border:1px solid #666;padding:2px 6px;font-size:8.5pt;line-height:1.8;">
-  <table style="width:100%;border-collapse:collapse;">
-    <tr>
-      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;width:7em;">派遣先責任者</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.CLIENT_MGR_TEL)}</td>
-    </tr>
-    <tr>
-      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;">派遣元責任者</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.HAKEN_MGR_TEL)}</td>
-    </tr>
-  </table>
-</div>
+${tbl(`
+  ${r('派遣先責任者', '（部署）'+e(ph.CLIENT_MGR_DEPT)+'　（役職）'+e(ph.CLIENT_MGR_TITLE)+'　（氏名）'+e(ph.CLIENT_MGR_NAME)+'　（電話）'+e(ph.CLIENT_MGR_TEL))}
+  ${r('派遣元責任者', '（部署）'+e(ph.HAKEN_MGR_DEPT)+'　（役職）'+e(ph.HAKEN_MGR_TITLE)+'　（氏名）'+e(ph.HAKEN_MGR_NAME)+'　（電話）'+e(ph.HAKEN_MGR_TEL))}
+`)}
 ${secEnd()}
 
 ${secStart()}
@@ -2137,22 +2123,8 @@ ${secStart()}
 ${secHead('苦情の申出先、処理方法・連携体制')}
 <div style="border:1px solid #666;padding:2px 6px;font-size:8pt;">
   <div style="font-weight:bold;margin-bottom:2px;">（1）苦情の申出を受ける者</div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:3px;line-height:1.8;">
-    <tr>
-      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;width:7em;">派遣先</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_CLIENT_TEL)}</td>
-    </tr>
-    <tr>
-      <td style="padding:1px 3px;font-weight:bold;white-space:nowrap;">派遣元</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（部署）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_DEPT)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（役職）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TITLE)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（氏名）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_NAME)}</td>
-      <td style="padding:1px 3px;color:#555;white-space:nowrap;">（電話）</td><td style="padding:1px 3px;">${e(ph.COMPLAINT_HAKEN_TEL)}</td>
-    </tr>
-  </table>
+  <div style="margin-bottom:1px;"><span style="font-weight:bold;">派遣先</span>　<span style="color:#555;">（部署）</span>${e(ph.COMPLAINT_CLIENT_DEPT)}　<span style="color:#555;">（役職）</span>${e(ph.COMPLAINT_CLIENT_TITLE)}　<span style="color:#555;">（氏名）</span>${e(ph.COMPLAINT_CLIENT_NAME)}　<span style="color:#555;">（電話）</span>${e(ph.COMPLAINT_CLIENT_TEL)}</div>
+  <div style="margin-bottom:3px;"><span style="font-weight:bold;">派遣元</span>　<span style="color:#555;">（部署）</span>${e(ph.COMPLAINT_HAKEN_DEPT)}　<span style="color:#555;">（役職）</span>${e(ph.COMPLAINT_HAKEN_TITLE)}　<span style="color:#555;">（氏名）</span>${e(ph.COMPLAINT_HAKEN_NAME)}　<span style="color:#555;">（電話）</span>${e(ph.COMPLAINT_HAKEN_TEL)}</div>
   <div style="font-weight:bold;margin-bottom:2px;">（2）苦情処理方法、連携体制等</div>
   <div style="line-height:1.7;">
     　①派遣先における(1)記載の者が苦情の申出を受けたときは、ただちに派遣先責任者へ連絡することとし、当該派遣先責任者が中心となって誠意をもって、遅滞なく、当該苦情の適切かつ迅速な処理を図ることとし、その結果について必ず派遣労働者に通知することとする。<br>
