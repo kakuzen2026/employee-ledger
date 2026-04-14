@@ -332,10 +332,14 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
     @media(max-width:768px){#jToastWrap{bottom:80px;left:8px;right:8px;} .j-toast{min-width:unset;width:100%;}}
   `;
   document.head.appendChild(style);
+})();
+function _ensureToastWrap(){
+  if(document.getElementById('jToastWrap'))return;
   const wrap=document.createElement('div');wrap.id='jToastWrap';
   document.body.appendChild(wrap);
-})();
+}
 function showToast(msg,type='success'){
+  _ensureToastWrap();
   const el=document.createElement('div');
   el.className=`j-toast ${type}`;
   const icon=type==='success'?'✓':type==='error'?'✕':'⚠';
