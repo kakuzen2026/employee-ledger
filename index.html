@@ -255,7 +255,7 @@ body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
 #emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
-body.theme-dark #emp-back-btn{display:block;}
+
 </style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
@@ -490,7 +490,7 @@ body.theme-dark #emp-back-btn{display:block;}
 </div>
 
 <!-- 部署追加モーダル -->
-<div class="modal-overlay" id="deptModal" style="display:none">
+<div class="modal-overlay" id="deptModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="deptModalTitle">部署を追加</h3>
     <div class="field"><label>所属1（勤務先）<span style="color:var(--danger)"> *</span></label><input id="dm_s1" placeholder="例：株式会社〇〇"></div>
@@ -503,7 +503,7 @@ body.theme-dark #emp-back-btn{display:block;}
 </div>
 
 <!-- 在留資格モーダル -->
-<div class="modal-overlay" id="visaModal" style="display:none">
+<div class="modal-overlay" id="visaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="visaModalTitle">在留資格を追加</h3>
     <div class="field"><label>在留資格名 <span style="color:var(--danger)">*</span></label><input id="vm_name" placeholder="例：特定技能1号"></div>
@@ -515,8 +515,8 @@ body.theme-dark #emp-back-btn{display:block;}
 </div>
 
 <!-- 雇用契約書モーダル -->
-<div class="modal-overlay" id="contractModal" style="display:none">
-  <div class="modal-box" style="max-width:520px;max-height:90vh;overflow-y:auto">
+<div class="modal-overlay" id="contractModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
+  <div class="modal-box" style="background:var(--emp-surface,#fff);border-radius:12px;border:1px solid var(--emp-border2,#ddd);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.15);">
     <h3>雇用契約書を作成</h3>
     <div id="contractModalBody"></div>
     <div class="actions">
@@ -527,7 +527,7 @@ body.theme-dark #emp-back-btn{display:block;}
 </div>
 
 <!-- 有給付与登録モーダル -->
-<div class="modal-overlay" id="grantModal" style="display:none">
+<div class="modal-overlay" id="grantModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="grantModalTitle">有給付与を登録</h3>
     <div class="field"><label>付与日 <span style="color:var(--danger)">*</span></label><input type="date" id="gm_date"></div>
@@ -1020,9 +1020,13 @@ function navigate(page){
   if(page!=='jugyoin'){
     document.body.classList.remove('theme-light');
     document.body.classList.add('theme-dark');
+    const btn=document.getElementById('emp-back-btn');
+    if(btn) btn.style.display='none';
   } else {
     document.body.classList.remove('theme-dark');
     document.body.classList.add('theme-light');
+    const btn=document.getElementById('emp-back-btn');
+    if(btn) btn.style.display='';
   }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.mnav-item').forEach(n=>n.classList.remove('active'));
@@ -3949,7 +3953,7 @@ body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
 #emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
-body.theme-dark #emp-back-btn{display:block;}
+
 </style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
@@ -4087,7 +4091,7 @@ body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
 #emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
-body.theme-dark #emp-back-btn{display:block;}
+
 </style></head>
 <body class="theme-dark">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
