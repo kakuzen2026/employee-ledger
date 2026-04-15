@@ -472,7 +472,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
     <div class="nav-menu" id="navMenu">
       <button class="nav-btn" id="tList" onclick="showView('list');closeMenu()">従業員一覧</button>
       <button class="nav-btn" id="tAdd" onclick="showView('add');closeMenu()">＋ 新規登録</button>
-      <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()" style="color:var(--warn);border-color:var(--warn)">⚠ 警告一覧</button>
+      <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()" style="color:var(--emp-warn);border-color:var(--emp-warn)">⚠ 警告一覧</button>
       <button class="nav-btn" id="tYukyu" onclick="showView('yukyu_list');closeMenu()">有給管理</button>
       <button class="nav-btn" id="tYukyuAdd" onclick="showView('yukyu_add');closeMenu()">＋ 有給登録</button>
       <button class="nav-btn" id="tKenko" onclick="showView('kenko_list');closeMenu()">健康診断</button>
@@ -493,7 +493,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 <div class="modal-overlay" id="deptModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="deptModalTitle">部署を追加</h3>
-    <div class="field"><label>所属1（勤務先）<span style="color:var(--danger)"> *</span></label><input id="dm_s1" placeholder="例：株式会社〇〇"></div>
+    <div class="field"><label>所属1（勤務先）<span style="color:var(--emp-danger)"> *</span></label><input id="dm_s1" placeholder="例：株式会社〇〇"></div>
     <div class="field"><label>所属2（工場名）</label><input id="dm_s2" placeholder="例：第一工場"></div>
     <div class="actions">
       <button class="btn" onclick="closeDeptModal()">キャンセル</button>
@@ -506,7 +506,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 <div class="modal-overlay" id="visaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="visaModalTitle">在留資格を追加</h3>
-    <div class="field"><label>在留資格名 <span style="color:var(--danger)">*</span></label><input id="vm_name" placeholder="例：特定技能1号"></div>
+    <div class="field"><label>在留資格名 <span style="color:var(--emp-danger)">*</span></label><input id="vm_name" placeholder="例：特定技能1号"></div>
     <div class="actions">
       <button class="btn" onclick="closeVisaModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveVisaModal()">保存</button>
@@ -530,7 +530,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 <div class="modal-overlay" id="grantModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box">
     <h3 id="grantModalTitle">有給付与を登録</h3>
-    <div class="field"><label>付与日 <span style="color:var(--danger)">*</span></label><input type="date" id="gm_date"></div>
+    <div class="field"><label>付与日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="gm_date"></div>
     <div class="field"><label>付与日数（空白可）</label><input type="number" id="gm_days" placeholder="例：10" min="0" step="0.5"></div>
     <div class="field"><label>有効期限（空白で付与日から2年後-1日）</label><input type="date" id="gm_expire"></div>
     <div class="actions">
@@ -544,7 +544,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 <div class="modal-overlay" id="wpModal" style="display:none">
   <div class="modal-box" style="max-width:500px">
     <h3 id="wpModalTitle">勤務パターンを追加</h3>
-    <div class="field"><label>パターン名 <span style="color:var(--danger)">*</span></label><input id="wp_name" placeholder="例：日勤・夜勤・パートA"></div>
+    <div class="field"><label>パターン名 <span style="color:var(--emp-danger)">*</span></label><input id="wp_name" placeholder="例：日勤・夜勤・パートA"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
       <div class="field"><label>始業時刻</label><input type="time" id="wp_start"></div>
       <div class="field"><label>終業時刻</label><input type="time" id="wp_end"></div>
@@ -791,7 +791,6 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
       <div class="form-row">
         <div class="form-group"><label class="form-label">締結日</label><input type="date" class="form-input" id="ct-contract-date"></div>
         <div class="form-group"></div>
-      </div>
       </div>
 
       <div class="form-row">
@@ -3263,7 +3262,7 @@ async function renderAlert(){
     </table></div>`}
 
     <div id="dispatch-alert-section" style="margin-top:24px;">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--text)">📄 派遣契約の期限アラート</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-text)">📄 派遣契約の期限アラート</div>
       <div class="loading" style="padding:20px 0;">読み込み中...</div>
     </div>`;
 
@@ -3282,13 +3281,13 @@ async function loadDispatchAlerts(){
       return days<=60;
     });
     if(!alertContracts.length){
-      section.innerHTML=`<div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--text)">📄 派遣契約の期限アラート</div>
+      section.innerHTML=`<div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-text)">📄 派遣契約の期限アラート</div>
         <div class="empty" style="background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:24px 0;font-size:13px;">期限が近い派遣契約はありません</div>`;
       return;
     }
     const empMap={};employees.forEach(e=>empMap[e.id]=e);
     section.innerHTML=`
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--text)">📄 派遣契約の期限アラート（60日以内 ${alertContracts.length}件）</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--emp-text)">📄 派遣契約の期限アラート（60日以内 ${alertContracts.length}件）</div>
       <div class="table-wrap"><table>
         <thead><tr><th>氏名</th><th>契約番号</th><th>取引先/現場</th><th>契約終了日</th><th>残日数</th><th></th></tr></thead>
         <tbody>${alertContracts.map(ct=>{
@@ -4386,7 +4385,7 @@ function deptDragStart(e,id){
 function deptDragOver(e){
   e.preventDefault();
   e.dataTransfer.dropEffect='move';
-  e.currentTarget.style.borderTop='2px solid var(--accent)';
+  e.currentTarget.style.borderTop='2px solid var(--emp-accent)';
 }
 function deptDragEnd(e){
   e.currentTarget.style.opacity='1';
@@ -4790,6 +4789,7 @@ function renderForm(id){
   skFormImgData=(e.shikaku_list||[]).slice(0,3).map(s=>s.img||'');
   while(skFormImgData.length<3)skFormImgData.push('');
   document.getElementById('mainContent').innerHTML=`
+    <div class="sticky-back">
       <button class="btn btn-sm" onclick="currentView='list';render()">← 一覧</button>
       <h2>${isEdit?'従業員情報を編集':'新規従業員登録'}</h2>
     </div>
