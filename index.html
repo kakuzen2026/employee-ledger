@@ -394,10 +394,10 @@ body.theme-dark #emp-back-btn{display:block;}
 .sticky-footer{position:fixed;bottom:0;left:0;right:0;z-index:9;background:var(--emp-surface);border-top:1px solid var(--emp-border);padding:10px 24px;display:flex;gap:8px;justify-content:flex-end;box-shadow:0 -2px 8px rgba(0,0,0,.06);}#emp-app /* ハンバーガーメニュー */
 .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:transparent;flex-shrink:0}#emp-app .hamburger span{display:block;width:22px;height:2px;background:var(--emp-text);border-radius:2px;transition:.2s}#emp-app .nav-menu{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}#emp-app .nav-divider{width:1px;height:20px;background:var(--emp-border);margin:0 4px;flex-shrink:0}#emp-app /* スマホ対応 */
 @media(max-width:768px){
-  header{height:52px;padding:0 12px;flex-wrap:nowrap;overflow:hidden}
-  header h1{font-size:13px;white-space:nowrap}
-  .hamburger{display:flex;margin-left:auto}
-  .nav-menu{
+  #emp-app-inner header{height:52px;padding:0 12px;flex-wrap:nowrap;overflow:hidden}
+  #emp-app-inner header h1{font-size:13px;white-space:nowrap}
+  #emp-app-inner .hamburger{display:flex;margin-left:auto}
+  #emp-app-inner .nav-menu{
     display:none;
     flex-direction:column;
     align-items:stretch;
@@ -412,43 +412,43 @@ body.theme-dark #emp-back-btn{display:block;}
     max-height:calc(100vh - 52px);
     overflow-y:auto;
   }
-  .nav-menu.open{display:flex}
-  .nav-btn{width:100%;text-align:left;padding:12px 16px;font-size:14px;border-radius:var(--emp-radius)}
-  .nav-divider{width:100%;height:1px;margin:4px 0}
-  main{padding:12px}
-  .sticky-back{padding:8px 12px;margin:-12px -12px 12px -12px;gap:6px;flex-wrap:wrap;top:52px}
-  .sticky-back h2{font-size:13px}
-  .sticky-back .btn-sm{padding:6px 8px;font-size:11px}
-  .btn{padding:9px 16px;font-size:14px}
-  .btn-sm{padding:6px 12px;font-size:13px}
-  .field input,.field select,.field textarea{font-size:16px;padding:10px 12px}
-  .search-bar input,.search-bar select{font-size:16px;padding:9px 12px;min-width:0}
-  .search-bar{gap:6px}
-  .add-row input,.add-row select{font-size:16px;padding:9px 12px}
-  .emp-search-input{font-size:16px;padding:10px 12px}
-  .sel-btn{padding:10px 18px;font-size:14px}
-  .summary-grid{grid-template-columns:repeat(2,1fr)}
-  .scard-val{font-size:20px}
-  .detail-grid{grid-template-columns:1fr 1fr}
-  .field-grid{grid-template-columns:1fr}
-  .itab{padding:8px 10px;font-size:12px}
-  .sticky-footer{padding:10px 12px}
-  .yukyu-form{padding:14px}
-  .modal-box{padding:16px;margin:0 8px}
-  .form-wrap{max-width:100%}
-  .settings-card{max-width:100%}
-  /* テーブル → カード形式（hakennと同じパターン） */
-  .table-wrap table{display:block;}
-  .table-wrap thead{display:none;}
-  .table-wrap tbody{display:block;}
-  .table-wrap tr{display:block;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:10px 12px;margin-bottom:10px;}
-  .table-wrap tr:hover td{background:transparent;}
-  .table-wrap td{display:flex;align-items:flex-start;gap:8px;border:none;padding:3px 0;font-size:13px;line-height:1.5;white-space:normal;}
-  .table-wrap td::before{content:attr(data-label);font-size:10px;color:var(--emp-text3);min-width:68px;padding-top:3px;flex-shrink:0;letter-spacing:.02em;}
-  .table-wrap td[data-label=""]::before,.table-wrap td.no-label::before{display:none;}
-  .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--emp-border);margin-top:4px;flex-wrap:wrap;gap:6px;}
-  .table-wrap td:last-child::before{display:none;}
-  .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
+  #emp-app-inner .nav-menu.open{display:flex}
+  #emp-app-inner .nav-btn{width:100%;text-align:left;padding:12px 16px;font-size:14px;border-radius:var(--emp-radius)}
+  #emp-app-inner .nav-divider{width:100%;height:1px;margin:4px 0}
+  #emp-app-inner main{padding:12px}
+  #emp-app-inner .sticky-back{padding:8px 12px;margin:-12px -12px 12px -12px;gap:6px;flex-wrap:wrap;top:52px}
+  #emp-app-inner .sticky-back h2{font-size:13px}
+  #emp-app-inner .sticky-back .btn-sm{padding:6px 8px;font-size:11px}
+  #emp-app-inner .btn{padding:9px 16px;font-size:14px}
+  #emp-app-inner .btn-sm{padding:6px 12px;font-size:13px}
+  #emp-app-inner .field input,#emp-app-inner .field select,#emp-app-inner .field textarea{font-size:16px;padding:10px 12px}
+  #emp-app-inner .search-bar input,#emp-app-inner .search-bar select{font-size:16px;padding:9px 12px;min-width:0}
+  #emp-app-inner .search-bar{gap:6px}
+  #emp-app-inner .add-row input,#emp-app-inner .add-row select{font-size:16px;padding:9px 12px}
+  #emp-app-inner .emp-search-input{font-size:16px;padding:10px 12px}
+  #emp-app-inner .sel-btn{padding:10px 18px;font-size:14px}
+  #emp-app-inner .summary-grid{grid-template-columns:repeat(2,1fr)}
+  #emp-app-inner .scard-val{font-size:20px}
+  #emp-app-inner .detail-grid{grid-template-columns:1fr 1fr}
+  #emp-app-inner .field-grid{grid-template-columns:1fr}
+  #emp-app-inner .itab{padding:8px 10px;font-size:12px}
+  #emp-app-inner .sticky-footer{padding:10px 12px}
+  #emp-app-inner .yukyu-form{padding:14px}
+  #emp-app-inner .modal-box{padding:16px;margin:0 8px}
+  #emp-app-inner .form-wrap{max-width:100%}
+  #emp-app-inner .settings-card{max-width:100%}
+  /* テーブル → カード形式 */
+  #emp-app-inner .table-wrap table{display:block;}
+  #emp-app-inner .table-wrap thead{display:none;}
+  #emp-app-inner .table-wrap tbody{display:block;}
+  #emp-app-inner .table-wrap tr{display:block;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:10px 12px;margin-bottom:10px;}
+  #emp-app-inner .table-wrap tr:hover td{background:transparent;}
+  #emp-app-inner .table-wrap td{display:flex;align-items:flex-start;gap:8px;border:none;padding:3px 0;font-size:13px;line-height:1.5;white-space:normal;}
+  #emp-app-inner .table-wrap td::before{content:attr(data-label);font-size:10px;color:var(--emp-text3);min-width:68px;padding-top:3px;flex-shrink:0;letter-spacing:.02em;}
+  #emp-app-inner .table-wrap td[data-label=""]::before,#emp-app-inner .table-wrap td.no-label::before{display:none;}
+  #emp-app-inner .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--emp-border);margin-top:4px;flex-wrap:wrap;gap:6px;}
+  #emp-app-inner .table-wrap td:last-child::before{display:none;}
+  #emp-app-inner .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
 }#emp-app /* トースト通知 */
 #emp-toast-wrap{position:fixed;bottom:24px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}#emp-app .j-toast{background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}#emp-app .j-toast.success{border-left:3px solid #1a5c30;}#emp-app .j-toast.error{border-left:3px solid var(--emp-danger);}#emp-app .j-toast.warn{border-left:3px solid var(--emp-warn);}#emp-app .modal-overlay.open{display:flex!important;}
         
@@ -3114,7 +3114,7 @@ function renderDetail(id){
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
       <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">雇用契約書</button>
-      <button class="btn btn-sm" style="background:var(--info-light);color:var(--info);border-color:var(--info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
+      <button class="btn btn-sm" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
     <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
@@ -3253,7 +3253,7 @@ async function renderAlert(){
       <div class="scard"><div class="scard-label">期限切れ</div><div class="scard-val" style="color:var(--emp-danger)">${expired.length}</div></div>
       <div class="scard"><div class="scard-label">90日以内</div><div class="scard-val" style="color:var(--emp-warn)">${warning.length}</div></div>
     </div>
-    ${alertList.length===0?`<div class="empty" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 0">期限切れ・期限間近の従業員はいません</div>`:`
+    ${alertList.length===0?`<div class="empty" style="background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:48px 0">期限切れ・期限間近の従業員はいません</div>`:`
     <div class="table-wrap"><table>
       <thead><tr><th>氏名</th><th>所属</th><th>警告内容</th><th>在留期限</th><th>免許期限</th><th></th></tr></thead>
       <tbody>${alertList.map(e=>alertRow(e)).join('')}</tbody>
@@ -3280,7 +3280,7 @@ async function loadDispatchAlerts(){
     });
     if(!alertContracts.length){
       section.innerHTML=`<div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--text)">📄 派遣契約の期限アラート</div>
-        <div class="empty" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 0;font-size:13px;">期限が近い派遣契約はありません</div>`;
+        <div class="empty" style="background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:24px 0;font-size:13px;">期限が近い派遣契約はありません</div>`;
       return;
     }
     const empMap={};employees.forEach(e=>empMap[e.id]=e);
@@ -3395,7 +3395,7 @@ function renderDT(){
         <div class="scard"><div class="scard-label">次回付与日時点の勤続年数</div><div class="scard-val" style="font-size:16px;padding-top:4px">${nensuStr}</div></div>
       </div>
 
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px">
+      <div style="background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px 14px;margin-bottom:16px">
         <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:10px">以前の勤続年数を参照しますか？</div>
         <div class="sel-group" style="margin-bottom:10px">
           <button class="sel-btn ${e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${e.id},true,this)">参照する</button>
@@ -3403,7 +3403,7 @@ function renderDT(){
         </div>
         <div id="kousokuDateRow" style="display:${e.kousoku_start_date?'flex':'none'};gap:8px;align-items:center;flex-wrap:wrap">
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">以前の勤務先の入社日</div>
-          <input type="date" id="kousokuInput" value="${e.kousoku_start_date||''}" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <input type="date" id="kousokuInput" value="${e.kousoku_start_date||''}" style="padding:6px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
           <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${e.id})">保存</button>
         </div>
         ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--emp-text3)">→ 本人の入社日（${e.nyusha_date||'未登録'}）で計算します</div>`:''}
@@ -3546,7 +3546,7 @@ function renderDT(){
                 <div style="font-size:12px;color:var(--emp-text2);">📍 ${ct.client_name||'—'} / ${ct.site_name||'—'}</div>
                 <div style="font-size:12px;color:var(--emp-text2);margin-top:2px;">📅 ${ct.contract_start} 〜 ${ct.contract_end}${days>=0?` （残${days}日）`:' （期限切れ）'}</div>
               </div>
-              <span style="font-size:11px;color:var(--info);white-space:nowrap;">詳細 →</span>
+              <span style="font-size:11px;color:var(--emp-info);white-space:nowrap;">詳細 →</span>
             </div>`;
           }).join('')}
         </div>`;
@@ -3578,13 +3578,13 @@ async function loadDispatchContracts(employeeId){
 function filePreviewHtml(src,height='100px'){
   if(!src)return'';
   if(src.includes('data:application/pdf')||src.includes('data:application/octet')||src.includes('data:application/x-pdf')){
-    return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--info-light);color:var(--info);border-radius:var(--radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📄 PDFを開く</a>`;
+    return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--emp-info-light);color:var(--emp-info);border-radius:var(--emp-radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📄 PDFを開く</a>`;
   }
   if(src.startsWith('data:image/')){
-    return`<img src="${src}" style="max-height:${height};border-radius:var(--radius);border:1px solid var(--border);cursor:pointer" onclick="window.open('${src}')">`;
+    return`<img src="${src}" style="max-height:${height};border-radius:var(--emp-radius);border:1px solid var(--emp-border);cursor:pointer" onclick="window.open('${src}')">`;
   }
   // 不明なファイル形式
-  return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);color:var(--emp-text2);border-radius:var(--radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📎 ファイルを開く</a>`;
+  return`<a href="${src}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--emp-bg);color:var(--emp-text2);border-radius:var(--emp-radius);font-size:12px;text-decoration:none;border:1px solid var(--border)">📎 ファイルを開く</a>`;
 }
 
 function multiImgGrid(imgs,onDelete){
@@ -4292,7 +4292,7 @@ async function renderContractList(){
         }).join('')}
         </tbody>
       </table></div>
-    </div>`:'<div style="background:#e8f0eb;border:1px solid #b8d4be;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1a5c30">✓ アラート対象の従業員はいません</div>'}
+    </div>`:'<div style="background:#e8f0eb;border:1px solid #b8d4be;border-radius:var(--emp-radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1a5c30">✓ アラート対象の従業員はいません</div>'}
 
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">発行履歴（このアプリ）</div>
     <div class="search-bar" style="margin-bottom:12px">
@@ -4343,7 +4343,7 @@ function renderCertList(){
       <span style="font-size:16px;font-weight:700">証明書発行一覧</span>
       <div class="summary-grid" style="max-width:360px;margin:0">
         <div class="scard"><div class="scard-label">発行総数</div><div class="scard-val">${list.length}</div></div>
-        <div class="scard"><div class="scard-label">在職証明</div><div class="scard-val" style="color:var(--info)">${certificates.filter(c=>c.cert_type==='在職証明書').length}</div></div>
+        <div class="scard"><div class="scard-label">在職証明</div><div class="scard-val" style="color:var(--emp-info)">${certificates.filter(c=>c.cert_type==='在職証明書').length}</div></div>
         <div class="scard"><div class="scard-label">退職証明</div><div class="scard-val" style="color:var(--emp-text2)">${certificates.filter(c=>c.cert_type==='退職証明書').length}</div></div>
       </div>
     </div>
@@ -4494,23 +4494,23 @@ function renderKenkoList(){
     </div>
 
     <!-- 新規登録フォーム -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;max-width:760px">
+    <div style="background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:16px;margin-bottom:16px;max-width:760px">
       <div style="font-size:13px;font-weight:500;margin-bottom:12px">＋ 健康診断を登録</div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
         <div style="min-width:180px;flex:1">
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">従業員</div>
-          <select id="kfEmp" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <select id="kfEmp" style="width:100%;padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
             <option value="">選択してください</option>
             ${employees.filter(e=>e.status==='在籍').map(e=>`<option value="${e.id}">${e.sei} ${e.mei}</option>`).join('')}
           </select>
         </div>
         <div>
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">受診日</div>
-          <input type="date" id="kfDate" value="${new Date().toISOString().slice(0,10)}" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <input type="date" id="kfDate" value="${new Date().toISOString().slice(0,10)}" style="padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
         </div>
         <div>
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">結果</div>
-          <select id="kfResult" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <select id="kfResult" style="padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
             ${CHECKRES.map(r=>`<option>${r}</option>`).join('')}
           </select>
         </div>
@@ -4823,7 +4823,7 @@ function renderForm(id){
       </div>
       <div class="field">
         <label>年齢</label>
-        <div id="ageDisplay" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:13px;color:var(--emp-text2)">${e.birthday?calcAgeVal(e.birthday)+'歳':'生年月日を入力してください'}</div>
+        <div id="ageDisplay" style="padding:7px 10px;border:1px solid var(--emp-border);border-radius:var(--emp-radius);background:var(--emp-bg);font-size:13px;color:var(--emp-text2)">${e.birthday?calcAgeVal(e.birthday)+'歳':'生年月日を入力してください'}</div>
       </div>
       <div class="field"><label>性別</label><select id="f_gender">${['男','女','その他'].map(x=>`<option ${e.gender===x?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="field"><label>国籍</label>
@@ -4895,7 +4895,7 @@ function renderForm(id){
       <label>在留カード写真</label>
       <label class="photo-upload" id="rcDropArea" style="display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer">
         <input type="file" accept="image/*,application/pdf" id="f_rc" style="display:none" onchange="previewRC(this)">
-        <span id="rcPreview">${e.residence_card?`<img src="${e.residence_card}" style="max-height:120px;border-radius:var(--radius)">`:'クリックまたはドロップして在留カードを追加'}</span>
+        <span id="rcPreview">${e.residence_card?`<img src="${e.residence_card}" style="max-height:120px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして在留カードを追加'}</span>
       </label>
     </div>
     <div class="section-title">雇用保険</div>
@@ -4910,13 +4910,13 @@ function renderForm(id){
       <label>免許証写真</label>
       <label class="photo-upload" id="licDropArea" style="display:flex;align-items:center;justify-content:center;min-height:70px;cursor:pointer">
         <input type="file" accept="image/*,application/pdf" id="f_lic_img" style="display:none" onchange="previewLicForm(this)">
-        <span id="licFormPreview">${e.license_img?`<img src="${e.license_img}" style="max-height:100px;border-radius:var(--radius)">`:'クリックまたはドロップして免許証を追加'}</span>
+        <span id="licFormPreview">${e.license_img?`<img src="${e.license_img}" style="max-height:100px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして免許証を追加'}</span>
       </label>
     </div>
     <div class="section-title">その他資格（最大3件）</div>
     ${[0,1,2].map(i=>{
       const sk=(e.shikaku_list||[])[i]||{};
-      return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+      return`<div style="background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px;margin-bottom:8px">
         <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:8px">資格 ${i+1}</div>
         <div class="field-grid">
           <div class="field"><label>資格名</label><input type="text" id="f_sk${i}_name" value="${sk.name||''}"></div>
@@ -4972,21 +4972,21 @@ function calcAge(){
 }
 function previewRC(input){
   const f=input.files[0];if(!f)return;
-  compressImage(f).then(data=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=`<img src="${data}" style="max-height:120px;border-radius:var(--radius)">`;});
+  compressImage(f).then(data=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=`<img src="${data}" style="max-height:120px;border-radius:var(--emp-radius)">`;});
 }
 let licFormImgData='';
 let skFormImgData=['','',''];
 function previewLicForm(input){
   const f=input.files[0];if(!f)return;
-  compressImage(f).then(data=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=`<img src="${data}" style="max-height:100px;border-radius:var(--radius)">`;});
+  compressImage(f).then(data=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=`<img src="${data}" style="max-height:100px;border-radius:var(--emp-radius)">`;});
 }
 function previewSkForm(input,i){
   const f=input.files[0];if(!f)return;
   compressImage(f).then(data=>{skFormImgData[i]=data;document.getElementById('skFormPreview'+i).innerHTML=`<img src="${data}" style="max-height:60px;border-radius:4px">`;});
 }
 function setupFormDropZones(){
-  setupDrop('rcDropArea',(data)=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=`<img src="${data}" style="max-height:120px;border-radius:var(--radius)">`;});
-  setupDrop('licDropArea',(data)=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=`<img src="${data}" style="max-height:100px;border-radius:var(--radius)">`;});
+  setupDrop('rcDropArea',(data)=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=`<img src="${data}" style="max-height:120px;border-radius:var(--emp-radius)">`;});
+  setupDrop('licDropArea',(data)=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=`<img src="${data}" style="max-height:100px;border-radius:var(--emp-radius)">`;});
   [0,1,2].forEach(i=>{
     setupDrop('skDrop'+i,(data)=>{skFormImgData[i]=data;document.getElementById('skFormPreview'+i).innerHTML=`<img src="${data}" style="max-height:60px;border-radius:4px">`;});
   });
