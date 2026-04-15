@@ -3939,24 +3939,10 @@ function generateCertificate(empId,type){
   .table td:first-child{width:30%;background:#f5f5f5;font-weight:bold}
   .seal-area{text-align:right;margin-top:40px}
   .company-info{text-align:right;line-height:1.8;margin-top:10px}
-  .stamp{display:inline-block;width:60px;height:60px;border:2px solid #c00;border-radius:50%;line-height:60px;text-align:center;color:#c00;font-size:11px;margin-left:10px;vertical-align:middle}
   @media print{body{padding:20px}}
 </style>
-
-<style>
-/* テーマ切り替え */
-body.theme-dark{background:var(--bg,#0f1117);color:var(--text,#e2e8f0);}
-body.theme-light{background:#f5f4f0;color:#1a1a18;}
-body.theme-light #sidebar{display:none!important;}
-body.theme-light .topbar{display:none!important;}
-body.theme-light #main{margin-left:0!important;padding:0!important;}
-body.theme-light #main .page{display:none!important;}
-body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(59,130,246,0.15);color:var(--accent2,#60a5fa);border:1px solid var(--border,#2a3347);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;display:none;}
-
-</style></head>
-<body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
+</head>
+<body>
   <div class="date">発行日：${todayStr}</div>
   <div class="title">${title}</div>
   <div class="content">
@@ -3978,7 +3964,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
       ${companyInfo.address||''}<br>
       ${companyInfo.company_name||''}<br>
       TEL：${companyInfo.tel||''}<br>
-      代表者：${companyInfo.representative||''}　<span class="stamp">印</span>
+      代表者：${companyInfo.representative||''}
     </div>
   </div>
 </body>
