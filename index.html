@@ -2964,6 +2964,7 @@ function showView(v){
   currentView=v;editingId=null;yfFromDetail=false;
   if(v==='yukyu_add')yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};
   render();
+  document.getElementById('emp-app-inner').scrollTop=0;window.scrollTo(0,0);
 }
 function render(){
   if(currentView==='list'){setNav('tList');renderList();}
@@ -3113,7 +3114,7 @@ function viewDetail(id){
   if(currentFilteredList.length===0)currentFilteredList=[...employees];
   render();
 }
-function editEmp(id){editingId=id;currentView='edit';render();}
+function editEmp(id){editingId=id;currentView='edit';render();document.getElementById('emp-app-inner').scrollTop=0;window.scrollTo(0,0);}
 
 // ---- 詳細 ----
 function renderDetail(id){
