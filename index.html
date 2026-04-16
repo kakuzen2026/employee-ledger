@@ -3120,8 +3120,8 @@ function editEmp(id){editingId=id;currentView='edit';render();setTimeout(()=>{co
 function renderDetail(id){
   const e=employees.find(x=>x.id===id);if(!e){currentView='list';render();return;}
   const today=new Date(),exp=e.visa_expiry?new Date(e.visa_expiry):null,dl=exp?Math.round((exp-today)/86400000):null;
-  const tabs=['basic','visa','insurance','yukyu','kenko','license','memo','dispatch'];
-  const labels=['基本情報','在留・外国人','保険','有給','健康診断','免許・資格','メモ','派遣契約'];
+  const tabs=['basic','visa','insurance','yukyu','kenko','license','memo','dispatch','contract'];
+  const labels=['基本情報','在留・外国人','保険','有給','健康診断','免許・資格','メモ','派遣契約','雇用契約書'];
 
   // 前へ・次へ
   const idx=currentFilteredList.findIndex(x=>x.id===id);
@@ -3159,19 +3159,16 @@ async function renderAlert(){
 
   // 雇用契約書アラート（契約書なし・期限切れ・15日以内）
   let dispatchContracts=[];
-  try{dispatchContracts=await sb('dispatch_contracts?select=id,contract_employees(employee_id,is_active,contract_end)');}catch(e){}
+  try{dispatchContracts=await sb('dispatch_contracts?select=employee_id,contract_end');}catch(e){}
   const empContractMap={};
   employmentContracts.forEach(c=>{
     const id=c.employee_id;
     if(!empContractMap[id]||c.issued_date>(empContractMap[id].issued_date||''))
       empContractMap[id]={source:'this_app',contract_end:c.contract_end};
   });
-  dispatchContracts.forEach(dc=>{
-    (dc.contract_employees||[]).forEach(ce=>{
-      if(!ce.is_active)return;
-      if(!empContractMap[ce.employee_id])
-        empContractMap[ce.employee_id]={source:'dispatch',contract_end:ce.contract_end};
-    });
+  dispatchContracts.forEach(ce=>{
+    if(!empContractMap[ce.employee_id])
+      empContractMap[ce.employee_id]={source:'dispatch',contract_end:ce.contract_end};
   });
   const contractAlerts=employees.filter(e=>{
     if(e.status!=='在籍')return false;
@@ -3346,7 +3343,7 @@ async function deleteEmp(id){
   await sb('employees?id=eq.'+id,'DELETE');await loadEmployees();render();
 }
 
-function renderDT(){
+async function renderDT(){
   const e=employees.find(x=>x.id===viewingId);if(!e)return;
   const c=document.getElementById('dtc');
   const dept=departments.find(d=>d.id===Number(e.dept_id));
@@ -3578,9 +3575,42 @@ function renderDT(){
           }).join('')}
         </div>`;
     });
+  } else if(detailTab==='contract'){
+    const empContracts=employmentContracts.filter(c=>c.employee_id===e.id).sort((a,b)=>b.issued_date?.localeCompare(a.issued_date||'')||0);
+    const dispContracts=await (async()=>{try{return await sb(`dispatch_contracts?employee_id=eq.${e.id}&order=contract_end.desc`);}catch(e){return[];}})();
+    if(!empContracts.length&&!dispContracts.length){
+      c.innerHTML=`<div class="empty">雇用契約書の発行履歴がありません</div>`;
+    } else {
+      c.innerHTML=`
+        ${dispContracts.length?`
+        <div class="section-title">派遣管理で作成した雇用契約書兼就業条件明示書</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          ${dispContracts.map(ct=>`
+          <div class="list-item">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${ct.contract_no||'—'}</div>
+              <div style="font-size:12px;color:var(--emp-text2);">📍 ${ct.client_name||'—'} / ${ct.site_name||'—'}</div>
+              <div style="font-size:12px;color:var(--emp-text2);">📅 ${ct.contract_start||'—'} 〜 ${ct.contract_end||'—'}</div>
+            </div>
+            <span class="badge badge-visa">派遣管理</span>
+          </div>`).join('')}
+        </div>`:''
+        }
+        ${empContracts.length?`
+        <div class="section-title">このアプリで作成した雇用契約書</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${empContracts.map(ct=>`
+          <div class="list-item">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${ct.issued_date||'—'} 発行</div>
+              <div style="font-size:12px;color:var(--emp-text2);">期間: ${ct.contract_start||'—'} 〜 ${ct.contract_end||'—'}</div>
+            </div>
+            <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">再発行</button>
+          </div>`).join('')}
+        </div>`:''
+        }`;
+    }
   }
-  // dropzone設定
-  setTimeout(()=>{
     if(document.getElementById('rcDetailDrop'))setupDrop('rcDetailDrop',(d)=>addRcImgDrop(e.id,d));
     if(document.getElementById('licDetailDrop'))setupDrop('licDetailDrop',(d)=>addLicImgDrop(e.id,d));
   },50);
