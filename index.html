@@ -60,11 +60,11 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
 .modal-header h2{font-size:16px;font-weight:700;letter-spacing:.02em;}
 .modal-body{padding:28px;}
 .modal-footer{padding:20px 28px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;background:var(--bg3);border-radius:0 0 16px 16px;}
-#main .form-group, #login-screen .form-group{margin-bottom:20px;}
-#main .form-label, #login-screen .form-label{display:block;font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
-#main .form-label .required, #login-screen .form-label .required{color:var(--danger);margin-left:3px;}
-#main .form-input,.form-select,.form-textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:'Noto Sans JP',sans-serif;transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5;}
-#main .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+#main .form-group, #login-screen .form-group, .modal-body .form-group{margin-bottom:20px;}
+#main .form-label, #login-screen .form-label, .modal-body .form-label{display:block;font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+#main .form-label .required, #login-screen .form-label .required, .modal-body .form-label .required{color:var(--danger);margin-left:3px;}
+#main .form-input, .modal-body .form-input, .form-select, .form-textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);font-family:'Noto Sans JP',sans-serif;transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5;}
+#main .form-input:focus, .modal-body .form-input:focus, .form-select:focus, .form-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
 .form-textarea{resize:vertical;min-height:80px;}
 .form-select option{background:var(--bg3);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -246,7 +246,7 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
   .emp-option{padding:11px 12px;}
 
   /* フォーム入力タップしやすく */
-  #main .form-input,.form-select,.form-textarea{font-size:16px;padding:10px 12px;}
+  #main .form-input, .modal-body .form-input, .form-select, .form-textarea{font-size:16px;padding:10px 12px;}
   .form-textarea{min-height:80px;}
   #main .btn-sm, #login-screen .btn-sm{padding:7px 12px;font-size:12px;}
 }
