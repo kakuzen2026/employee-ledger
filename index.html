@@ -1146,7 +1146,7 @@ async function generateContractNo(){
 }
 
 // ===== CLIENTS =====
-async function loadClients(){const {data}=await db.from('clients').select('*').order('name');ST.clients=data||[];renderClients(ST.clients);}
+async function loadClients(force=false){if(!force&&ST.clients.length){renderClients(ST.clients);return;}const {data}=await db.from('clients').select('*').order('name');ST.clients=data||[];renderClients(ST.clients);}
 function renderClients(list){
   const el=document.getElementById('clients-table');
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🏢</div><p>取引先が登録されていません</p></div>';return;}
@@ -1192,16 +1192,16 @@ async function saveClient(){
   const {error}=id?await db.from('clients').update(p).eq('id',id):await db.from('clients').insert(p);
   if(error){toast('保存に失敗：'+error.message,'error');return;}
   toast(id?'取引先を更新しました':'取引先を登録しました','success');
-  closeModal('modal-client');loadClients();
+  closeModal('modal-client');loadClients(true);
 }
 async function deleteClient(id){
   if(!confirm('この取引先を削除しますか？'))return;
   const {error}=await db.from('clients').delete().eq('id',id);
-  if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadClients();}
+  if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadClients(true);}
 }
 
 // ===== SITES =====
-async function loadSites(){const {data}=await db.from('sites').select('*,clients(name),work_patterns(*)').order('name');ST.sites=data||[];renderSites(ST.sites);}
+async function loadSites(force=false){if(!force&&ST.sites.length){renderSites(ST.sites);return;}const {data}=await db.from('sites').select('*,clients(name),work_patterns(*)').order('name');ST.sites=data||[];renderSites(ST.sites);}
 function renderSites(list){
   const el=document.getElementById('sites-table');
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📍</div><p>現場が登録されていません</p></div>';return;}
@@ -1332,16 +1332,17 @@ async function saveSite(){
   const valid=wpList.filter(x=>x.pattern_name&&x.start_time&&x.end_time);
   if(valid.length) await db.from('work_patterns').insert(valid.map(x=>({site_id:sid,pattern_name:x.pattern_name,start_time:x.start_time,end_time:x.end_time,break_minutes:x.break_minutes??60})));
   toast(id?'現場を更新しました':'現場を登録しました','success');
-  closeModal('modal-site');loadSites();
+  closeModal('modal-site');loadSites(true);
 }
 async function deleteSite(id){
   if(!confirm('この現場を削除しますか？'))return;
   const {error}=await db.from('sites').delete().eq('id',id);
-  if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadSites();}
+  if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadSites(true);}
 }
 
 // ===== CONTRACTS =====
-async function loadContracts(){
+async function loadContracts(force=false){
+  if(!force&&ST.contracts.length){renderContracts();return;}
   const {data}=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,employee_id,employment_type,is_active)').order('contract_end',{ascending:true});
   ST.contracts=data||[];renderContracts();
 }
@@ -1416,7 +1417,7 @@ async function endContract(id){
   if(!confirm('この契約を終了しますか？\n元に戻せません。'))return;
   await db.from('contracts').update({status:'ended',updated_at:new Date().toISOString()}).eq('id',id);
   await db.from('contract_employees').update({is_active:false}).eq('contract_id',id);
-  toast('契約を終了しました','success');loadContracts();
+  toast('契約を終了しました','success');loadContracts(true);
 }
 
 async function deleteContract(id){
@@ -1424,7 +1425,7 @@ async function deleteContract(id){
   await db.from('contract_employees').delete().eq('contract_id',id);
   const {error}=await db.from('contracts').delete().eq('id',id);
   if(error){toast('削除に失敗しました','error');return;}
-  toast('契約を削除しました','success');loadContracts();
+  toast('契約を削除しました','success');loadContracts(true);
 }
 
 // ===== EMPLOYEE SEARCH =====
@@ -1555,7 +1556,7 @@ async function saveContract(){
 
   await syncDispatchContracts(cid, p.contract_start, p.contract_end, p.contract_no);
 
-  toast('契約を保存しました','success');closeModal('modal-contract');loadContracts();
+  toast('契約を保存しました','success');closeModal('modal-contract');loadContracts(true);
 }
 
 // ===== RENEWAL =====
@@ -1595,7 +1596,7 @@ async function execRenewal(){
   // 従業員管理台帳のdispatch_contractsに同期
   await syncDispatchContracts(nc.id, ns, ne, newNo);
 
-  toast('契約を更新しました','success');closeModal('modal-renewal');loadContracts();
+  toast('契約を更新しました','success');closeModal('modal-renewal');loadContracts(true);
   if(ST.page==='dashboard') loadDashboard();
 }
 
@@ -2799,7 +2800,7 @@ async function sb(path,method='GET',body=null){
   if(!res.ok)throw new Error(await res.text());
   const t=await res.text();return t?JSON.parse(t):[];
 }
-async function loadEmployees(){EMP_ST.employees=(await sb('employees?select=*&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
+async function loadEmployees(){EMP_ST.employees=(await sb('employees?select=id,shain_no,sei,mei,seikana,meikana,birthday,gender,nationality,address,tel,email,company,dept_id,position,koyou,employment_type,nyusha_date,taishoku_date,status,kyuyo,jikyu,visa,visa_expiry,visa_no,koyo_hoken_no,koyo_nyusha,koyo_soshitsu,shakai_hoken_no,shakai_nyusha,shakai_soshitsu,license_no,license_date,license_expiry,bank_name,bank_branch,bank_account_no,bank_account_name,memo,yukyu_list,kenkou_list,shikaku_list,residence_card_imgs,license_imgs,contract_other_system,kousoku_start_date,updated_at&order=id.asc')).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
 async function loadYukyu(){EMP_ST.yukyuRecords=await sb('yukyu_records?select=*&order=use_date.desc,id.desc');yukyuRecords=EMP_ST.yukyuRecords;}
 async function loadGrants(){EMP_ST.yukyuGrants=await sb('yukyu_grants?select=*&order=grant_date.asc');yukyuGrants=EMP_ST.yukyuGrants;}
 async function loadDepts(){EMP_ST.departments=await sb('departments?select=*&order=sort_order.asc,id.asc');departments=EMP_ST.departments;}
@@ -2809,13 +2810,14 @@ async function loadCertificates(){EMP_ST.certificates=await sb('certificates?sel
 async function loadWorkPatterns(){EMP_ST.workPatterns=await sb('work_patterns?select=*&order=sort_order.asc,id.asc');workPatterns=EMP_ST.workPatterns;}
 async function loadEmploymentContracts(){EMP_ST.employmentContracts=await sb('employment_contracts?select=*&order=created_at.desc');employmentContracts=EMP_ST.employmentContracts;}
 async function loadAndRender(){
+  // 優先度高（毎回取得）と低（初回のみ）に分けて並列実行
   const tasks=[
     {fn:loadEmployees,name:'従業員'},
-    {fn:loadYukyu,name:'有給記録'},
-    {fn:loadGrants,name:'有給付与'},
     {fn:loadDepts,name:'部署'},
-    {fn:loadVisaTypes,name:'在留資格'},
     {fn:loadCompanyInfo,name:'会社情報'},
+    {fn:loadVisaTypes,name:'在留資格'},
+    {fn:loadGrants,name:'有給付与'},
+    {fn:loadYukyu,name:'有給記録'},
     {fn:loadCertificates,name:'証明書'},
     {fn:loadWorkPatterns,name:'勤務パターン'},
     {fn:loadEmploymentContracts,name:'雇用契約書'},
@@ -2827,7 +2829,12 @@ async function loadAndRender(){
     console.error('Load errors:', results.filter(r=>r.status==='rejected').map(r=>r.reason));
   }
   syncFromST();
-  await checkAndAutoGrant();
+  // 有給自動付与は今日初回のみ実行
+  const _grantKey='autoGrant_'+new Date().toISOString().slice(0,10);
+  if(!sessionStorage.getItem(_grantKey)){
+    sessionStorage.setItem(_grantKey,'1');
+    await checkAndAutoGrant();
+  }
   render();
 }
 
@@ -4865,10 +4872,6 @@ function renderForm(id){
       <div class="field"><label>雇用期間の定め</label><select id="f_employment_type">
         <option value="fixed" ${(e.employment_type||'fixed')==='fixed'?'selected':''}>有期（期間の定めあり）</option>
         <option value="permanent" ${e.employment_type==='permanent'?'selected':''}>無期（期間の定めなし）</option>
-      </select></div>
-      <div class="field"><label>契約種別</label><select id="f_employment_type">
-        <option value="fixed" ${(e.employment_type||'fixed')==='fixed'?'selected':''}>有期</option>
-        <option value="permanent" ${e.employment_type==='permanent'?'selected':''}>無期</option>
       </select></div>
     </div>
     <div style="margin-top:8px;">
