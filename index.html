@@ -3576,39 +3576,42 @@ async function renderDT(){
         </div>`;
     });
   } else if(detailTab==='contract'){
-    const empContracts=employmentContracts.filter(c=>c.employee_id===e.id).sort((a,b)=>b.issued_date?.localeCompare(a.issued_date||'')||0);
-    const dispContracts=await (async()=>{try{return await sb(`dispatch_contracts?employee_id=eq.${e.id}&order=contract_end.desc`);}catch(e){return[];}})();
+    const empContracts=employmentContracts.filter(c=>c.employee_id===e.id).sort((a,b)=>(b.issued_date||'').localeCompare(a.issued_date||''));
+    const dispContracts=await (async()=>{try{return await sb('dispatch_contracts?employee_id=eq.'+e.id+'&order=contract_end.desc');}catch(_){return[];}})();
     if(!empContracts.length&&!dispContracts.length){
-      c.innerHTML=`<div class="empty">雇用契約書の発行履歴がありません</div>`;
+      c.innerHTML='<div class="empty">雇用契約書の発行履歴がありません</div>';
     } else {
-      c.innerHTML=`
-        ${dispContracts.length?`
-        <div class="section-title">派遣管理で作成した雇用契約書兼就業条件明示書</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-          ${dispContracts.map(ct=>`
-          <div class="list-item">
-            <div style="flex:1;">
-              <div style="font-weight:600;font-size:13px;">${ct.contract_no||'—'}</div>
-              <div style="font-size:12px;color:var(--emp-text2);">📍 ${ct.client_name||'—'} / ${ct.site_name||'—'}</div>
-              <div style="font-size:12px;color:var(--emp-text2);">📅 ${ct.contract_start||'—'} 〜 ${ct.contract_end||'—'}</div>
-            </div>
-            <span class="badge badge-visa">派遣管理</span>
-          </div>`).join('')}
-        </div>`:''
-        }
-        ${empContracts.length?`
-        <div class="section-title">このアプリで作成した雇用契約書</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${empContracts.map(ct=>`
-          <div class="list-item">
-            <div style="flex:1;">
-              <div style="font-weight:600;font-size:13px;">${ct.issued_date||'—'} 発行</div>
-              <div style="font-size:12px;color:var(--emp-text2);">期間: ${ct.contract_start||'—'} 〜 ${ct.contract_end||'—'}</div>
-            </div>
-            <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">再発行</button>
-          </div>`).join('')}
-        </div>`:''
-        }`;
+      let html='';
+      if(dispContracts.length){
+        html+='<div class="section-title">派遣管理で作成した雇用契約書兼就業条件明示書</div>';
+        html+='<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
+        dispContracts.forEach(ct=>{
+          html+='<div class="list-item">';
+          html+='<div style="flex:1;">';
+          html+='<div style="font-weight:600;font-size:13px;">'+(ct.contract_no||'—')+'</div>';
+          html+='<div style="font-size:12px;color:var(--emp-text2);">📍 '+(ct.client_name||'—')+' / '+(ct.site_name||'—')+'</div>';
+          html+='<div style="font-size:12px;color:var(--emp-text2);">📅 '+(ct.contract_start||'—')+' 〜 '+(ct.contract_end||'—')+'</div>';
+          html+='</div>';
+          html+='<span class="badge badge-visa">派遣管理</span>';
+          html+='</div>';
+        });
+        html+='</div>';
+      }
+      if(empContracts.length){
+        html+='<div class="section-title">このアプリで作成した雇用契約書</div>';
+        html+='<div style="display:flex;flex-direction:column;gap:8px;">';
+        empContracts.forEach(ct=>{
+          html+='<div class="list-item">';
+          html+='<div style="flex:1;">';
+          html+='<div style="font-weight:600;font-size:13px;">'+(ct.issued_date||'—')+' 発行</div>';
+          html+='<div style="font-size:12px;color:var(--emp-text2);">期間: '+(ct.contract_start||'—')+' 〜 '+(ct.contract_end||'—')+'</div>';
+          html+='</div>';
+          html+='<button class="btn btn-sm" onclick="emp_openContractModal('+e.id+')">再発行</button>';
+          html+='</div>';
+        });
+        html+='</div>';
+      }
+      c.innerHTML=html;
     }
   }
     if(document.getElementById('rcDetailDrop'))setupDrop('rcDetailDrop',(d)=>addRcImgDrop(e.id,d));
