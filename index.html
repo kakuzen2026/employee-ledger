@@ -359,13 +359,15 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 
     <!-- 取引先 -->
     <div class="page" id="page-clients">
-      <div class="section-header"><div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="企業名で検索..." id="search-clients" oninput="if(window._imeOn)return;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(filterClients,400);" oncompositionstart="window._imeOn=true" oncompositionend="window._imeOn=false;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(filterClients,0)"></div></div>
+      <div class="section-header"><div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="企業名で検索..." id="search-clients" onkeydown="if(event.key==='Enter'&&!event.isComposing)filterClients();">
+      <button onclick="filterClients()" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;">検索</button></div></div>
       <div class="card" style="padding:0;overflow:hidden;"><div id="clients-table"><div class="loading"><div class="spinner"></div>読み込み中...</div></div></div>
     </div>
 
     <!-- 現場 -->
     <div class="page" id="page-sites">
-      <div class="section-header"><div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="現場名・企業名で検索..." id="search-sites" oninput="if(window._imeOn)return;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(filterSites,400);" oncompositionstart="window._imeOn=true" oncompositionend="window._imeOn=false;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(filterSites,0)"></div></div>
+      <div class="section-header"><div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="現場名・企業名で検索..." id="search-sites" onkeydown="if(event.key==='Enter'&&!event.isComposing)filterSites();">
+      <button onclick="filterSites()" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;">検索</button></div></div>
       <div class="card" style="padding:0;overflow:hidden;"><div id="sites-table"><div class="loading"><div class="spinner"></div>読み込み中...</div></div></div>
     </div>
 
@@ -3016,7 +3018,8 @@ function renderList(){
       <div class="scard"><div class="scard-label">在留期限90日以内</div><div class="scard-val" style="color:var(--warn)">${warn}</div></div>
     </div>
     <div class="search-bar">
-      <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" oninput="if(window._imeOn)return;listFilter.sq=this.value;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(()=>{renderList();document.getElementById('searchQ')?.focus();},400);" oncompositionstart="window._imeOn=true" oncompositionend="window._imeOn=false;listFilter.sq=this.value;clearTimeout(window._sqTimer);window._sqTimer=setTimeout(()=>{renderList();document.getElementById('searchQ')?.focus();},0)">
+      <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" onkeydown="if(event.key==='Enter'&&!event.isComposing){listFilter.sq=this.value;renderList();}">
+      <button onclick="listFilter.sq=document.getElementById('searchQ').value;renderList();" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
       <select id="fCompany" onchange="listFilter.fc=this.value;render()">
         <option value="">会社：全て</option>
         <option value="セレクト" ${fc==='セレクト'?'selected':''}>セレクト</option>
