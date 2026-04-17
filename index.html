@@ -3616,7 +3616,6 @@ async function renderDT(){
   }
     if(document.getElementById('rcDetailDrop'))setupDrop('rcDetailDrop',(d)=>addRcImgDrop(e.id,d));
     if(document.getElementById('licDetailDrop'))setupDrop('licDetailDrop',(d)=>addLicImgDrop(e.id,d));
-  },50);
 }
 function df(label,val,full){
   return`<div class="detail-field" ${full?'style="grid-column:1/-1"':''}><div class="detail-label">${label}</div><div class="detail-val">${val||'<span style="color:var(--emp-text3)">—</span>'}</div></div>`;
