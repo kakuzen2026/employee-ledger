@@ -9,7 +9,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 :root{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--border:#2a3347;--accent:#3b82f6;--accent2:#60a5fa;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--radius:8px;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+html{overflow-x:hidden;}body{overflow-x:hidden;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
 #sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;}
 .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
 .sidebar-logo h1{font-size:14px;font-weight:700;color:var(--accent2);letter-spacing:.05em;}
@@ -164,7 +164,7 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
   .topbar-title{font-size:14px;font-weight:600;}
 
   /* topbar アクションボタン：テキスト非表示・アイコンのみ */
-  .topbar-actions #main .btn, #login-screen .btn{padding:7px 12px;font-size:12px;}
+  .topbar-actions .btn{padding:7px 12px;font-size:12px;}
   .topbar-actions .btn-text{display:none;}
 
   /* stats 2列 */
@@ -185,7 +185,7 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
   td:last-child{padding-top:10px;border-top:1px solid var(--border);margin-top:6px;flex-wrap:wrap;gap:6px;}
   td:last-child::before{display:none;}
   /* ボタン類を全幅に */
-  td:last-child #main .btn, #login-screen .btn{flex:1;min-width:60px;justify-content:center;}
+  td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
 
   /* form グリッド解除 */
   .form-row,.form-row-3{grid-template-columns:1fr;}
@@ -207,7 +207,7 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
     padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
     gap:8px;flex-wrap:wrap;
   }
-  .modal-footer #main .btn, #login-screen .btn{flex:1;justify-content:center;font-size:13px;padding:10px 8px;min-width:80px;}
+  .modal-footer .btn{flex:1;justify-content:center;font-size:13px;padding:10px 8px;min-width:80px;}
 
   /* モーダルドラッグハンドル */
   .modal::before{
@@ -219,7 +219,7 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
   /* search box */
   .search-box{max-width:100%;}
   .section-header{flex-direction:column;align-items:stretch;gap:10px;}
-  .section-header #main .btn, #login-screen .btn{width:100%;justify-content:center;}
+  .section-header .btn{width:100%;justify-content:center;}
 
   /* tabs スクロール */
   .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:1px;}
@@ -435,9 +435,9 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
   #emp-app-inner .nav-btn{width:100%;text-align:left;padding:12px 16px;font-size:14px;border-radius:var(--emp-radius)}
   #emp-app-inner .nav-divider{width:100%;height:1px;margin:4px 0}
   #emp-app-inner main{padding:12px}
-  #emp-app-inner .sticky-back{padding:8px 12px;margin:-12px -12px 12px -12px;gap:6px;flex-wrap:wrap;top:52px}
-  #emp-app-inner .sticky-back h2{font-size:13px}
-  #emp-app-inner .sticky-back .btn-sm{padding:6px 8px;font-size:11px}
+  #emp-app-inner .sticky-back{padding:8px 12px;margin:-12px -12px 12px -12px;gap:4px;flex-wrap:wrap;top:52px}
+  #emp-app-inner .sticky-back h2{font-size:13px;width:100%;margin-bottom:2px}
+  #emp-app-inner .sticky-back .btn-sm{padding:5px 8px;font-size:11px}
   #emp-app-inner .btn{padding:9px 16px;font-size:14px}
   #emp-app-inner .btn-sm{padding:6px 12px;font-size:13px}
   #emp-app-inner .field input,#emp-app-inner .field select,#emp-app-inner .field textarea{font-size:16px;padding:10px 12px}
@@ -448,7 +448,9 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
   #emp-app-inner .sel-btn{padding:10px 18px;font-size:14px}
   #emp-app-inner .summary-grid{grid-template-columns:repeat(2,1fr)}
   #emp-app-inner .scard-val{font-size:20px}
-  #emp-app-inner .detail-grid{grid-template-columns:1fr 1fr}
+  #emp-app-inner .detail-grid{grid-template-columns:1fr}
+  #emp-app-inner .hide-sp{display:none!important}
+  #emp-app-inner .sp-grid-1col{grid-template-columns:1fr!important}
   #emp-app-inner .field-grid{grid-template-columns:1fr}
   #emp-app-inner .itab{padding:8px 10px;font-size:12px}
   #emp-app-inner .sticky-footer{padding:10px 12px}
@@ -3137,14 +3139,14 @@ function renderDetail(id){
       <h2>${emp_esc(e.sei)} ${emp_esc(e.mei)}</h2>
       <span class="badge ${e.status==='在籍'?'badge-active':'badge-retired'}">${emp_esc(e.status||'—')}</span>
       ${dl!==null&&dl<90?`<span class="badge badge-warn">在留${dl<0?'期限切れ':'残'+dl+'日'}</span>`:''}
-      <span style="font-size:12px;color:var(--emp-text3);margin-left:auto">最終更新: ${emp_esc(e.updated_at||'—')}</span>
+      <span style="font-size:12px;color:var(--emp-text3);margin-left:auto" class="hide-sp">最終更新: ${emp_esc(e.updated_at||'—')}</span>
       <button class="btn btn-sm" ${prevEmp?`onclick="viewDetail(${prevEmp.id})"`:'disabled'} style="${!prevEmp?'opacity:.4':''}">◀ 前へ</button>
       <span style="font-size:12px;color:var(--emp-text3)">${idx+1}/${currentFilteredList.length}</span>
       <button class="btn btn-sm" ${nextEmp?`onclick="viewDetail(${nextEmp.id})"`:'disabled'} style="${!nextEmp?'opacity:.4':''}">次へ ▶</button>
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
       <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">雇用契約書</button>
-      <button class="btn btn-sm" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
+      <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
     <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
@@ -3850,7 +3852,7 @@ function renderSettings(){
 
       <div class="settings-card" style="margin-bottom:20px">
         <h3>部署マスター管理</h3>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <span style="font-size:12px;color:var(--emp-text3)">☰ ドラッグで並び替え</span>
           <button class="btn btn-primary btn-sm" onclick="openDeptModal('add')">＋ 部署を追加</button>
         </div>
@@ -3893,7 +3895,7 @@ function renderSettings(){
           workPatterns.map(p=>`
             <div class="dept-row" style="flex-wrap:wrap">
               <div style="font-weight:500;font-size:13px;flex:1;min-width:120px">${p.name}</div>
-              <div style="font-size:12px;color:var(--emp-text2);flex:2;min-width:200px">
+              <div style="font-size:12px;color:var(--emp-text2);flex:2;min-width:0;word-break:break-all">
                 ${p.start_time||''}〜${p.end_time||''} 休憩${p.break_minutes||60}分 
                 週${p.work_days_per_week||''}日 休日：${p.holidays||''}
               </div>
@@ -4916,7 +4918,7 @@ function renderForm(id){
         <span>雇用契約書は他システムで管理（アラート対象外にする）</span>
       </label>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px" class="sp-grid-1col">
       ${fi('nyusha_date','入社日',e.nyusha_date,'date')}
       <div class="field">
         <label>退職日</label>
