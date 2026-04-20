@@ -413,11 +413,13 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
 .sticky-footer{position:fixed;bottom:0;left:0;right:0;z-index:9;background:var(--emp-surface);border-top:1px solid var(--emp-border);padding:10px 24px;display:flex;gap:8px;justify-content:flex-end;box-shadow:0 -2px 8px rgba(0,0,0,.06);}#emp-app /* ハンバーガーメニュー */
 .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;border:none;background:transparent;flex-shrink:0}#emp-app .hamburger span{display:block;width:22px;height:2px;background:var(--emp-text);border-radius:2px;transition:.2s}#emp-app .nav-menu{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto}#emp-app .nav-divider{width:1px;height:20px;background:var(--emp-border);margin:0 4px;flex-shrink:0}/* スマホ対応 */
 @media(max-width:768px){
+  #page-jugyoin{overflow-x:hidden!important;}
+  #emp-app,#emp-app-inner{max-width:100vw;overflow-x:hidden;}
   #emp-app-inner header{height:52px;padding:0 12px;flex-wrap:nowrap;overflow:hidden}
   #emp-app-inner header h1{font-size:13px;white-space:nowrap}
-  #emp-app-inner .hamburger{display:flex;margin-left:auto}
+  #emp-app-inner .hamburger{display:flex!important;margin-left:auto}
   #emp-app-inner .nav-menu{
-    display:none;
+    display:none!important;
     flex-direction:column;
     align-items:stretch;
     gap:2px;
@@ -431,7 +433,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
     max-height:calc(100vh - 52px);
     overflow-y:auto;
   }
-  #emp-app-inner .nav-menu.open{display:flex}
+  #emp-app-inner .nav-menu.open{display:flex!important}
   #emp-app-inner .nav-btn{width:100%;text-align:left;padding:12px 16px;font-size:14px;border-radius:var(--emp-radius)}
   #emp-app-inner .nav-divider{width:100%;height:1px;margin:4px 0}
   #emp-app-inner main{padding:12px}
