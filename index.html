@@ -459,17 +459,18 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100vh;overfl
   #emp-app-inner .form-wrap{max-width:100%}
   #emp-app-inner .settings-card{max-width:100%}
   /* テーブル → カード形式 */
+  #emp-app-inner .table-wrap{overflow-x:visible;}
   #emp-app-inner .table-wrap table{display:block;}
   #emp-app-inner .table-wrap thead{display:none;}
   #emp-app-inner .table-wrap tbody{display:block;}
   #emp-app-inner .table-wrap tr{display:block;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:10px 12px;margin-bottom:10px;}
   #emp-app-inner .table-wrap tr:hover td{background:transparent;}
-  #emp-app-inner .table-wrap td{display:flex;align-items:flex-start;gap:8px;border:none;padding:3px 0;font-size:13px;line-height:1.5;white-space:normal;}
+  #emp-app-inner .table-wrap td{display:flex;align-items:flex-start;gap:8px;border:none;padding:3px 0;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;min-width:0;}
   #emp-app-inner .table-wrap td::before{content:attr(data-label);font-size:10px;color:var(--emp-text3);min-width:68px;padding-top:3px;flex-shrink:0;letter-spacing:.02em;}
   #emp-app-inner .table-wrap td[data-label=""]::before,#emp-app-inner .table-wrap td.no-label::before{display:none;}
-  #emp-app-inner .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--emp-border);margin-top:4px;flex-wrap:wrap;gap:6px;}
+  #emp-app-inner .table-wrap td:last-child{padding-top:8px;border-top:1px solid var(--emp-border);margin-top:4px;flex-wrap:wrap;gap:6px;white-space:normal!important;}
   #emp-app-inner .table-wrap td:last-child::before{display:none;}
-  #emp-app-inner .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;}
+  #emp-app-inner .table-wrap td:last-child .btn{flex:1;min-width:60px;justify-content:center;margin-left:0!important;}
 }#emp-app /* トースト通知 */
 #emp-toast-wrap{position:fixed;bottom:24px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}#emp-app .j-toast{background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}#emp-app .j-toast.success{border-left:3px solid #1a5c30;}#emp-app .j-toast.error{border-left:3px solid var(--emp-danger);}#emp-app .j-toast.warn{border-left:3px solid var(--emp-warn);}#emp-app .modal-overlay.open{display:flex!important;}
         
