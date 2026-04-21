@@ -3450,37 +3450,48 @@ async function renderDT(){
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <span style="font-size:13px;font-weight:500">付与履歴</span>
-        <button class="btn btn-sm" onclick="openGrantModal(${e.id})">＋ 付与を登録</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
-        ${grants.length===0?'<div class="empty" style="padding:12px 0">付与記録がありません</div>':grants.map(g=>`
-          <div class="list-item" style="${(!g.days&&g.days!==0)?'background:var(--warn-light);border-color:#f5d9a8':''}">
-            <span class="dt">${g.grant_date}</span>
-            <span style="font-weight:500">${g.days!=null&&g.days!==''?`＋${g.days}日付与`:`<span style="color:var(--emp-warn)">⚠ 日数未設定</span>`}</span>
-            ${g.expire_date?`<span style="font-size:12px;color:var(--emp-text2)">期限：${g.expire_date}</span>`:''}
-            <div style="margin-left:auto;display:flex;gap:4px">
-              <button class="btn btn-sm" onclick="openGrantModal(${e.id},${g.id})">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="delGrant(${g.id},${e.id})">削除</button>
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <span style="font-size:13px;font-weight:500">取得履歴</span>
-        <button class="btn btn-primary btn-sm" onclick="openYukyuFromDetail(${e.id})">＋ 有給を登録</button>
+        <span style="font-size:13px;font-weight:500">付与・取得履歴</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="openGrantModal(${e.id})">＋ 付与を登録</button>
+          <button class="btn btn-primary btn-sm" onclick="openYukyuFromDetail(${e.id})">＋ 有給を登録</button>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        ${recs.length===0?'<div class="empty">有給記録がありません</div>':recs.map(r=>`
-          <div class="list-item">
-            <span class="dt">${r.use_date||'—'}</span>
-            <span class="badge badge-visa">${r.use_type||'—'}</span>
-            <span class="chip">${r.shubetsu||'—'}</span>
-            <span class="chip">${r.kubun||'—'}</span>
-            <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
-            ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
-            <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
-          </div>`).join('')}
+        ${(()=>{
+          const timeline=[
+            ...grants.map(g=>({type:'grant',date:g.grant_date||'',data:g})),
+            ...recs.map(r=>({type:'use',date:r.use_date||'',data:r})),
+          ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+          if(timeline.length===0)return '<div class="empty">履歴がありません</div>';
+          return timeline.map(item=>{
+            if(item.type==='grant'){
+              const g=item.data;
+              const warn=(!g.days&&g.days!==0);
+              return `<div class="list-item" style="background:var(--emp-accent-light);border-color:var(--emp-accent)${warn?';background:var(--emp-warn-light);border-color:#f5d9a8':''}">
+                <span class="dt">${g.grant_date||'—'}</span>
+                <span class="badge badge-active">付与</span>
+                <span style="font-weight:500">${warn?'<span style="color:var(--emp-warn)">⚠ 日数未設定</span>':`＋${g.days}日`}</span>
+                ${g.expire_date?`<span style="font-size:12px;color:var(--emp-text2)">期限：${g.expire_date}</span>`:''}
+                <div style="margin-left:auto;display:flex;gap:4px">
+                  <button class="btn btn-sm" onclick="openGrantModal(${e.id},${g.id})">編集</button>
+                  <button class="btn btn-sm btn-danger" onclick="delGrant(${g.id},${e.id})">削除</button>
+                </div>
+              </div>`;
+            } else {
+              const r=item.data;
+              return `<div class="list-item">
+                <span class="dt">${r.use_date||'—'}</span>
+                <span class="badge badge-visa">取得</span>
+                <span class="chip">${r.use_type||'—'}</span>
+                <span class="chip">${r.shubetsu||'—'}</span>
+                <span class="chip">${r.kubun||'—'}</span>
+                <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
+                ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
+                <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
+              </div>`;
+            }
+          }).join('');
+        })()}
       </div>`;
   } else if(detailTab==='kenko'){
     const list=e.kenkou_list||[];
