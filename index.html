@@ -2875,28 +2875,42 @@ function calcYukyuInfo(empId){
   const e=employees.find(x=>x.id===empId);
   if(!e)return{granted:0,used:0,remaining:0,nextDate:null,nextDays:null,unsetDays:false};
 
-  const grants=yukyuGrants.filter(g=>g.employee_id===empId);
-  const twoYearsAgo=new Date(today);twoYearsAgo.setFullYear(twoYearsAgo.getFullYear()-2);
-
-  // 付与合計（2年以内・日数が設定済みのもののみ）
-  const granted=grants.reduce((s,g)=>{
-    if(g.days===null||g.days===undefined||g.days==='')return s;
-    const gd=new Date(g.grant_date);
-    return gd>=twoYearsAgo?s+Number(g.days):s;
-  },0);
+  const allGrants=yukyuGrants.filter(g=>g.employee_id===empId);
+  // 日数設定済み・付与日が今日以前を古い順にソート（FIFO消化のため）
+  const grants=allGrants
+    .filter(g=>g.days!==null&&g.days!==undefined&&g.days!==''&&g.grant_date<=todayStr)
+    .sort((a,b)=>a.grant_date.localeCompare(b.grant_date));
 
   // 日数未設定の付与があるか
-  const unsetDays=grants.some(g=>(g.days===null||g.days===undefined||g.days==='')&&g.grant_date<=todayStr);
+  const unsetDays=allGrants.some(g=>(g.days===null||g.days===undefined||g.days==='')&&g.grant_date<=todayStr);
 
-  // 取得日数
+  // 付与合計・取得合計
+  const granted=grants.reduce((s,g)=>s+Number(g.days),0);
   const recs=yukyuRecords.filter(r=>r.employee_id===empId);
   const used=recs.reduce((s,r)=>s+(r.use_type==='全日'?1:0.5),0);
-  const remaining=Math.max(0,granted-used);
+
+  // FIFO残日数：古い付与から順に消化し、期限切れの残は加算しない
+  let usedBuf=used;
+  let remaining=0;
+  for(const g of grants){
+    const days=Number(g.days);
+    let expStr=g.expire_date;
+    if(!expStr){
+      const ed=new Date(g.grant_date);ed.setFullYear(ed.getFullYear()+2);ed.setDate(ed.getDate()-1);
+      expStr=ed.toISOString().slice(0,10);
+    }
+    if(usedBuf>=days){
+      usedBuf-=days;
+    }else{
+      const left=days-usedBuf;usedBuf=0;
+      if(expStr>=todayStr)remaining+=left;
+    }
+  }
 
   // 次回付与日
   const allDates=calcGrantDates(empId);
   const nextDate=allDates.find(d=>d>todayStr)||null;
-  const nextGrant=grants.find(g=>g.grant_date===nextDate);
+  const nextGrant=allGrants.find(g=>g.grant_date===nextDate);
   const nextDays=nextGrant?(nextGrant.days!==null&&nextGrant.days!==''?Number(nextGrant.days):null):null;
 
   return{granted,used,remaining,nextDate,nextDays,unsetDays};
