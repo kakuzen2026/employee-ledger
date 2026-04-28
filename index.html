@@ -900,6 +900,23 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   </div>
 </div>
 
+<!-- 有給取得編集モーダル -->
+<div class="modal-overlay" id="yrEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
+  <div class="modal-box" style="max-width:480px;max-height:90vh;overflow-y:auto">
+    <h3>有給取得を編集</h3>
+    <div class="field"><label>使用日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yre_date"></div>
+    <div class="field"><label>使用内容 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group" id="yre_use_type_grp"></div></div>
+    <div class="field"><label>種別 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group" id="yre_shubetsu_grp"></div></div>
+    <div class="field"><label>区分 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group" id="yre_kubun_grp"></div></div>
+    <div class="field"><label>入力者 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group" id="yre_input_by_grp"></div></div>
+    <div class="field"><label>備考</label><textarea id="yre_biko" rows="3" style="width:100%"></textarea></div>
+    <div class="actions">
+      <button class="btn" onclick="closeYrEditModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveYrEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 勤務パターン編集モーダル -->
 <div class="modal-overlay" id="wpModal" style="display:none">
   <div class="modal-box" style="max-width:500px">
@@ -3835,7 +3852,10 @@ async function renderDT(){
                 <span class="chip">${r.kubun||'—'}</span>
                 <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
                 ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
-                <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
+                <div style="margin-left:auto;display:flex;gap:4px">
+                  <button class="btn btn-sm" onclick="openYrEditModal(${r.id})">編集</button>
+                  <button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button>
+                </div>
               </div>`;
             }
           }).join('');
@@ -5097,6 +5117,39 @@ async function saveKousokuDate(id,clear=false){
   await sb('employees?id=eq.'+id,'PATCH',{kousoku_start_date:d||null,updated_at:e.updated_at});
   if(!clear)showToast('保存しました');
   renderDT();
+}
+
+// ---- 有給取得 編集 ----
+let yrEditId=null,yrEditState={};
+function openYrEditModal(id){
+  const r=yukyuRecords.find(x=>x.id===id);
+  if(!r){showToast('記録が見つかりません','error');return;}
+  yrEditId=id;
+  yrEditState={use_type:r.use_type||'',shubetsu:r.shubetsu||'',kubun:r.kubun||'',input_by:r.input_by||''};
+  document.getElementById('yre_date').value=r.use_date||'';
+  document.getElementById('yre_biko').value=r.biko||'';
+  [['yre_use_type_grp',USE_TYPES,'use_type'],['yre_shubetsu_grp',SHUBETSU,'shubetsu'],['yre_kubun_grp',KUBUN,'kubun'],['yre_input_by_grp',INPUT_BY,'input_by']].forEach(([grpId,opts,key])=>{
+    document.getElementById(grpId).innerHTML=opts.map(t=>`<button class="sel-btn ${yrEditState[key]===t?'selected':''}" onclick="selYrEdit('${key}','${t}',this)">${t}</button>`).join('');
+  });
+  document.getElementById('yrEditModal').classList.add('open');
+}
+function selYrEdit(key,val,btn){
+  yrEditState[key]=val;
+  btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function closeYrEditModal(){document.getElementById('yrEditModal').classList.remove('open');}
+async function saveYrEdit(){
+  const d=document.getElementById('yre_date').value;
+  if(!d){showToast('使用日は必須です','error');return;}
+  if(!yrEditState.use_type){showToast('使用内容を選択してください','error');return;}
+  if(!yrEditState.shubetsu){showToast('種別を選択してください','error');return;}
+  if(!yrEditState.kubun){showToast('区分を選択してください','error');return;}
+  if(!yrEditState.input_by){showToast('入力者を選択してください','error');return;}
+  try{
+    await sb('yukyu_records?id=eq.'+yrEditId,'PATCH',{use_date:d,use_type:yrEditState.use_type,shubetsu:yrEditState.shubetsu,kubun:yrEditState.kubun,input_by:yrEditState.input_by,biko:document.getElementById('yre_biko').value||''});
+    await loadYukyu();closeYrEditModal();renderDT();
+  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
 }
 
 // ---- 有給付与 ----
