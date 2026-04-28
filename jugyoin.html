@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -981,10 +981,9 @@ async function deleteEmp(id){
 
 function renderDT(){
   const e=employees.find(x=>x.id===viewingId);if(!e)return;
-  // アクティブタブの強調表示を更新
-  document.querySelectorAll('.itab').forEach(btn=>{
-    const t=btn.getAttribute('onclick').match(/detailTab='([^']+)'/);
-    if(t)btn.classList.toggle('active',t[1]===detailTab);
+  const tabs=['basic','visa','insurance','yukyu','kenko','license','memo','dispatch'];
+  document.querySelectorAll('.tab-list .itab').forEach((btn,i)=>{
+    btn.classList.toggle('active',tabs[i]===detailTab);
   });
   const c=document.getElementById('dtc');
   const dept=departments.find(d=>d.id===Number(e.dept_id));
@@ -2682,7 +2681,8 @@ function downloadSampleCSV(){
 async function importCSV(input){
   const file=input.files[0];if(!file)return;
   const text=await file.text();
-  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const lines=text.split('\
+').map(l=>l.trim()).filter(Boolean);
   if(lines.length<2){showToast('データがありません','warn');return;}
   const headers=parseCSVLine(lines[0]);
   const idx=col=>headers.indexOf(col);
@@ -2738,9 +2738,11 @@ function exportYukyuCSV(){
   dlCSV([h,...rows],'有給記録');
 }
 function dlCSV(data,name){
-  const csv='\uFEFF'+data.map(r=>r.join(',')).join('\n');
+  const csv='\uFEFF'+data.map(r=>r.join(',')).join('\
+');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 </script>
 </body>
 </html>
+"
