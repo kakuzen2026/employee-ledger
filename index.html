@@ -1315,12 +1315,8 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
 // ===== CONFIG =====
 const SUPA_URL = 'https://wkzbsdfgslidubqpifwa.supabase.co';
 const SUPA_KEY = 'sb_publishable_mfVmygJgUjnax83quON02Q_KMdYfF-Y';
-// DB統合により従業員DBも新DBへ統合済み。旧DB接続は下記コメントに保持（1〜2週間のロールバック用）
-// const EMP_URL  = 'https://jqokhqybxjkcantxsjfm.supabase.co';
-// const EMP_KEY  = 'sb_publishable_xrJBbuf8RlXbz_achTcVTw_kGZE8Yu4';
 const {createClient} = supabase;
 const db    = createClient(SUPA_URL, SUPA_KEY);
-// const empDb = createClient(EMP_URL,  EMP_KEY);
 
 // ===== XSS エスケープ =====
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
@@ -1772,6 +1768,16 @@ async function openCtDetail(cid){
     ${c.status==='active'?`<button class="btn btn-danger" onclick="closeModal('modal-ct-detail');endContract('${esc(c.id)}')">契約を終了</button>`:''}
     <button class="btn btn-danger" onclick="closeModal('modal-ct-detail');deleteContract('${esc(c.id)}')">🗑 削除</button>`;
   openModal('modal-ct-detail');
+}
+
+async function openIntegratedDispatchContract(contractId){
+  if(!contractId){
+    navigate('contracts');
+    return;
+  }
+  navigate('contracts');
+  await loadContracts(true);
+  await openCtDetail(String(contractId));
 }
 
 async function endContract(id){
@@ -3040,9 +3046,7 @@ document.addEventListener('click',e=>{const dd=document.getElementById('ct-emp-d
 
 
 // ===== EMPLOYEE MANAGEMENT (統合) =====
-// DB統合により新DB(wk…)へ接続。旧DB接続は下記コメントに保持（1〜2週間のロールバック用）
-// const SUPABASE_URL='https://jqokhqybxjkcantxsjfm.supabase.co';
-// const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxb2tocXlieGprY2FudHhzamZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODA0OTcsImV4cCI6MjA5MTI1NjQ5N30.BXjGGwnQXOAyKTlOcVs9v0myUqOGDybvTJ9saqdLIk0';
+// DB統合により従業員管理も統合先DBへ接続する。
 const SUPABASE_URL=SUPA_URL;
 const SUPABASE_KEY=SUPA_KEY;
 const KOYOU=['正社員','パート・アルバイト','契約社員','派遣社員','業務委託'];
@@ -3522,7 +3526,7 @@ function renderDetail(id){
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
       <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">雇用契約書</button>
-      <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('hakenn.html','_blank')">派遣管理で確認 ↗</button>
+      <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="navigate('dashboard')">派遣管理へ</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
     <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
@@ -3700,14 +3704,13 @@ async function loadDispatchAlerts(){
           const rowBg=days<0?'background:var(--danger-light);':days<=14?'background:var(--warn-light);':'';
           const dayLabel=days<0?`<span style="color:var(--emp-danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
             :`<span style="color:var(--emp-warn);font-weight:600;">${days}日</span>`;
-          const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${emp_esc(ct.dispatch_app_contract_id)}`;
           return`<tr style="${rowBg}">
             <td data-label="氏名"><span class="emp-name" onclick="detailTab='dispatch';viewDetail(${ct.employee_id})">${name}</span></td>
             <td data-label="契約番号" style="font-size:12px;">${emp_esc(ct.contract_no||'—')}</td>
             <td data-label="取引先/現場" style="font-size:12px;">${emp_esc(ct.client_name||'—')} / ${emp_esc(ct.site_name||'—')}</td>
             <td data-label="契約終了日" style="font-size:12px;">${emp_esc(ct.contract_end)}</td>
             <td data-label="残日数">${dayLabel}</td>
-            <td class="no-label"><button class="btn btn-sm" onclick="window.open('${dispatchUrl}','_blank')">派遣管理で確認</button></td>
+            <td class="no-label"><button class="btn btn-sm" onclick="openIntegratedDispatchContract('${emp_esc(ct.dispatch_app_contract_id||'')}')">派遣管理で確認</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -3939,7 +3942,7 @@ async function renderDT(){
         return;
       }
       c.innerHTML=`
-        <div style="font-size:13px;color:var(--emp-text2);margin-bottom:12px;">派遣管理台帳に登録された契約履歴です。クリックすると派遣管理アプリの詳細へ移動します。</div>
+        <div style="font-size:13px;color:var(--emp-text2);margin-bottom:12px;">派遣管理台帳に登録された契約履歴です。クリックすると統合アプリ内の契約詳細へ移動します。</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${contracts.map(ct=>{
             const start=new Date(ct.contract_start);
@@ -3955,8 +3958,7 @@ async function renderDT(){
             } else {
               statusBadge=`<span class="badge badge-active">有効</span>`;
             }
-            const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${ct.dispatch_app_contract_id}`;
-            return`<div class="list-item" style="${rowBg}cursor:pointer;" onclick="window.open('${dispatchUrl}','_blank')">
+            return`<div class="list-item" style="${rowBg}cursor:pointer;" onclick="openIntegratedDispatchContract('${emp_esc(ct.dispatch_app_contract_id||'')}')">
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
                   <span style="font-weight:600;font-size:13px;">${ct.contract_no||'—'}</span>
