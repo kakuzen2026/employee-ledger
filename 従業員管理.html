@@ -136,10 +136,11 @@ tr:hover td{background:#fafaf8}
 <div id="loginScreen">
   <div class="login-box">
     <h1>従業員管理台帳</h1>
-    <p>パスワードを入力してください</p>
-    <input type="password" id="pwInput" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()">
-    <button onclick="doLogin()">ログイン</button>
-    <div class="login-error" id="loginErr">パスワードが違います</div>
+    <p>メールアドレスとパスワードでログインしてください</p>
+    <input type="email" id="emailInput" placeholder="メールアドレス" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('pwInput').focus()">
+    <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="loginBtn" onclick="doLogin()">ログイン</button>
+    <div class="login-error" id="loginErr">ログインできませんでした</div>
   </div>
 </div>
 
@@ -203,8 +204,10 @@ tr:hover td{background:#fafaf8}
 
 <script>
 const SUPABASE_URL='https://jqokhqybxjkcantxsjfm.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxb2tocXlieGprY2FudHhzamZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODA0OTcsImV4cCI6MjA5MTI1NjQ5N30.BXjGGwnQXOAyKTlOcVs9v0myUqOGDybvTJ9saqdLIk0';
-const APP_PASSWORD='kakuzen2025';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxb2tocXlieGprY2FudHhzamZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODA0OTcsImV4cCI6MjA5MTI1NjQ5N30.BXjGGwnQXOAyKTlOcVs9v0myUqOGDybvTJ9saqdLIk0';
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+  auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+});
 const KOYOU=['正社員','パート・アルバイト','契約社員','派遣社員','業務委託'];
 const CHECKRES=['異常なし','要経過観察','要精密検査','受診未了'];
 const USE_TYPES=['全日','半休（午前）','半休（午後）'];
@@ -218,6 +221,7 @@ let kenkoImgData='',rcImgData='';
 let yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};
 let yfFromDetail=false;
 let deptModalMode='add',deptModalId=null,deptModalCallback=null;
+let currentSession=null;
 
 // フィルター状態を保持
 let listFilter={sq:'',fs:'在籍',fd:'',fc:''};
@@ -245,24 +249,55 @@ try{const s=localStorage.getItem('emp_cols');if(s)visibleCols=JSON.parse(s);}cat
 let currentFilteredList=[];
 
 // ---- Auth ----
-function doLogin(){
-  if(document.getElementById('pwInput').value===APP_PASSWORD){
-    sessionStorage.setItem('auth','1');
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appScreen').style.display='flex';
-    loadAndRender();
-  } else {document.getElementById('loginErr').style.display='block';}
-}
-function doLogout(){sessionStorage.removeItem('auth');location.reload();}
-if(sessionStorage.getItem('auth')==='1'){
+function showApp(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appScreen').style.display='flex';
-  loadAndRender();
 }
+function showLoginError(message){
+  const el=document.getElementById('loginErr');
+  el.textContent=message||'ログインできませんでした';
+  el.style.display='block';
+}
+async function doLogin(){
+  const email=document.getElementById('emailInput').value.trim();
+  const pw=document.getElementById('pwInput').value;
+  const btn=document.getElementById('loginBtn');
+  document.getElementById('loginErr').style.display='none';
+  if(!email||!pw){showLoginError('メールアドレスとパスワードを入力してください');return;}
+  btn.disabled=true;btn.textContent='ログイン中...';
+  try{
+    const {data,error}=await db.auth.signInWithPassword({email,password:pw});
+    if(error)throw error;
+    currentSession=data.session;
+    showApp();
+    await loadAndRender();
+  }catch(e){
+    showLoginError(e.message||'ログインできませんでした');
+  }finally{
+    btn.disabled=false;btn.textContent='ログイン';
+  }
+}
+async function doLogout(){await db.auth.signOut();location.reload();}
+async function checkLogin(){
+  const {data,error}=await db.auth.getSession();
+  if(error||!data.session)return;
+  currentSession=data.session;
+  showApp();
+  await loadAndRender();
+}
+checkLogin();
 
 // ---- Supabase ----
+async function getAccessToken(){
+  if(currentSession?.access_token)return currentSession.access_token;
+  const {data,error}=await db.auth.getSession();
+  if(error||!data.session)throw new Error('ログインセッションが切れています。再ログインしてください。');
+  currentSession=data.session;
+  return data.session.access_token;
+}
 async function sb(path,method='GET',body=null){
-  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
+  const token=await getAccessToken();
+  const opts={method,headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'}};
   if(body)opts.body=JSON.stringify(body);
   const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
   if(!res.ok)throw new Error(await res.text());
@@ -519,7 +554,7 @@ function renderList(){
             <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
             <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')" style="margin-left:4px">在職証明</button>
             ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')" style="margin-left:4px">退職証明</button>`:''}
-            <button class="btn btn-sm btn-danger" onclick="deleteEmp(${e.id})" style="margin-left:4px">削除</button>
+            <button class="btn btn-sm btn-danger" onclick="retireEmp(${e.id})" style="margin-left:4px">退職扱い</button>
           </td></tr>`;
       }).join('')}</tbody>
     </table></div>`}`;
@@ -676,9 +711,16 @@ function renderAlert(){
 
 // ---- 詳細 ----
 function editEmp(id){editingId=id;currentView='edit';render();}
-async function deleteEmp(id){
-  if(!confirm('本当に削除しますか？'))return;
-  await sb('employees?id=eq.'+id,'DELETE');await loadEmployees();render();
+async function retireEmp(id){
+  const e=employees.find(x=>x.id===id);
+  if(!e){alert('従業員が見つかりません');return;}
+  if(!confirm(`${e.sei||''} ${e.mei||''} さんを退職扱いにします。台帳データは削除されません。よろしいですか？`))return;
+  await sb('employees?id=eq.'+id,'PATCH',{
+    status:'退職',
+    taishoku_date:e.taishoku_date||new Date().toISOString().slice(0,10),
+    updated_at:new Date().toISOString().slice(0,10)
+  });
+  await loadEmployees();render();
 }
 
 function renderDT(){
@@ -783,7 +825,7 @@ function renderDT(){
             ${g.expire_date?`<span style="font-size:12px;color:var(--text2)">期限：${g.expire_date}</span>`:''}
             <div style="margin-left:auto;display:flex;gap:4px">
               <button class="btn btn-sm" onclick="openGrantModal(${e.id},${g.id})">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="delGrant(${g.id},${e.id})">削除</button>
+              <button class="btn btn-sm btn-danger" onclick="showDeleteDisabled()">削除停止中</button>
             </div>
           </div>`).join('')}
       </div>
@@ -801,7 +843,7 @@ function renderDT(){
             <span class="chip">${r.kubun||'—'}</span>
             <span style="font-size:12px;color:var(--text2)">入力：${r.input_by||'—'}</span>
             ${r.biko?`<span style="font-size:12px;color:var(--text2)">備考：${r.biko}</span>`:''}
-            <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
+            <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="showDeleteDisabled()">削除停止中</button>
           </div>`).join('')}
       </div>`;
   } else if(detailTab==='kenko'){
@@ -1119,7 +1161,7 @@ function renderSettings(){
               <div class="d1">${d.shozoku1}</div>
               <div class="d2">${d.shozoku2||'<span style="color:var(--text3)">所属2なし</span>'}</div>
               <button class="btn btn-sm" onclick="openDeptModal('edit',${d.id})">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteDept(${d.id})">削除</button>
+              <button class="btn btn-sm btn-danger" onclick="showDeleteDisabled()">削除停止中</button>
             </div>`).join('')}
         </div>`}
       </div>
@@ -1133,7 +1175,7 @@ function renderSettings(){
             <div class="dept-row">
               <div class="d1" style="flex:2">${v.name}</div>
               <button class="btn btn-sm" onclick="openVisaModal('edit',${v.id},'${v.name.replace(/'/g,"\\'")}')">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteVisaType(${v.id})">削除</button>
+              <button class="btn btn-sm btn-danger" onclick="showDeleteDisabled()">削除停止中</button>
             </div>`).join('')}
       </div>
     </div>`;
@@ -1271,18 +1313,15 @@ function renderCertList(){
         <td style="font-size:12px;color:var(--text2)">${r.issued_by||'—'}</td>
         <td>
           <button class="btn btn-sm" onclick="reissueCert(${r.employee_id},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')">再発行</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button>
+          <button class="btn btn-sm btn-danger" onclick="showDeleteDisabled()" style="margin-left:4px">削除停止中</button>
         </td>
       </tr>`).join('')}
       </tbody>
     </table></div>`}`;
 }
 
-async function deleteCert(id){
-  if(!confirm('この発行履歴を削除しますか？'))return;
-  await sb('certificates?id=eq.'+id,'DELETE');
-  await loadCertificates();
-  renderCertList();
+function showDeleteDisabled(){
+  alert('安全のため物理削除を停止しています。削除が必要な場合は、論理削除用のDB列を確認・追加してから対応してください。');
 }
 
 function reissueCert(empId,type){
@@ -1319,14 +1358,6 @@ async function deptDrop(e,targetId){
     await loadDepts();renderSettings();
   }catch(err){alert('並び替えの保存に失敗しました：'+err.message);}
 }
-async function deleteDept(id){
-  const inUse=employees.some(e=>Number(e.dept_id)===id);
-  if(inUse){alert('この部署は従業員に使用されているため削除できません。\n先に従業員の部署を変更してください。');return;}
-  if(!confirm('この部署を削除しますか？'))return;
-  await sb('departments?id=eq.'+id,'DELETE');
-  await loadDepts();renderSettings();
-}
-
 // ---- 在留資格マスター ----
 let visaModalMode='add',visaModalId=null;
 function openVisaModal(mode,id=null,name=''){
@@ -1345,14 +1376,6 @@ async function saveVisaModal(){
     await loadVisaTypes();closeVisaModal();renderSettings();
   }catch(e){alert('保存に失敗しました：'+e.message);}
 }
-async function deleteVisaType(id){
-  const inUse=employees.some(e=>e.visa===visaTypes.find(v=>v.id===id)?.name);
-  if(inUse){alert('この在留資格は従業員に使用されているため削除できません。');return;}
-  if(!confirm('この在留資格を削除しますか？'))return;
-  await sb('visa_types?id=eq.'+id,'DELETE');
-  await loadVisaTypes();renderSettings();
-}
-
 // ---- 健康診断一覧 ----
 function renderKenkoList(){
   const fe=(document.getElementById('fkEmp')||{}).value||'';
@@ -1547,16 +1570,10 @@ function renderYukyuList(){
         <td>${r.input_by||'—'}</td>
         <td style="font-size:12px;color:var(--text3)">${r.touroku_date||'—'}</td>
         <td style="font-size:12px;color:var(--text2);max-width:140px">${r.biko||''}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></td>
+        <td><button class="btn btn-sm btn-danger" onclick="showDeleteDisabled()">削除停止中</button></td>
       </tr>`).join('')}</tbody>
     </table></div>`}`;
 }
-async function delYR(id){
-  if(!confirm('この有給記録を削除しますか？'))return;
-  await sb('yukyu_records?id=eq.'+id,'DELETE');await loadYukyu();
-  if(currentView==='yukyu_list')renderYukyuList();else renderDT();
-}
-
 function toggleKousoku(id,useKousoku,btn){
   btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -1619,12 +1636,6 @@ async function saveGrant(){
     await loadGrants();closeGrantModal();renderDT();
   }catch(e){alert('保存に失敗しました：'+e.message);}
 }
-async function delGrant(id,empId){
-  if(!confirm('この付与記録を削除しますか？'))return;
-  await sb('yukyu_grants?id=eq.'+id,'DELETE');
-  await loadGrants();renderDT();
-}
-
 // ---- 有給登録 ----
 function openYukyuFromDetail(empId){
   const e=employees.find(x=>x.id===empId);
@@ -1755,10 +1766,6 @@ function renderForm(id){
       <div class="field"><label>雇用期間の定め</label><select id="f_employment_type">
         <option value="fixed" ${(e.employment_type||'fixed')==='fixed'?'selected':''}>有期（期間の定めあり）</option>
         <option value="permanent" ${e.employment_type==='permanent'?'selected':''}>無期（期間の定めなし）</option>
-      </select></div>
-      <div class="field"><label>契約種別</label><select id="f_employment_type">
-        <option value="fixed" ${(e.employment_type||'fixed')==='fixed'?'selected':''}>有期</option>
-        <option value="permanent" ${e.employment_type==='permanent'?'selected':''}>無期</option>
       </select></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
