@@ -3562,7 +3562,7 @@ function renderDetail(id){
       <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="navigate('dashboard')">派遣管理へ</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
-    <div class="tab-list" role="tablist" aria-label="従業員詳細タブ">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" type="button" role="tab" aria-selected="${detailTab===t?'true':'false'}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
+    <div class="tab-list" role="tablist" aria-label="従業員詳細タブ">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" type="button" role="tab" aria-selected="${detailTab===t?'true':'false'}" data-tab="${t}" onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
     <div id="dtc"></div>`;
   renderDT();
 }
@@ -3762,6 +3762,11 @@ async function deleteEmp(id){
 
 async function renderDT(){
   const e=employees.find(x=>x.id===viewingId);if(!e)return;
+  document.querySelectorAll('#page-jugyoin #emp-app .itab').forEach(btn=>{
+    const isActive=btn.dataset.tab===detailTab;
+    btn.classList.toggle('active',isActive);
+    btn.setAttribute('aria-selected',isActive?'true':'false');
+  });
   const c=document.getElementById('dtc');
   const dept=departments.find(d=>d.id===Number(e.dept_id));
   if(detailTab==='basic'){
