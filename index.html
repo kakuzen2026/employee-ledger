@@ -626,6 +626,10 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
 
 <style>
 /* テーマ切り替え */
+body.shell-pending #sidebar,
+body.shell-pending #mobile-nav,
+body.shell-pending #main,
+body.shell-pending #emp-back-btn{visibility:hidden;}
 body.theme-dark{background:var(--bg,#141210);color:var(--text,#F5F0EB);}
 body.theme-light{background:#f5f4f0;color:#1a1a18;}
 body.theme-light #sidebar{display:none!important;}
@@ -636,7 +640,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
 #emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(217,119,6,.12);color:#F59E0B;border:1px solid rgba(217,119,6,.3);border-radius:5px;padding:4px 11px;font-size:11px;cursor:pointer;display:none;font-family:'JetBrains Mono',monospace;}
 
 </style></head>
-<body class="theme-dark">
+<body class="theme-dark shell-pending">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
 
 <!-- LOGIN -->
@@ -1371,13 +1375,13 @@ async function checkLogin(){
     const {data:{session},error} = await db.auth.getSession();
     if(session){
       window.location.hash = '';
-      showApp();
+      showApp(true);
       return;
     }
   }
   const {data:{session}} = await db.auth.getSession();
   if(session){
-    showApp();
+    showApp(true);
   } else {
     document.getElementById('login-screen').style.display='block';
   }
@@ -1405,7 +1409,7 @@ async function doEmailLogin(){
     btn.textContent = 'ログイン';
   } else {
     document.getElementById('login-screen').style.display='none';
-    showApp();
+    showApp(true);
   }
 }
 
@@ -1415,7 +1419,7 @@ async function doLogoutAll(){
   window.location.reload();
 }
 
-function showApp(){navigate('jugyoin');}
+function showApp(sessionReady=false){navigate('jugyoin',sessionReady);}
 
 // ===== NAV =====
 const NAV_TITLES={dashboard:'ダッシュボード',clients:'取引先管理',sites:'現場管理',contracts:'契約管理',billing:'請求管理',records:'記録管理',settings:'設定',jugyoin:'従業員管理台帳'};
@@ -1425,7 +1429,7 @@ const NAV_BTNS={
   contracts:`<button class="btn btn-primary" onclick="openContractModal()">＋ <span class="btn-text">契約を作成</span></button>`,
   billing:`<button class="btn btn-primary" onclick="openBillingModal()">＋ <span class="btn-text">請求を記録</span></button>`,
 };
-function navigate(page){
+function navigate(page,sessionReady=false){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   if(page!=='jugyoin'){
     document.body.classList.remove('theme-light');
@@ -1454,8 +1458,8 @@ function navigate(page){
   else if(page==='records') loadRecords();
   else if(page==='jugyoin'){
     // Supabase Auth セッションがあれば従業員管理も自動認証
-    db.auth.getSession().then(({data:{session}})=>{
-      if(session){
+    const applyJugyoinShell=(loggedIn)=>{
+      if(loggedIn){
         document.getElementById('emp-login').style.display='none';
         document.getElementById('emp-app-inner').style.display='flex';
         if(!window._empLoaded){window._empLoaded=true;loadAndRender();}
@@ -1463,7 +1467,13 @@ function navigate(page){
         document.getElementById('emp-login').style.display='flex';
         document.getElementById('emp-app-inner').style.display='none';
       }
-    });
+      document.body.classList.remove('shell-pending');
+    };
+    if(sessionReady){
+      applyJugyoinShell(true);
+    } else {
+      db.auth.getSession().then(({data:{session}})=>applyJugyoinShell(!!session));
+    }
   }
   else if(page==='settings') loadSettings();
 }
