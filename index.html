@@ -3546,6 +3546,16 @@ function viewDetail(id,tab){
   if(currentFilteredList.length===0)currentFilteredList=[...employees];
   render();
 }
+function setDetailTab(tab){
+  detailTab=tab;
+  document.querySelectorAll('.tab-list .itab').forEach(btn=>{
+    const active=btn.dataset.tab===tab;
+    btn.classList.toggle('active',active);
+    if(active)btn.setAttribute('aria-current','page');
+    else btn.removeAttribute('aria-current');
+  });
+  renderDT();
+}
 function editEmp(id){editingId=id;currentView='edit';render();setTimeout(()=>{const el=document.getElementById('page-jugyoin');if(el)el.scrollTop=0;},0);}
 
 // ---- 詳細 ----
@@ -3576,7 +3586,7 @@ function renderDetail(id){
       <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('https://kakuzen2026.github.io/dispatch-kanri/','_blank')">派遣管理で確認 ↗</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
-    <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" ${detailTab===t?'aria-current="page"':''} onclick="detailTab='${t}';renderDT()">${labels[i]}</button>`).join('')}</div>
+    <div class="tab-list">${tabs.map((t,i)=>`<button class="itab ${detailTab===t?'active':''}" data-tab="${t}" ${detailTab===t?'aria-current="page"':''} onclick="setDetailTab('${t}')">${labels[i]}</button>`).join('')}</div>
     <div id="dtc"></div>`;
   renderDT();
 }
@@ -3836,7 +3846,7 @@ async function renderDT(){
   } else if(detailTab==='insurance'){
     const deps=getFuyouList(e);
     const socialCnt=deps.filter(d=>d.social_fuyou).length;
-    c.innerHTML=`<div class="section-title">雇用保険</div><div class="detail-grid">${df('被保険者番号',e.koyo_hoken_no)}${df('加入日',e.koyo_nyusha)}${df('喪失日',e.koyo_soshitsu)}</div><div class="section-title">社会保険</div><div class="detail-grid">${df('被保険者番号',e.shakai_hoken_no)}${df('加入日',e.shakai_nyusha)}${df('喪失日',e.shakai_soshitsu)}${df('社会保険扶養',socialCnt?socialCnt+'名':'なし')}</div><div style="margin-top:12px"><button class="btn btn-sm" onclick="detailTab='fuyou';renderDT()">扶養情報を登録・確認</button></div>`;
+    c.innerHTML=`<div class="section-title">雇用保険</div><div class="detail-grid">${df('被保険者番号',e.koyo_hoken_no)}${df('加入日',e.koyo_nyusha)}${df('喪失日',e.koyo_soshitsu)}</div><div class="section-title">社会保険</div><div class="detail-grid">${df('被保険者番号',e.shakai_hoken_no)}${df('加入日',e.shakai_nyusha)}${df('喪失日',e.shakai_soshitsu)}${df('社会保険扶養',socialCnt?socialCnt+'名':'なし')}</div><div style="margin-top:12px"><button class="btn btn-sm" onclick="setDetailTab('fuyou')">扶養情報を登録・確認</button></div>`;
   } else if(detailTab==='fuyou'){
     c.innerHTML=renderFuyouEditor(e);
   } else if(detailTab==='yukyu'){
