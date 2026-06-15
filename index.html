@@ -600,10 +600,17 @@ body.theme-light .topbar{display:none!important;}
 body.theme-light #main{margin-left:0!important;padding:0!important;}
 body.theme-light #main .page{display:none!important;}
 body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overflow:auto;}
+body.app-booting #sidebar,
+body.app-booting #mobile-nav,
+body.app-booting #main,
+body.login-only #sidebar,
+body.login-only #mobile-nav,
+body.login-only #main,
+body.login-only #emp-back-btn{display:none!important;}
 #emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(217,119,6,.12);color:#F59E0B;border:1px solid rgba(217,119,6,.3);border-radius:5px;padding:4px 11px;font-size:11px;cursor:pointer;display:none;font-family:'JetBrains Mono',monospace;}
 
 </style></head>
-<body class="theme-dark">
+<body class="theme-light app-booting login-only">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
 
 <!-- LOGIN -->
@@ -634,7 +641,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   <div class="sidebar-logo"><h1>派遣管理台帳</h1><p>KAKUZEN</p></div>
   <div class="nav-section">
     <div class="nav-section-label">メイン</div>
-    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('dashboard')"><span class="icon" aria-hidden="true">📊</span>ダッシュボード</div>
+    <div class="nav-item" data-page="dashboard" onclick="navigate('dashboard')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('dashboard')"><span class="icon" aria-hidden="true">📊</span>ダッシュボード</div>
     <div class="nav-item" data-page="clients" onclick="navigate('clients')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('clients')"><span class="icon" aria-hidden="true">🏢</span>取引先管理</div>
     <div class="nav-item" data-page="sites" onclick="navigate('sites')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('sites')"><span class="icon" aria-hidden="true">📍</span>現場管理</div>
     <div class="nav-item" data-page="contracts" onclick="navigate('contracts')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('contracts')"><span class="icon" aria-hidden="true">📄</span>契約管理</div>
@@ -647,7 +654,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   </div>
   <div class="nav-section" style="margin-top:auto;">
     <div class="nav-section-label">連携</div>
-    <div class="nav-item" data-page="jugyoin" onclick="navigate('jugyoin')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('jugyoin')" style="color:var(--accent2);border:1px solid var(--border);border-radius:var(--radius);">
+    <div class="nav-item active" data-page="jugyoin" onclick="navigate('jugyoin')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' ')navigate('jugyoin')" style="color:var(--accent2);border:1px solid var(--border);border-radius:var(--radius);">
       <span class="icon" aria-hidden="true">👥</span>従業員管理
     </div>
   </div>
@@ -660,26 +667,26 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
 <!-- MOBILE BOTTOM NAV -->
 <nav id="mobile-nav">
   <div class="mnav-inner">
-    <div class="mnav-item active" onclick="navigate('dashboard')" data-page="dashboard" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('dashboard')"><div class="micon" aria-hidden="true">📊</div><div class="mlabel">ホーム</div></div>
+    <div class="mnav-item" onclick="navigate('dashboard')" data-page="dashboard" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('dashboard')"><div class="micon" aria-hidden="true">📊</div><div class="mlabel">ホーム</div></div>
     <div class="mnav-item" onclick="navigate('clients')" data-page="clients" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('clients')"><div class="micon" aria-hidden="true">🏢</div><div class="mlabel">取引先</div></div>
     <div class="mnav-item" onclick="navigate('sites')" data-page="sites" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('sites')"><div class="micon" aria-hidden="true">📍</div><div class="mlabel">現場</div></div>
     <div class="mnav-item" onclick="navigate('contracts')" data-page="contracts" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('contracts')"><div class="micon" aria-hidden="true">📄</div><div class="mlabel">契約</div></div>
     <div class="mnav-item" onclick="navigate('billing')" data-page="billing" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('billing')"><div class="micon" aria-hidden="true">💴</div><div class="mlabel">請求</div></div>
     <div class="mnav-item" onclick="navigate('records')" data-page="records" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('records')"><div class="micon" aria-hidden="true">📋</div><div class="mlabel">記録</div></div>
-    <div class="mnav-item" onclick="navigate('jugyoin')" data-page="jugyoin" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('jugyoin')"><div class="micon" aria-hidden="true">👥</div><div class="mlabel">従業員</div></div>
+    <div class="mnav-item active" onclick="navigate('jugyoin')" data-page="jugyoin" tabindex="0" role="button" onkeydown="if(event.key==='Enter')navigate('jugyoin')"><div class="micon" aria-hidden="true">👥</div><div class="mlabel">従業員</div></div>
   </div>
 </nav>
 
 <!-- MAIN -->
 <div id="main">
   <div class="topbar">
-    <div class="topbar-title" id="page-title">ダッシュボード</div>
+    <div class="topbar-title" id="page-title">従業員管理台帳</div>
     <div class="topbar-actions" id="topbar-actions"></div>
   </div>
   <div class="content">
 
     <!-- ダッシュボード -->
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-label">取引先企業</div><div class="stat-value" id="s-clients">—</div></div>
         <div class="stat-card"><div class="stat-label">稼働中現場</div><div class="stat-value" id="s-sites">—</div></div>
@@ -733,7 +740,7 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
     </div>
 
     <!-- 従業員管理（統合） -->
-    <div class="page" id="page-jugyoin" style="padding:0;overflow:auto;">
+    <div class="page active" id="page-jugyoin" style="padding:0;overflow:auto;">
       <div id="emp-app">
         <style>
 #emp-app{
@@ -1320,7 +1327,7 @@ const db    = createClient(SUPA_URL, SUPA_KEY);
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 
 // ===== STATE =====
-let ST = {clients:[],sites:[],contracts:[],billing:[],page:'dashboard',ctTab:'active'};
+let ST = {clients:[],sites:[],contracts:[],billing:[],page:'jugyoin',ctTab:'active'};
 let wpList=[], selEmps=[], empCache=null, empTimer=null;
 let currentDocContract = null;
 
@@ -1340,6 +1347,8 @@ async function checkLogin(){
   if(session){
     showApp();
   } else {
+    document.body.classList.remove('app-booting');
+    document.body.classList.add('login-only');
     document.getElementById('login-screen').style.display='block';
   }
 }
@@ -1376,7 +1385,10 @@ async function doLogoutAll(){
   window.location.reload();
 }
 
-function showApp(){navigate('jugyoin');}
+function showApp(){
+  document.body.classList.remove('app-booting','login-only');
+  navigate('jugyoin');
+}
 
 // ===== NAV =====
 const NAV_TITLES={dashboard:'ダッシュボード',clients:'取引先管理',sites:'現場管理',contracts:'契約管理',billing:'請求管理',records:'記録管理',settings:'設定',jugyoin:'従業員管理台帳'};
@@ -3518,8 +3530,7 @@ function renderList(){
 // ---- 表示列設定 ----
 function showColSettings(){
   const modal=document.createElement('div');
-  modal.className='modal-overlay';modal.id='colModal';
-  modal.style.display='flex';
+  modal.className='modal-overlay open';modal.id='colModal';
   modal.innerHTML=`<div class="modal-box">
     <h3>表示列を選択</h3>
     <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
