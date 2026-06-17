@@ -376,6 +376,31 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
 .expiry-near{color:var(--warning);}
 .expiry-expired{color:var(--danger);}
 
+/* === DISPATCH HOME === */
+.ops-board{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.9fr);gap:14px;margin-bottom:16px;}
+.ops-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);}
+.ops-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.ops-kicker{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+.ops-title{font-size:18px;font-weight:700;color:var(--text);line-height:1.35;}
+.ops-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+.ops-task-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.ops-task-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);padding:12px;text-align:left;color:var(--text);font-family:inherit;cursor:pointer;min-height:112px;transition:transform .12s,border-color .12s,box-shadow .12s;}
+.ops-task-card:hover{transform:translateY(-1px);border-color:var(--border2);box-shadow:var(--shadow-sm);}
+.ops-task-card.warn{background:var(--warning-dim);border-color:rgba(202,138,4,.28);}
+.ops-task-card.danger{background:var(--danger-dim);border-color:rgba(220,38,38,.28);}
+.ops-task-card.info{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.24);}
+.ops-task-num{font-size:26px;font-weight:800;line-height:1;font-family:'JetBrains Mono',monospace;}
+.ops-task-label{font-size:13px;font-weight:700;margin-top:8px;}
+.ops-task-note{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.45;}
+.ops-flow-list{display:flex;flex-direction:column;gap:8px;}
+.ops-flow-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);padding:10px 12px;color:var(--text);font-family:inherit;cursor:pointer;text-align:left;}
+.ops-flow-btn:hover{border-color:var(--accent);background:var(--accent-dim);}
+.ops-flow-btn strong{font-size:13px;}
+.ops-flow-btn span{font-size:11px;color:var(--text2);}
+.ops-flow-btn .arrow{color:var(--accent2);font-family:'JetBrains Mono',monospace;}
+.list-toolbar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;}
+.list-toolbar-title{font-size:13px;font-weight:700;margin-bottom:8px;}
+
 /* === EMP SEARCH DROPDOWN === */
 .emp-search-wrap{position:relative;}
 .emp-dropdown{
@@ -534,10 +559,15 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
   .topbar-actions .btn{padding:6px 10px;font-size:11px;}
   .topbar-actions .btn-text{display:none;}
   .stat-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-  .stat-card{padding:14px;}
-  .stat-value{font-size:22px;}
-  .stat-label{font-size:9px;}
-  #main table{display:block;}
+	  .stat-card{padding:14px;}
+	  .stat-value{font-size:22px;}
+	  .stat-label{font-size:9px;}
+	  .ops-board{grid-template-columns:1fr;margin-bottom:14px;}
+	  .ops-panel{padding:14px;}
+	  .ops-head{flex-direction:column;}
+	  .ops-task-grid{grid-template-columns:1fr;}
+	  .ops-flow-btn{padding:11px 12px;}
+	  #main table{display:block;}
   thead{display:none;}
   tbody{display:block;}
   tr{display:block;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;margin-bottom:9px;}
@@ -694,6 +724,55 @@ body.login-only #emp-back-btn{display:none!important;}
         <div class="stat-card"><div class="stat-label">稼働中現場</div><div class="stat-value" id="s-sites">—</div></div>
         <div class="stat-card"><div class="stat-label">有効契約</div><div class="stat-value" id="s-contracts">—</div></div>
         <div class="stat-card"><div class="stat-label">稼働中スタッフ</div><div class="stat-value" id="s-staff">—</div><div class="stat-sub">名</div></div>
+      </div>
+      <div class="ops-board">
+        <section class="ops-panel">
+          <div class="ops-head">
+            <div>
+              <div class="ops-kicker">TODAY</div>
+              <div class="ops-title">今日の派遣管理</div>
+              <div class="ops-sub">期限、契約、記録、請求の順で確認できます。</div>
+            </div>
+            <button class="btn btn-primary" onclick="openContractModal()">＋ <span class="btn-text">契約を作成</span></button>
+          </div>
+          <div class="ops-task-grid">
+            <button class="ops-task-card warn" onclick="navigate('contracts');setTimeout(()=>{const t=[...document.querySelectorAll('#page-contracts .tab')].find(x=>x.textContent.includes('期限間近'));if(t) switchCtTab('expiring',t);},0)">
+              <div class="ops-task-num" id="op-expiring">—</div>
+              <div class="ops-task-label">期限確認</div>
+              <div class="ops-task-note">60日以内の契約を先に確認します。</div>
+            </button>
+            <button class="ops-task-card info" onclick="navigate('contracts')">
+              <div class="ops-task-num" id="op-active-contracts">—</div>
+              <div class="ops-task-label">有効契約</div>
+              <div class="ops-task-note">契約詳細・書類生成へ進みます。</div>
+            </button>
+            <button class="ops-task-card" onclick="navigate('records')">
+              <div class="ops-task-num" id="op-recent-contracts">—</div>
+              <div class="ops-task-label">最近の契約</div>
+              <div class="ops-task-note">直近作成分の確認漏れを防ぎます。</div>
+            </button>
+            <button class="ops-task-card" onclick="navigate('billing')">
+              <div class="ops-task-num" id="op-active-staff">—</div>
+              <div class="ops-task-label">稼働スタッフ</div>
+              <div class="ops-task-note">請求・台帳の人数確認に使います。</div>
+            </button>
+          </div>
+        </section>
+        <aside class="ops-panel">
+          <div class="ops-head">
+            <div>
+              <div class="ops-kicker">FLOW</div>
+              <div class="ops-title">よく使う流れ</div>
+              <div class="ops-sub">登録・更新・記録を迷わず開始できます。</div>
+            </div>
+          </div>
+          <div class="ops-flow-list">
+            <button class="ops-flow-btn" onclick="openClientModal()"><span><strong>取引先を登録</strong><br><span>企業情報と担当者</span></span><span class="arrow">→</span></button>
+            <button class="ops-flow-btn" onclick="openSiteModal()"><span><strong>現場を登録</strong><br><span>就業場所・指揮命令者</span></span><span class="arrow">→</span></button>
+            <button class="ops-flow-btn" onclick="openContractModal()"><span><strong>契約を作成</strong><br><span>スタッフ配属と契約期間</span></span><span class="arrow">→</span></button>
+            <button class="ops-flow-btn" onclick="openRecordModal()"><span><strong>記録を追加</strong><br><span>苦情・教育・面談メモ</span></span><span class="arrow">→</span></button>
+          </div>
+        </aside>
       </div>
       <div class="card">
         <div class="section-header"><h2>⚠️ 契約期限アラート（60日以内）</h2></div>
@@ -1466,6 +1545,13 @@ function navigate(page){
 }
 
 // ===== DASHBOARD =====
+function updateDispatchFocusCards(metrics){
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  set('op-expiring', metrics.expiringCount);
+  set('op-active-contracts', metrics.activeContracts);
+  set('op-recent-contracts', metrics.recentContracts);
+  set('op-active-staff', metrics.activeStaff);
+}
 async function loadDashboard(){
   const [c,s,ct,ce]=await Promise.allSettled([
     db.from('clients').select('id'),
@@ -1498,6 +1584,12 @@ async function loadDashboard(){
       }).join('')}</tbody></table>`;
   }
   const {data:recent}=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,is_active)').order('created_at',{ascending:false}).limit(6);
+  updateDispatchFocusCards({
+    expiringCount:expiring.length,
+    activeContracts:activeContracts.length,
+    recentContracts:(recent||[]).length,
+    activeStaff:ce.status==='fulfilled'?(ce.value.data||[]).length:'—'
+  });
   const rcEl=document.getElementById('recent-contracts');
   if(!(recent||[]).length){rcEl.innerHTML='<div class="empty-state"><div class="icon">📄</div><p>契約がありません</p></div>';}
   else{
