@@ -622,16 +622,18 @@ body.login-only #emp-back-btn{display:none!important;}
         <h1>派遣・従業員管理システム</h1>
         <p>KAKUZEN</p>
       </div>
-      <div class="form-group">
-        <label class="form-label">メールアドレス</label>
-        <input type="email" class="form-input" id="login-email" placeholder="mail@example.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">パスワード</label>
-        <input type="password" class="form-input" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doEmailLogin()">
-      </div>
-      <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:16px;padding:10px 14px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.2);"></div>
-      <button class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center;" onclick="doEmailLogin()">ログイン</button>
+      <form onsubmit="event.preventDefault();doEmailLogin();">
+        <div class="form-group">
+          <label class="form-label" for="login-email">メールアドレス</label>
+          <input type="email" class="form-input" id="login-email" placeholder="mail@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-pw">パスワード</label>
+          <input type="password" class="form-input" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div id="login-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:16px;padding:10px 14px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.2);"></div>
+        <button type="submit" class="btn btn-primary" id="login-btn" style="width:100%;justify-content:center;">ログイン</button>
+      </form>
     </div>
   </div>
 </div>
@@ -820,7 +822,29 @@ body.login-only #emp-back-btn{display:none!important;}
 #emp-toast-wrap{position:fixed;bottom:22px;right:14px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none;}#emp-app .j-toast{background:var(--emp-surface);border:1px solid var(--emp-border2);border-radius:var(--emp-radius);padding:9px 13px;font-size:12px;min-width:200px;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:0 2px 12px rgba(0,0,0,.10);}#emp-app .j-toast.success{border-left:3px solid #15803D;}#emp-app .j-toast.error{border-left:3px solid var(--emp-danger);}#emp-app .j-toast.warn{border-left:3px solid var(--emp-warn);}#emp-app .modal-overlay.open{display:flex!important;}
 #emp-app .emp-header-brand{display:flex;flex-direction:column;gap:1px;min-width:142px;flex:0 0 auto}#emp-app .emp-header-brand h1{font-size:14px;font-weight:800;color:var(--emp-accent-text);letter-spacing:.02em;line-height:1.25}#emp-app .emp-header-brand span{font-size:10px;color:var(--emp-text3);line-height:1.2}#emp-app .emp-top-return{margin-left:auto;padding:6px 13px;border:none;border-radius:var(--emp-radius);background:#D97706;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;letter-spacing:.03em;box-shadow:0 2px 8px rgba(217,119,6,.28)}#emp-app .nav-menu{gap:8px;padding:0 0 0 4px;scrollbar-width:thin}#emp-app .emp-nav-group{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid var(--emp-border);border-radius:8px;background:rgba(255,255,255,.58);flex:0 0 auto}#emp-app .emp-nav-label{font-size:10px;font-weight:700;color:var(--emp-text3);padding:0 3px;white-space:nowrap}#emp-app .emp-nav-primary{border-color:rgba(217,119,6,.25);background:var(--emp-accent-light)}#emp-app .emp-nav-actions{background:transparent;border-style:dashed}#emp-app .emp-nav-actions .btn{background:transparent}#emp-app .nav-btn{font-weight:650;padding:6px 10px}#emp-app #tAdd,#emp-app #tYukyuAdd{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent);box-shadow:0 1px 4px rgba(217,119,6,.22)}#emp-app #tAlert{color:var(--emp-warn)!important;border-color:rgba(202,138,4,.45)!important;background:var(--emp-warn-light)}#emp-app .nav-btn.active{box-shadow:inset 0 0 0 1px rgba(217,119,6,.22)}#emp-app .emp-command-zone{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:14px 16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.04)}#emp-app .emp-command-title{display:flex;flex-direction:column;gap:2px}#emp-app .emp-command-title strong{font-size:15px;color:var(--emp-text)}#emp-app .emp-command-title span{font-size:12px;color:var(--emp-text2)}#emp-app .emp-command-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}#emp-app .emp-command-actions .btn{min-height:34px}#emp-app .emp-secondary-action{background:var(--emp-bg)!important;color:var(--emp-text2)!important}
 #emp-app .tab-list{gap:8px;padding:4px 0 5px;border-bottom:1px solid var(--emp-border2)}#emp-app .itab{position:relative;border-radius:8px;padding:10px 18px;border:1px solid transparent;border-bottom:3px solid transparent;font-weight:650;background:var(--emp-surface);color:var(--emp-text2)}#emp-app .itab.active{background:var(--emp-accent);color:#fff;border-color:var(--emp-accent);border-bottom-color:#B45309;box-shadow:0 4px 12px rgba(180,83,9,.24),inset 0 -2px 0 rgba(120,53,15,.32);font-weight:800;transform:translateY(-1px)}
-@media(min-width:769px){#emp-app header{height:auto;min-height:62px;padding:9px 16px;align-items:center;gap:10px}#emp-app main{max-width:1240px;padding-top:18px}.theme-light #main #page-jugyoin{background:var(--emp-bg)}#emp-app .table-wrap table{min-width:1080px}#emp-app th:first-child,#emp-app td[data-label="氏名"]{min-width:96px}#emp-app .emp-name{display:inline-block;line-height:1.5}#emp-app td.no-label{min-width:278px}}@media(max-width:768px){#emp-app .emp-header-brand span{display:none}#emp-app .emp-top-return{margin-left:auto}#emp-app-inner .nav-menu.open{gap:8px;padding:10px}#emp-app-inner .emp-nav-group{display:flex!important;flex-direction:column;align-items:stretch;padding:8px;gap:6px}#emp-app-inner .emp-nav-label{padding:2px 4px}#emp-app-inner .emp-nav-actions{border-style:solid}#emp-app .emp-command-zone{align-items:stretch;flex-direction:column;padding:12px}#emp-app .emp-command-actions{justify-content:stretch}#emp-app .emp-command-actions .btn{flex:1;justify-content:center}}
+#emp-app .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;border-radius:999px;background:var(--emp-danger);color:#fff;font-size:10px;font-weight:800;line-height:1}
+#emp-app .emp-today-board{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.9fr);gap:14px;margin-bottom:14px}
+#emp-app .emp-today-main,#emp-app .emp-today-side{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+#emp-app .emp-today-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+#emp-app .emp-today-kicker{font-size:10px;color:var(--emp-text3);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+#emp-app .emp-today-title{font-size:17px;font-weight:800;color:var(--emp-text);line-height:1.35}
+#emp-app .emp-today-sub{font-size:12px;color:var(--emp-text2);margin-top:2px}
+#emp-app .emp-task-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#emp-app .emp-task-card{border:1px solid var(--emp-border);border-radius:9px;background:var(--emp-bg);padding:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--emp-text);min-height:112px;transition:transform .12s,box-shadow .12s,border-color .12s}
+#emp-app .emp-task-card:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.08);border-color:var(--emp-border2)}
+#emp-app .emp-task-card.danger{background:var(--emp-danger-light);border-color:rgba(220,38,38,.24)}
+#emp-app .emp-task-card.warn{background:var(--emp-warn-light);border-color:rgba(202,138,4,.28)}
+#emp-app .emp-task-card.info{background:var(--emp-info-light);border-color:rgba(37,99,235,.22)}
+#emp-app .emp-task-num{font-size:26px;font-weight:850;line-height:1;font-family:'JetBrains Mono',monospace}
+#emp-app .emp-task-label{font-size:13px;font-weight:800;margin-top:8px}
+#emp-app .emp-task-note{font-size:11px;color:var(--emp-text2);margin-top:4px;line-height:1.45}
+#emp-app .emp-flow-list{display:flex;flex-direction:column;gap:8px}
+#emp-app .emp-flow-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:1px solid var(--emp-border);border-radius:8px;background:var(--emp-bg);padding:10px 12px;color:var(--emp-text);font-family:inherit;cursor:pointer;text-align:left}
+#emp-app .emp-flow-btn:hover{border-color:var(--emp-accent);background:var(--emp-accent-light)}
+#emp-app .emp-flow-btn strong{font-size:13px}
+#emp-app .emp-flow-btn span{font-size:11px;color:var(--emp-text2)}
+#emp-app .emp-list-toolbar{background:var(--emp-surface);border:1px solid var(--emp-border);border-radius:var(--emp-radius-lg);padding:12px;margin-bottom:14px}
+@media(min-width:769px){#emp-app header{height:auto;min-height:62px;padding:9px 16px;align-items:center;gap:10px}#emp-app main{max-width:1240px;padding-top:18px}.theme-light #main #page-jugyoin{background:var(--emp-bg)}#emp-app .table-wrap table{min-width:1080px}#emp-app th:first-child,#emp-app td[data-label="氏名"]{min-width:96px}#emp-app .emp-name{display:inline-block;line-height:1.5}#emp-app td.no-label{min-width:278px}}@media(max-width:768px){#emp-app .emp-header-brand span{display:none}#emp-app .emp-top-return{margin-left:auto}#emp-app-inner .nav-menu.open{gap:8px;padding:10px}#emp-app-inner .emp-nav-group{display:flex!important;flex-direction:column;align-items:stretch;padding:8px;gap:6px}#emp-app-inner .emp-nav-label{padding:2px 4px}#emp-app-inner .emp-nav-actions{border-style:solid}#emp-app .emp-command-zone{align-items:stretch;flex-direction:column;padding:12px}#emp-app .emp-command-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;align-items:stretch}#emp-app .emp-command-actions .btn{width:100%;min-height:40px;justify-content:center;padding-left:8px;padding-right:8px}#emp-app .emp-today-board{grid-template-columns:1fr}#emp-app .emp-task-grid{grid-template-columns:1fr}#emp-app .emp-today-main,#emp-app .emp-today-side{padding:12px}#emp-app .emp-today-head{flex-direction:column}#emp-app .emp-list-toolbar{padding:10px}#emp-app-inner .emp-list-toolbar .search-bar input{flex:1 1 calc(100% - 70px);min-width:180px}#emp-app-inner .emp-list-toolbar .search-bar select{flex:1 1 calc(50% - 4px)}}
 
 </style>
         <div id="emp-login">
@@ -847,11 +871,11 @@ body.login-only #emp-back-btn{display:none!important;}
         <span class="emp-nav-label">主要作業</span>
         <button class="nav-btn" id="tList" onclick="showView('list');closeMenu()">一覧を見る</button>
         <button class="nav-btn" id="tAdd" onclick="showView('add');closeMenu()">新規登録</button>
-        <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()" style="color:var(--emp-warn);border-color:var(--emp-warn)">警告確認</button>
+        <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()" style="color:var(--emp-warn);border-color:var(--emp-warn)">警告確認<span class="nav-badge" id="navAlertBadge" style="display:none"></span></button>
       </div>
       <div class="emp-nav-group">
         <span class="emp-nav-label">勤怠・書類</span>
-        <button class="nav-btn" id="tYukyu" onclick="showView('yukyu_list');closeMenu()">有給一覧</button>
+        <button class="nav-btn" id="tYukyu" onclick="showView('yukyu_list');closeMenu()">有給一覧<span class="nav-badge" id="navYukyuBadge" style="display:none"></span></button>
         <button class="nav-btn" id="tYukyuAdd" onclick="showView('yukyu_add');closeMenu()">有給登録</button>
         <button class="nav-btn" id="tKenko" onclick="showView('kenko_list');closeMenu()">健康診断</button>
         <button class="nav-btn" id="tCert" onclick="showView('cert_list');closeMenu()">証明書</button>
@@ -3340,6 +3364,63 @@ function deptLabelById(id){const d=departments.find(x=>x.id===Number(id));return
 function deptOptions(selectedId){
   return`<option value="">（未選択）</option>`+departments.map(d=>`<option value="${d.id}" ${Number(selectedId)===d.id?'selected':''}>${deptLabel(d)}</option>`).join('');
 }
+function getLatestEmploymentContractMap(){
+  const map={};
+  (employmentContracts||[]).forEach(c=>{
+    const id=c.employee_id;
+    if(!id)return;
+    const current=map[id];
+    const cDate=c.issued_date||c.created_at||c.contract_end||'';
+    const currentDate=current?(current.issued_date||current.created_at||current.contract_end||''):'';
+    if(!current||cDate>currentDate)map[id]=c;
+  });
+  return map;
+}
+function getLedgerFocusMetrics(today=new Date()){
+  const activeEmps=(employees||[]).filter(e=>e.status==='在籍');
+  const contractMap=getLatestEmploymentContractMap();
+  const visaExpired=[];
+  const visaSoon=[];
+  const licenseExpired=[];
+  const licenseSoon=[];
+  const yukyuUnset=[];
+  const contractNeed=[];
+  activeEmps.forEach(e=>{
+    const visaDays=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
+    const licenseDays=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    if(visaDays!==null&&visaDays<0)visaExpired.push(e);
+    else if(visaDays!==null&&visaDays<90)visaSoon.push(e);
+    if(licenseDays!==null&&licenseDays<0)licenseExpired.push(e);
+    else if(licenseDays!==null&&licenseDays<90)licenseSoon.push(e);
+    if(calcYukyuInfo(e.id).unsetDays)yukyuUnset.push(e);
+    if(!e.contract_other_system){
+      const ct=contractMap[e.id];
+      const contractDays=ct?.contract_end?Math.ceil((new Date(ct.contract_end)-today)/86400000):null;
+      if(!ct||contractDays<=15)contractNeed.push(e);
+    }
+  });
+  return{
+    active:activeEmps.length,
+    deadlineTotal:visaExpired.length+visaSoon.length+licenseExpired.length+licenseSoon.length,
+    expiredTotal:visaExpired.length+licenseExpired.length,
+    visaExpired,visaSoon,licenseExpired,licenseSoon,yukyuUnset,contractNeed,
+    alertTotal:visaExpired.length+visaSoon.length+licenseExpired.length+licenseSoon.length+yukyuUnset.length+contractNeed.length
+  };
+}
+function updateNavBadges(){
+  if(!employees||!employees.length)return;
+  const focus=getLedgerFocusMetrics();
+  const alertBadge=document.getElementById('navAlertBadge');
+  const yukyuBadge=document.getElementById('navYukyuBadge');
+  if(alertBadge){
+    alertBadge.textContent=focus.alertTotal;
+    alertBadge.style.display=focus.alertTotal?'inline-flex':'none';
+  }
+  if(yukyuBadge){
+    yukyuBadge.textContent=focus.yukyuUnset.length;
+    yukyuBadge.style.display=focus.yukyuUnset.length?'inline-flex':'none';
+  }
+}
 
 // ---- 部署モーダル ----
 function openDeptModal(mode,id=null,cb=null){
@@ -3388,6 +3469,7 @@ function setNav(active){
       else if(id==='tAlert'&&id===active)el.style.cssText='';
     }
   });
+  updateNavBadges();
 }
 function showView(v){
   currentView=v;editingId=null;yfFromDetail=false;
@@ -3433,14 +3515,54 @@ function renderList(){
   const warn=employees.filter(e=>{if(!e.visa_expiry)return false;return(new Date(e.visa_expiry)-today)/86400000<90;}).length;
   const selectCnt=employees.filter(e=>e.company==='セレクト').length;
   const kakuzenCnt=employees.filter(e=>e.company==='覚善').length;
+  const focus=getLedgerFocusMetrics(today);
 
   const showCol=k=>visibleCols.includes(k);
 
   document.getElementById('mainContent').innerHTML=`
+    <div class="emp-today-board">
+      <section class="emp-today-main">
+        <div class="emp-today-head">
+          <div>
+            <div class="emp-today-kicker">TODAY</div>
+            <div class="emp-today-title">今日の確認</div>
+            <div class="emp-today-sub">期限、契約書、有給の未処理を先に確認できます。</div>
+          </div>
+          <button class="btn btn-primary" onclick="showView('add')">新規登録</button>
+        </div>
+        <div class="emp-task-grid">
+          <button class="emp-task-card ${focus.expiredTotal?'danger':'warn'}" onclick="showView('alert')">
+            <div class="emp-task-num">${focus.deadlineTotal}</div>
+            <div class="emp-task-label">期限アラート</div>
+            <div class="emp-task-note">在留・免許の期限切れ ${focus.expiredTotal}件 / 90日以内 ${Math.max(0,focus.deadlineTotal-focus.expiredTotal)}件</div>
+          </button>
+          <button class="emp-task-card ${focus.contractNeed.length?'danger':'info'}" onclick="showView('alert')">
+            <div class="emp-task-num">${focus.contractNeed.length}</div>
+            <div class="emp-task-label">契約書確認</div>
+            <div class="emp-task-note">未作成または終了15日以内の雇用契約書を確認</div>
+          </button>
+          <button class="emp-task-card ${focus.yukyuUnset.length?'warn':'info'}" onclick="showView('yukyu_list')">
+            <div class="emp-task-num">${focus.yukyuUnset.length}</div>
+            <div class="emp-task-label">有給未設定</div>
+            <div class="emp-task-note">付与日はあるが日数未設定の従業員を確認</div>
+          </button>
+        </div>
+      </section>
+      <aside class="emp-today-side">
+        <div class="emp-today-kicker">WORKFLOW</div>
+        <div class="emp-today-title" style="font-size:15px;margin-bottom:10px">よく使う導線</div>
+        <div class="emp-flow-list">
+          <button class="emp-flow-btn" onclick="showView('list')"><strong>従業員を探す</strong><span>検索・絞り込み</span></button>
+          <button class="emp-flow-btn" onclick="showView('yukyu_add')"><strong>有給を登録</strong><span>取得/付与を追加</span></button>
+          <button class="emp-flow-btn" onclick="showView('cert_list')"><strong>証明書を見る</strong><span>発行履歴・再発行</span></button>
+          <button class="emp-flow-btn" onclick="showView('contract_list')"><strong>契約書を見る</strong><span>作成履歴・再発行</span></button>
+        </div>
+      </aside>
+    </div>
     <div class="emp-command-zone">
       <div class="emp-command-title">
-        <strong>まずやることを選ぶ</strong>
-        <span>日常作業は右の3つ。検索やCSVは必要な時だけ使えます。</span>
+        <strong>従業員一覧</strong>
+        <span>詳細確認、書類作成、退職処理は各行から実行できます。</span>
       </div>
       <div class="emp-command-actions">
         <button class="btn btn-primary" onclick="showView('add')">新規登録</button>
@@ -3456,24 +3578,26 @@ function renderList(){
       <div class="scard"><div class="scard-label">覚善</div><div class="scard-val" style="color:var(--emp-accent)">${kakuzenCnt}</div></div>
       <div class="scard"><div class="scard-label">在留期限90日以内</div><div class="scard-val" style="color:var(--emp-warn)">${warn}</div></div>
     </div>
-    <div class="search-bar">
-      <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" onkeydown="if(event.key==='Enter'&&!event.isComposing){listFilter.sq=this.value;renderList();}">
-      <button onclick="listFilter.sq=document.getElementById('searchQ').value;renderList();" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
-      <select id="fCompany" onchange="listFilter.fc=this.value;render()">
-        <option value="">会社：全て</option>
-        <option value="セレクト" ${fc==='セレクト'?'selected':''}>セレクト</option>
-        <option value="覚善" ${fc==='覚善'?'selected':''}>覚善</option>
-      </select>
-      <select id="fStatus" onchange="listFilter.fs=this.value;render()">
-        <option value="">在籍：全て</option>
-        <option value="在籍" ${fs==='在籍'?'selected':''}>在籍</option>
-        <option value="退職" ${fs==='退職'?'selected':''}>退職</option>
-      </select>
-      <select id="fDept" onchange="listFilter.fd=this.value;render()">
-        <option value="">部署：全て</option>
-        ${departments.map(d=>`<option value="${d.id}" ${fd==d.id?'selected':''}>${deptLabel(d)}</option>`).join('')}
-      </select>
-      <button class="btn btn-sm" onclick="showColSettings()" style="white-space:nowrap">⚙ 表示列</button>
+    <div class="emp-list-toolbar">
+      <div class="search-bar" style="margin-bottom:0">
+        <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" onkeydown="if(event.key==='Enter'&&!event.isComposing){listFilter.sq=this.value;renderList();}">
+        <button onclick="listFilter.sq=document.getElementById('searchQ').value;renderList();" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
+        <select id="fCompany" onchange="listFilter.fc=this.value;render()">
+          <option value="">会社：全て</option>
+          <option value="セレクト" ${fc==='セレクト'?'selected':''}>セレクト</option>
+          <option value="覚善" ${fc==='覚善'?'selected':''}>覚善</option>
+        </select>
+        <select id="fStatus" onchange="listFilter.fs=this.value;render()">
+          <option value="">在籍：全て</option>
+          <option value="在籍" ${fs==='在籍'?'selected':''}>在籍</option>
+          <option value="退職" ${fs==='退職'?'selected':''}>退職</option>
+        </select>
+        <select id="fDept" onchange="listFilter.fd=this.value;render()">
+          <option value="">部署：全て</option>
+          ${departments.map(d=>`<option value="${d.id}" ${fd==d.id?'selected':''}>${deptLabel(d)}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm" onclick="showColSettings()" style="white-space:nowrap">⚙ 表示列</button>
+      </div>
     </div>
     ${list.length===0?'<div class="empty">該当する従業員がいません</div>':`
     <div class="table-wrap"><table>
