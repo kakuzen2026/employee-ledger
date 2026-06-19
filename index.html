@@ -3453,6 +3453,17 @@ async function checkAndAutoGrant(){
 }
 function deptLabel(d){return d?[d.shozoku1,d.shozoku2].filter(Boolean).join(' / '):''}
 function deptLabelById(id){const d=departments.find(x=>x.id===Number(id));return d?deptLabel(d):''}
+function employeeSearchText(e){
+  if(!e)return'';
+  return(
+    (e.sei||'')+(e.mei||'')+
+    (e.seikana||'')+(e.meikana||'')+
+    (e.shain_no||'')+
+    deptLabelById(e.dept_id)+
+    (e.visa||'')+
+    (e.company||'')
+  ).toLowerCase();
+}
 function deptOptions(selectedId){
   return`<option value="">（未選択）</option>`+departments.map(d=>`<option value="${d.id}" ${Number(selectedId)===d.id?'selected':''}>${deptLabel(d)}</option>`).join('');
 }
@@ -3595,8 +3606,7 @@ function renderList(){
 
   let list=employees;
   if(sq)list=list.filter(e=>{
-    const dl=deptLabelById(e.dept_id);
-    return(e.sei+e.mei+(e.seikana||'')+(e.meikana||'')+dl+(e.visa||'')+(e.company||'')).toLowerCase().includes(sq.toLowerCase());
+    return employeeSearchText(e).includes(sq.toLowerCase());
   });
   if(fs)list=list.filter(e=>e.status===fs);
   if(fd)list=list.filter(e=>String(e.dept_id)===fd);
@@ -5420,14 +5430,19 @@ function exportKenkoCSV(){
 
 // ---- 有給一覧 ----
 function renderYukyuList(){
+  const fq=(document.getElementById('fyQ')||{}).value||'';
   const fe=(document.getElementById('fyEmp')||{}).value||'';
   const fm=(document.getElementById('fyMonth')||{}).value||'';
   let list=yukyuRecords;
+  if(fq)list=list.filter(r=>{
+    const e=employees.find(x=>x.id===Number(r.employee_id));
+    return(employeeSearchText(e)+(r.employee_name||'').toLowerCase()).includes(fq.toLowerCase());
+  });
   if(fe)list=list.filter(r=>r.employee_id===Number(fe));
   if(fm)list=list.filter(r=>r.use_date&&r.use_date.startsWith(fm));
 
   // 在籍中全員の残日数一覧
-  const activeEmps=employees.filter(e=>e.status==='在籍');
+  const activeEmps=employees.filter(e=>e.status==='在籍'&&(!fq||employeeSearchText(e).includes(fq.toLowerCase())));
   document.getElementById('mainContent').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <span style="font-size:16px;font-weight:700">有給管理</span>
@@ -5453,6 +5468,8 @@ function renderYukyuList(){
 
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">取得履歴</div>
     <div class="search-bar">
+      <input id="fyQ" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
+      <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
       <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
         <option value="">従業員：全て</option>
         ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
