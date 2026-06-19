@@ -5449,6 +5449,16 @@ function renderYukyuList(){
       <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="exportYukyuCSV()">CSV出力</button><button class="btn btn-primary btn-sm" onclick="showView('yukyu_add')">＋ 有給登録</button></div>
     </div>
 
+    <div class="search-bar">
+      <input id="fyQ" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
+      <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
+      <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
+        <option value="">従業員：全て</option>
+        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+      </select>
+      <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()">
+    </div>
+
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">残日数一覧（在籍中）</div>
     <div class="table-wrap" style="margin-bottom:20px"><table>
       <thead><tr><th>氏名</th><th>残日数</th><th>付与合計</th><th>取得合計</th><th>次回付与日</th><th></th></tr></thead>
@@ -5467,15 +5477,6 @@ function renderYukyuList(){
     </table></div>
 
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">取得履歴</div>
-    <div class="search-bar">
-      <input id="fyQ" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
-      <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
-      <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
-        <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
-      </select>
-      <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()">
-    </div>
     ${list.length===0?'<div class="empty">有給記録がありません</div>':`
     <div class="table-wrap"><table>
       <thead><tr><th>使用日</th><th>氏名</th><th>使用内容</th><th>種別</th><th>区分</th><th>入力者</th><th>登録日</th><th>備考</th><th></th></tr></thead>
