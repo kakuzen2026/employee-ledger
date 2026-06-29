@@ -5,6 +5,7 @@ This local project follows Solven operating rules.
 ## Primary Reference
 
 - `/Users/kazuki/Documents/Solven-codex/AGENTS.md`
+- Subagent / high-parallel operation: `/Users/kazuki/Documents/Solven-codex/docs/subagent-rules.md`
 
 ## Project Records
 
