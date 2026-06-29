@@ -6,6 +6,7 @@ This local project follows Solven operating rules.
 
 - `/Users/kazuki/Documents/Solven-codex/AGENTS.md`
 - Subagent / high-parallel operation: `/Users/kazuki/Documents/Solven-codex/docs/subagent-rules.md`
+- For non-trivial refactoring, make a subagent decision first; use bounded subagents for disjoint discovery, implementation, and QA packets, or report why none were used.
 
 ## Project Records
 
