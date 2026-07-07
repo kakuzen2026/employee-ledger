@@ -163,7 +163,8 @@ function renderYukyuAdd(){
             <div class="emp-dropdown" id="empDD">${empDDItems('')}</div>
           </div>`}
       </div>
-      <div class="frow"><label>使用日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${new Date().toISOString().slice(0,10)}" style="max-width:200px"></div>
+      <div class="frow"><label>使用日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${new Date().toISOString().slice(0,10)}" style="max-width:200px" oninput="renderYukyuDuplicateWarning()"></div>
+      <div id="yukyuDupWarning">${yukyuDuplicateWarningHtml(new Date().toISOString().slice(0,10))}</div>
       <div class="frow"><label>使用内容 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>種別 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${SHUBETSU.map(t=>`<button class="sel-btn ${yf.shubetsu===t?'selected':''}" onclick="selYF('shubetsu','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>区分 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${KUBUN.map(t=>`<button class="sel-btn ${yf.kubun===t?'selected':''}" onclick="selYF('kubun','${t}',this)">${t}</button>`).join('')}</div></div>
@@ -192,10 +193,37 @@ function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');
 function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
 function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
 function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+function findYukyuDuplicateRecord(employeeId,useDate){
+  if(!employeeId||!useDate)return null;
+  const emp=employees.find(e=>e.id===Number(employeeId));
+  const shainNo=(emp?.shain_no||'').toString().trim();
+  return yukyuRecords.find(r=>{
+    if(r.use_date!==useDate)return false;
+    const recEmp=employees.find(e=>e.id===Number(r.employee_id));
+    const recNo=(recEmp?.shain_no||'').toString().trim();
+    return shainNo&&recNo?recNo===shainNo:Number(r.employee_id)===Number(employeeId);
+  })||null;
+}
+function yukyuDuplicateWarningHtml(useDate){
+  const dup=findYukyuDuplicateRecord(yf.employee_id,useDate);
+  if(!dup)return '';
+  const emp=employees.find(e=>e.id===Number(dup.employee_id));
+  const no=(emp?.shain_no||'社員番号未設定').toString();
+  return `<div class="alert alert-warning" style="margin-bottom:16px">同じ社員番号（${emp_esc(no)}）と使用日（${emp_esc(useDate)}）の有給登録がすでにあります。保存時に登録を止めます。</div>`;
+}
+function renderYukyuDuplicateWarning(){
+  const el=document.getElementById('yukyuDupWarning');
+  if(el)el.innerHTML=yukyuDuplicateWarningHtml(document.getElementById('yDate')?.value||'');
+}
 async function saveYR(){
   if(!yf.employee_id){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('yDate')?.value;
   if(!d){showToast('使用日を入力してください','error');return;}
+  if(findYukyuDuplicateRecord(yf.employee_id,d)){
+    alert('同じ社員番号と使用日の有給登録がすでにあります。重複登録はできません。');
+    renderYukyuDuplicateWarning();
+    return;
+  }
   if(!yf.use_type){showToast('使用内容を選択してください','error');return;}
   if(!yf.shubetsu){showToast('種別を選択してください','error');return;}
   if(!yf.kubun){showToast('区分を選択してください','error');return;}
