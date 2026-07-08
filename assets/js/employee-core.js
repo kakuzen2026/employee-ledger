@@ -198,11 +198,16 @@ function fullMonthsBetween(startStr,endStr){
   if(e.getDate()<s.getDate())months--;
   return months;
 }
+function addDaysToDateStr(dateStr,days){
+  const d=new Date(dateStr);
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
 function calcYukyuLegalDays(empId,grantDate){
   const e=employees.find(x=>x.id===empId);
   const start=e?.kousoku_start_date||e?.nyusha_date;
   if(!start||!grantDate)return null;
-  const months=fullMonthsBetween(start,grantDate);
+  const months=fullMonthsBetween(start,addDaysToDateStr(grantDate,1));
   if(months>=78)return 20;
   if(months>=66)return 18;
   if(months>=54)return 16;
