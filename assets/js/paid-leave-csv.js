@@ -106,10 +106,14 @@ function openGrantModal(empId,editGrantId=null){
     document.getElementById('gm_expire').value=g?.expire_date||'';
   } else {
     const info=calcYukyuInfo(empId);
-    document.getElementById('gm_date').value=info.nextDate||new Date().toISOString().slice(0,10);
-    document.getElementById('gm_days').value='';
+    const d=info.nextDate||new Date().toISOString().slice(0,10);
+    document.getElementById('gm_date').value=d;
+    document.getElementById('gm_days').value=calcYukyuLegalDays(empId,d)??'';
     document.getElementById('gm_expire').value='';
   }
+  const dateInput=document.getElementById('gm_date');
+  const daysInput=document.getElementById('gm_days');
+  dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';};
   document.getElementById('grantModal').style.display='flex';
 }
 function closeGrantModal(){document.getElementById('grantModal').style.display='none';}

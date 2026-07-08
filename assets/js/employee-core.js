@@ -192,6 +192,34 @@ function calcGrantDates(empId){
   return dates;
 }
 
+function fullMonthsBetween(startStr,endStr){
+  const s=new Date(startStr),e=new Date(endStr);
+  let months=(e.getFullYear()-s.getFullYear())*12+(e.getMonth()-s.getMonth());
+  if(e.getDate()<s.getDate())months--;
+  return months;
+}
+function calcYukyuLegalDays(empId,grantDate){
+  const e=employees.find(x=>x.id===empId);
+  const start=e?.kousoku_start_date||e?.nyusha_date;
+  if(!start||!grantDate)return null;
+  const months=fullMonthsBetween(start,grantDate);
+  if(months>=78)return 20;
+  if(months>=66)return 18;
+  if(months>=54)return 16;
+  if(months>=42)return 14;
+  if(months>=30)return 12;
+  if(months>=18)return 11;
+  if(months>=6)return 10;
+  return null;
+}
+function yukyuGrantNeedsDays(g){
+  return g.days===null||g.days===undefined||g.days==='';
+}
+function grantExpireDate(grantDate){
+  const exp=new Date(grantDate);exp.setFullYear(exp.getFullYear()+2);exp.setDate(exp.getDate()-1);
+  return exp.toISOString().slice(0,10);
+}
+
 function calcYukyuInfo(empId){
   const today=new Date();
   const todayStr=today.toISOString().slice(0,10);
@@ -205,7 +233,7 @@ function calcYukyuInfo(empId){
     .sort((a,b)=>a.grant_date.localeCompare(b.grant_date));
 
   // 日数未設定の付与があるか
-  const unsetDays=allGrants.some(g=>(g.days===null||g.days===undefined||g.days==='')&&g.grant_date<=todayStr);
+  const unsetDays=allGrants.some(g=>yukyuGrantNeedsDays(g)&&g.grant_date<=todayStr);
 
   // 付与合計・取得合計
   const granted=grants.reduce((s,g)=>s+Number(g.days),0);
@@ -218,10 +246,7 @@ function calcYukyuInfo(empId){
   for(const g of grants){
     const days=Number(g.days);
     let expStr=g.expire_date;
-    if(!expStr){
-      const ed=new Date(g.grant_date);ed.setFullYear(ed.getFullYear()+2);ed.setDate(ed.getDate()-1);
-      expStr=ed.toISOString().slice(0,10);
-    }
+    if(!expStr)expStr=grantExpireDate(g.grant_date);
     if(usedBuf>=days){
       usedBuf-=days;
     }else{
@@ -243,18 +268,30 @@ function calcYukyuInfo(empId){
 async function checkAndAutoGrant(){
   const todayStr=new Date().toISOString().slice(0,10);
   const batch=[];
+  const updates=[];
   for(const e of employees.filter(x=>x.status==='在籍'&&x.nyusha_date)){
     const dates=calcGrantDates(e.id);
-    const existingDates=yukyuGrants.filter(g=>g.employee_id===e.id).map(g=>g.grant_date);
+    const existingGrants=yukyuGrants.filter(g=>g.employee_id===e.id);
+    const existingDates=existingGrants.map(g=>g.grant_date);
+    existingGrants.filter(g=>g.grant_date&&yukyuGrantNeedsDays(g)).forEach(g=>{
+      const days=calcYukyuLegalDays(e.id,g.grant_date);
+      if(days!==null){
+        const patch={days};
+        if(!g.expire_date)patch.expire_date=grantExpireDate(g.grant_date);
+        updates.push({id:g.id,patch});
+      }
+    });
     for(const d of dates){
       if(d<=todayStr&&!existingDates.includes(d)){
-        const exp=new Date(d);exp.setFullYear(exp.getFullYear()+2);exp.setDate(exp.getDate()-1);
-        batch.push({employee_id:e.id,grant_date:d,days:null,expire_date:exp.toISOString().slice(0,10)});
+        batch.push({employee_id:e.id,grant_date:d,days:calcYukyuLegalDays(e.id,d),expire_date:grantExpireDate(d)});
       }
     }
   }
-  if(batch.length){
-    try{await createYukyuGrants(batch);}catch(err){console.error('自動付与エラー',err);}
+  if(batch.length||updates.length){
+    try{
+      if(batch.length)await createYukyuGrants(batch);
+      if(updates.length)await Promise.all(updates.map(u=>saveYukyuGrant(u.id,u.patch)));
+    }catch(err){console.error('自動付与エラー',err);}
     await loadGrants();
   }
 }
