@@ -168,7 +168,7 @@ async function loadAndRender(){
   }
   syncFromST();
   // 有給自動付与は今日初回のみ実行
-  const _grantKey='autoGrant_'+new Date().toISOString().slice(0,10);
+  const _grantKey='autoGrantLegalDays_'+new Date().toISOString().slice(0,10);
   if(!sessionStorage.getItem(_grantKey)){
     sessionStorage.setItem(_grantKey,'1');
     await checkAndAutoGrant();
