@@ -568,7 +568,7 @@ async function renderDT(){
                 <span class="chip">${r.kubun||'—'}</span>
                 <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
                 ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
-                <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delYR(${r.id})">削除</button>
+                <div style="margin-left:auto;display:flex;gap:4px"><button class="btn btn-sm" onclick="openYukyuEdit(${r.id},true)">編集</button><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></div>
               </div>`;
             }
           }).join('');

@@ -42,6 +42,7 @@ async function createYukyuGrants(batch){return sb('yukyu_grants','POST',batch);}
 async function saveYukyuGrant(id,data){return id?sb('yukyu_grants?id=eq.'+id,'PATCH',data):sb('yukyu_grants','POST',data);}
 async function deleteYukyuGrant(id){return sb('yukyu_grants?id=eq.'+id,'DELETE');}
 async function createYukyuRecord(data){return sb('yukyu_records','POST',data);}
+async function updateYukyuRecord(id,data){return sb('yukyu_records?id=eq.'+id,'PATCH',data);}
 async function deleteYukyuRecord(id){return sb('yukyu_records?id=eq.'+id,'DELETE');}
 
 async function createDepartment(data){return sb('departments','POST',data);}
