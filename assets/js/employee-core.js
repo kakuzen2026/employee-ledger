@@ -167,8 +167,8 @@ async function loadAndRender(){
     console.error('Load errors:', results.filter(r=>r.status==='rejected').map(r=>r.reason));
   }
   syncFromST();
-  // 有給自動付与は今日初回のみ実行
-  const _grantKey='autoGrantLegalDays_'+new Date().toISOString().slice(0,10);
+  // 有給自動付与と付与整理は今日初回のみ実行
+  const _grantKey='autoGrantExpiredCleanup_'+new Date().toISOString().slice(0,10);
   if(!sessionStorage.getItem(_grantKey)){
     sessionStorage.setItem(_grantKey,'1');
     await checkAndAutoGrant();
@@ -270,10 +270,16 @@ function calcYukyuInfo(empId){
 }
 
 // ---- 自動付与チェック（ログイン時に実行） ----
+function findExpiredGrantDeleteIds(todayStr){
+  return yukyuGrants
+    .filter(g=>g.id&&g.grant_date&&(g.expire_date||grantExpireDate(g.grant_date))<todayStr)
+    .map(g=>g.id);
+}
 async function checkAndAutoGrant(){
   const todayStr=new Date().toISOString().slice(0,10);
   const batch=[];
   const updates=[];
+  const deleteIds=findExpiredGrantDeleteIds(todayStr);
   for(const e of employees.filter(x=>x.status==='在籍'&&x.nyusha_date)){
     const dates=calcGrantDates(e.id);
     const existingGrants=yukyuGrants.filter(g=>g.employee_id===e.id);
@@ -292,10 +298,11 @@ async function checkAndAutoGrant(){
       }
     }
   }
-  if(batch.length||updates.length){
+  if(batch.length||updates.length||deleteIds.length){
     try{
       if(batch.length)await createYukyuGrants(batch);
       if(updates.length)await Promise.all(updates.map(u=>saveYukyuGrant(u.id,u.patch)));
+      if(deleteIds.length)await Promise.all(deleteIds.map(id=>deleteYukyuGrant(id)));
     }catch(err){console.error('自動付与エラー',err);}
     await loadGrants();
   }
