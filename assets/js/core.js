@@ -14,50 +14,229 @@ let wpList=[], selEmps=[], empCache=null, empTimer=null;
 let currentDocContract = null;
 
 // ===== LOGIN (Magic Link) =====
+function authMessage(id,message,isError=false){
+  const element=document.getElementById(id);
+  element.textContent=message;
+  element.classList.toggle('auth-message-error',isError);
+  element.hidden=false;
+}
+
+function clearAuthMessage(id){
+  const element=document.getElementById(id);
+  element.textContent='';
+  element.hidden=true;
+  element.classList.remove('auth-message-error');
+}
+
+function showAuthForm(formId){
+  ['login-form','reset-request-form','password-update-form'].forEach(id=>{
+    document.getElementById(id).hidden=id!==formId;
+  });
+  document.body.classList.remove('app-booting');
+  document.body.classList.add('login-only');
+  document.getElementById('login-screen').style.display='block';
+}
+
+function showLoginForm(statusMessage='',statusIsError=false){
+  const resetEmail=document.getElementById('reset-email').value.trim();
+  if(resetEmail&&!document.getElementById('login-email').value){
+    document.getElementById('login-email').value=resetEmail;
+  }
+  clearAuthMessage('login-err');
+  clearAuthMessage('login-status');
+  showAuthForm('login-form');
+  if(statusMessage){
+    authMessage('login-status',statusMessage,statusIsError);
+  }
+  document.getElementById('login-email').focus();
+}
+
+function showPasswordResetRequest(){
+  const loginEmail=document.getElementById('login-email').value.trim();
+  if(loginEmail&&!document.getElementById('reset-email').value){
+    document.getElementById('reset-email').value=loginEmail;
+  }
+  clearAuthMessage('reset-request-message');
+  showAuthForm('reset-request-form');
+  document.getElementById('reset-email').focus();
+}
+
+function showPasswordUpdateForm(){
+  clearAuthMessage('password-update-message');
+  showAuthForm('password-update-form');
+  document.getElementById('new-password').focus();
+}
+
+function recoveryRedirectInUrl(){
+  const hashParams=new URLSearchParams(window.location.hash.replace(/^#/,''));
+  const queryParams=new URLSearchParams(window.location.search);
+  return hashParams.get('type')==='recovery'||queryParams.get('type')==='recovery';
+}
+
+let passwordRecoveryActive=false;
+let resolvePasswordRecoveryEvent;
+const passwordRecoveryEvent=new Promise(resolve=>{
+  resolvePasswordRecoveryEvent=resolve;
+});
+
+function clearRecoveryUrl(){
+  window.history.replaceState(null,document.title,window.location.pathname);
+}
+
+async function waitForPasswordRecoveryEvent(timeoutMs=4000){
+  if(passwordRecoveryActive) return true;
+  return Promise.race([
+    passwordRecoveryEvent,
+    new Promise(resolve=>setTimeout(()=>resolve(false),timeoutMs))
+  ]);
+}
+
 async function checkLogin(){
-  // URLハッシュにトークンが含まれる場合（マジックリンクからの遷移）
-  if(window.location.hash && window.location.hash.includes('access_token')){
-    // Supabase v2 が自動でセッションを復元するのを待つ
-    const {data:{session},error} = await db.auth.getSession();
-    if(session){
-      window.location.hash = '';
-      showApp();
-      return;
+  if(passwordRecoveryActive){
+    showPasswordUpdateForm();
+    return;
+  }
+  if(recoveryRedirectInUrl()){
+    const resetButton=document.getElementById('reset-request-btn');
+    showAuthForm('reset-request-form');
+    authMessage('reset-request-message','再設定リンクを確認しています。');
+    resetButton.disabled=true;
+    resetButton.textContent='確認中...';
+    try{
+      await db.auth.getSession();
+    }catch{
+      // PASSWORD_RECOVERYイベントを認可根拠とし、取得失敗は下の汎用表示へまとめる。
     }
+    const recoveryReady=await waitForPasswordRecoveryEvent();
+    resetButton.disabled=false;
+    resetButton.textContent='再設定メールを送る';
+    if(recoveryReady) return;
+    clearRecoveryUrl();
+    showPasswordResetRequest();
+    authMessage('reset-request-message','再設定リンクが無効か期限切れです。再設定メールをもう一度送信してください。',true);
+    return;
   }
   const {data:{session}} = await db.auth.getSession();
+  if(passwordRecoveryActive){
+    showPasswordUpdateForm();
+    return;
+  }
   if(session){
     showApp();
   } else {
-    document.body.classList.remove('app-booting');
-    document.body.classList.add('login-only');
-    document.getElementById('login-screen').style.display='block';
+    showLoginForm();
   }
 }
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==='PASSWORD_RECOVERY'&&session){
+    passwordRecoveryActive=true;
+    resolvePasswordRecoveryEvent(true);
+    clearRecoveryUrl();
+    showPasswordUpdateForm();
+  }
+});
 
 async function doEmailLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-pw').value;
+  clearAuthMessage('login-status');
   if(!email || !pw){
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-err').textContent='❌ メールアドレスとパスワードを入力してください';
+    authMessage('login-err','メールアドレスとパスワードを入力してください。',true);
     return;
   }
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
   btn.textContent = 'ログイン中...';
-  document.getElementById('login-err').style.display='none';
+  clearAuthMessage('login-err');
 
   const {error} = await db.auth.signInWithPassword({ email, password: pw });
 
   if(error){
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-err').textContent='❌ ' + error.message;
+    authMessage('login-err','ログインできませんでした。入力内容を確認してください。',true);
     btn.disabled = false;
     btn.textContent = 'ログイン';
   } else {
     document.getElementById('login-screen').style.display='none';
     showApp();
+  }
+}
+
+async function requestPasswordReset(){
+  const email=document.getElementById('reset-email').value.trim();
+  const btn=document.getElementById('reset-request-btn');
+  clearAuthMessage('reset-request-message');
+  if(!email){
+    authMessage('reset-request-message','メールアドレスを入力してください。',true);
+    return;
+  }
+  btn.disabled=true;
+  btn.textContent='送信中...';
+  const redirectTo=`${window.location.origin}${window.location.pathname}`;
+  try{
+    const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error){
+      authMessage('reset-request-message','再設定メールを送信できませんでした。時間をおいて再度お試しください。',true);
+      return;
+    }
+    authMessage('reset-request-message','アカウントが登録されている場合、再設定メールを送信しました。メール内のリンクを開いてください。');
+  }catch{
+    authMessage('reset-request-message','再設定メールを送信できませんでした。時間をおいて再度お試しください。',true);
+  }finally{
+    btn.disabled=false;
+    btn.textContent='再設定メールを送る';
+  }
+}
+
+async function updateRecoveredPassword(){
+  const newPassword=document.getElementById('new-password').value;
+  const confirmation=document.getElementById('new-password-confirmation').value;
+  const btn=document.getElementById('password-update-btn');
+  clearAuthMessage('password-update-message');
+  if(newPassword.length<12){
+    authMessage('password-update-message','新しいパスワードは12文字以上で入力してください。',true);
+    return;
+  }
+  if(newPassword!==confirmation){
+    authMessage('password-update-message','確認用パスワードが一致しません。',true);
+    return;
+  }
+  btn.disabled=true;
+  btn.textContent='更新中...';
+  try{
+    const {error}=await db.auth.updateUser({password:newPassword});
+    if(error){
+      authMessage('password-update-message','パスワードを更新できませんでした。再設定メールからやり直してください。',true);
+      return;
+    }
+
+    let globalSignOutFailed=false;
+    try{
+      const {error:signOutError}=await db.auth.signOut({scope:'global'});
+      if(signOutError) globalSignOutFailed=true;
+    }catch{
+      globalSignOutFailed=true;
+    }
+    if(globalSignOutFailed){
+      try{
+        await db.auth.signOut({scope:'local'});
+      }catch{
+        // 更新自体は完了済みのため、下の完了表示で失効未確認を明示する。
+      }
+    }
+    passwordRecoveryActive=false;
+    if(globalSignOutFailed){
+      showLoginForm('パスワードは更新されましたが、ほかの端末からのログアウトを確認できませんでした。管理者へご連絡ください。',true);
+    }else{
+      showLoginForm('パスワードを更新しました。新しいパスワードでログインしてください。');
+    }
+  }catch{
+    authMessage('password-update-message','パスワードを更新できませんでした。再設定メールからやり直してください。',true);
+  }finally{
+    document.getElementById('new-password').value='';
+    document.getElementById('new-password-confirmation').value='';
+    btn.disabled=false;
+    btn.textContent='新しいパスワードを設定';
   }
 }
 
@@ -122,4 +301,3 @@ function navigate(page){
   }
   else if(page==='settings') loadSettings();
 }
-
