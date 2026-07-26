@@ -523,6 +523,30 @@ tr:hover #main td{background:rgba(255,255,255,.02);}
 #login-screen .btn-primary:hover{
   transform:translateY(-1px);box-shadow:0 6px 20px var(--accent-glow);
 }
+.login-link{
+  display:block;width:100%;margin-top:16px;padding:4px;
+  border:0;background:transparent;color:var(--accent2);
+  font:600 12px/1.6 'Sora','Noto Sans JP',sans-serif;
+  text-align:center;text-decoration:underline;text-underline-offset:3px;
+  cursor:pointer;
+}
+.login-link:hover{color:var(--accent);}
+.login-link:focus-visible{
+  outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;
+}
+.login-help{
+  margin:-12px 0 22px;color:var(--text2);font-size:12px;line-height:1.8;
+}
+.auth-message{
+  margin-bottom:16px;padding:10px 14px;border-radius:8px;
+  border:1px solid rgba(34,197,94,.28);background:rgba(34,197,94,.1);
+  color:#86efac;font-size:12px;line-height:1.7;
+}
+.auth-message-error{
+  border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.1);
+  color:var(--danger);
+}
+#login-screen [hidden]{display:none!important;}
 
 /* === MOBILE BOTTOM NAV === */
 #mobile-nav{
