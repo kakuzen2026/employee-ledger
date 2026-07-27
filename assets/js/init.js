@@ -1,5 +1,5 @@
 // ===== INIT =====
-// Supabase Auth セッションで従業員管理を自動ログイン
+// Firebase Auth セッションで従業員管理を自動ログイン
 db.auth.getSession().then(({data:{session}})=>{
   if(session){
     document.getElementById('emp-login').style.display='none';
