@@ -1,9 +1,6 @@
 // ===== CONFIG =====
-const SUPA_URL = 'https://wkzbsdfgslidubqpifwa.supabase.co';
-const SUPA_KEY = 'sb_publishable_mfVmygJgUjnax83quON02Q_KMdYfF-Y';
-// DB統合により従業員DBも新DBへ統合済み。
-const {createClient} = supabase;
-const db    = createClient(SUPA_URL, SUPA_KEY);
+// Firebaseへ移行済みの20コレクションを既存UIから利用する。
+const db = createFirebaseDb();
 
 // ===== XSS エスケープ =====
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
@@ -13,18 +10,8 @@ let ST = {clients:[],sites:[],contracts:[],billing:[],page:'jugyoin',ctTab:'acti
 let wpList=[], selEmps=[], empCache=null, empTimer=null;
 let currentDocContract = null;
 
-// ===== LOGIN (Magic Link) =====
+// ===== LOGIN =====
 async function checkLogin(){
-  // URLハッシュにトークンが含まれる場合（マジックリンクからの遷移）
-  if(window.location.hash && window.location.hash.includes('access_token')){
-    // Supabase v2 が自動でセッションを復元するのを待つ
-    const {data:{session},error} = await db.auth.getSession();
-    if(session){
-      window.location.hash = '';
-      showApp();
-      return;
-    }
-  }
   const {data:{session}} = await db.auth.getSession();
   if(session){
     showApp();
@@ -108,7 +95,7 @@ function navigate(page){
   else if(page==='billing'){initBillingMonths();loadBilling();}
   else if(page==='records') loadRecords();
   else if(page==='jugyoin'){
-    // Supabase Auth セッションがあれば従業員管理も自動認証
+    // Firebase Auth セッションがあれば従業員管理も自動認証
     db.auth.getSession().then(({data:{session}})=>{
       if(session){
         document.getElementById('emp-login').style.display='none';
@@ -122,4 +109,3 @@ function navigate(page){
   }
   else if(page==='settings') loadSettings();
 }
-
