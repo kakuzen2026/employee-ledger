@@ -50,14 +50,23 @@ async function createYukyuRecord(data){return firebaseRows(db.from('yukyu_record
 async function updateYukyuRecord(id,data){return firebaseRows(db.from('yukyu_records').update(data).eq('id',id));}
 async function deleteYukyuRecord(id){return firebaseRows(db.from('yukyu_records').delete().eq('id',id));}
 
-async function createDepartment(data){return firebaseRows(db.from('departments').insert(data));}
+async function createDepartment(data){
+  const sortOrder=Math.max(0,...(departments||[]).map(d=>Number(d.sort_order)).filter(Number.isFinite))+1;
+  return firebaseRows(db.from('departments').insert({...data,sort_order:sortOrder}));
+}
 async function updateDepartment(id,data){return firebaseRows(db.from('departments').update(data).eq('id',id));}
 async function deleteDepartment(id){return firebaseRows(db.from('departments').delete().eq('id',id));}
 async function updateDepartmentSortOrders(depts){return Promise.all(depts.map((d,i)=>updateDepartment(d.id,{sort_order:i+1})));}
 
 async function saveWorkPattern(id,data,sortOrder){return id?firebaseRows(db.from('emp_work_patterns').update(data).eq('id',id)):firebaseRows(db.from('emp_work_patterns').insert({...data,sort_order:sortOrder}));}
 async function deleteWorkPatternRecord(id){return firebaseRows(db.from('emp_work_patterns').delete().eq('id',id));}
-async function updateCompanyInfo(data){return firebaseRows(db.from('company_info').update(data).eq('id',1));}
+async function updateCompanyInfo(data){
+  const {data:current,error}=await db.from('company_info').select('id').limit(1).maybeSingle();
+  if(error)throw error;
+  return current
+    ? firebaseRows(db.from('company_info').update(data).eq('id',current.id))
+    : firebaseRows(db.from('company_info').insert(data));
+}
 async function createCertificate(data){return firebaseRows(db.from('certificates').insert(data));}
 async function deleteCertificate(id){return firebaseRows(db.from('certificates').delete().eq('id',id));}
 async function createEmploymentContract(data){return firebaseRows(db.from('employment_contracts').insert(data));}
