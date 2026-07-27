@@ -1,7 +1,5 @@
 // ===== EMPLOYEE MANAGEMENT (統合) =====
-// DB統合により新DBへ接続。
-const SUPABASE_URL=SUPA_URL;
-const SUPABASE_KEY=SUPA_KEY;
+// Firebase移行済みのデータを共有アダプター経由で利用する。
 const KOYOU=['正社員','パート・アルバイト','契約社員','派遣社員','業務委託'];
 const CHECKRES=['異常なし','要経過観察','要精密検査','受診未了'];
 const USE_TYPES=['全日','半休（午前）','半休（午後）'];

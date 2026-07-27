@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isLedgerAdmin() {
+      return request.auth != null && request.auth.token.ledger_admin == true;
+    }
+
+    // All migrated collections and the ID counter are restricted to explicitly
+    // provisioned administrative accounts. No public or ordinary-user access.
+    match /{collection}/{document} {
+      allow read, create, update, delete: if isLedgerAdmin();
+    }
+  }
+}

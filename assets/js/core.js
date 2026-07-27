@@ -1,9 +1,6 @@
 // ===== CONFIG =====
-const SUPA_URL = 'https://wkzbsdfgslidubqpifwa.supabase.co';
-const SUPA_KEY = 'sb_publishable_mfVmygJgUjnax83quON02Q_KMdYfF-Y';
-// DB統合により従業員DBも新DBへ統合済み。
-const {createClient} = supabase;
-const db    = createClient(SUPA_URL, SUPA_KEY);
+// Firebaseへ移行済みの20コレクションを既存UIから利用する。
+const db = createFirebaseDb();
 
 // ===== XSS エスケープ =====
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
@@ -13,7 +10,7 @@ let ST = {clients:[],sites:[],contracts:[],billing:[],page:'jugyoin',ctTab:'acti
 let wpList=[], selEmps=[], empCache=null, empTimer=null;
 let currentDocContract = null;
 
-// ===== LOGIN (Magic Link) =====
+// ===== LOGIN =====
 function authMessage(id,message,isError=false){
   const element=document.getElementById(id);
   element.textContent=message;
@@ -29,7 +26,7 @@ function clearAuthMessage(id){
 }
 
 function showAuthForm(formId){
-  ['login-form','reset-request-form','password-update-form'].forEach(id=>{
+  ['login-form','reset-request-form'].forEach(id=>{
     document.getElementById(id).hidden=id!==formId;
   });
   document.body.classList.remove('app-booting');
@@ -61,81 +58,14 @@ function showPasswordResetRequest(){
   document.getElementById('reset-email').focus();
 }
 
-function showPasswordUpdateForm(){
-  clearAuthMessage('password-update-message');
-  showAuthForm('password-update-form');
-  document.getElementById('new-password').focus();
-}
-
-function recoveryRedirectInUrl(){
-  const hashParams=new URLSearchParams(window.location.hash.replace(/^#/,''));
-  const queryParams=new URLSearchParams(window.location.search);
-  return hashParams.get('type')==='recovery'||queryParams.get('type')==='recovery';
-}
-
-let passwordRecoveryActive=false;
-let resolvePasswordRecoveryEvent;
-const passwordRecoveryEvent=new Promise(resolve=>{
-  resolvePasswordRecoveryEvent=resolve;
-});
-
-function clearRecoveryUrl(){
-  window.history.replaceState(null,document.title,window.location.pathname);
-}
-
-async function waitForPasswordRecoveryEvent(timeoutMs=4000){
-  if(passwordRecoveryActive) return true;
-  return Promise.race([
-    passwordRecoveryEvent,
-    new Promise(resolve=>setTimeout(()=>resolve(false),timeoutMs))
-  ]);
-}
-
 async function checkLogin(){
-  if(passwordRecoveryActive){
-    showPasswordUpdateForm();
-    return;
-  }
-  if(recoveryRedirectInUrl()){
-    const resetButton=document.getElementById('reset-request-btn');
-    showAuthForm('reset-request-form');
-    authMessage('reset-request-message','再設定リンクを確認しています。');
-    resetButton.disabled=true;
-    resetButton.textContent='確認中...';
-    try{
-      await db.auth.getSession();
-    }catch{
-      // PASSWORD_RECOVERYイベントを認可根拠とし、取得失敗は下の汎用表示へまとめる。
-    }
-    const recoveryReady=await waitForPasswordRecoveryEvent();
-    resetButton.disabled=false;
-    resetButton.textContent='再設定メールを送る';
-    if(recoveryReady) return;
-    clearRecoveryUrl();
-    showPasswordResetRequest();
-    authMessage('reset-request-message','再設定リンクが無効か期限切れです。再設定メールをもう一度送信してください。',true);
-    return;
-  }
   const {data:{session}} = await db.auth.getSession();
-  if(passwordRecoveryActive){
-    showPasswordUpdateForm();
-    return;
-  }
   if(session){
     showApp();
   } else {
     showLoginForm();
   }
 }
-
-db.auth.onAuthStateChange((event,session)=>{
-  if(event==='PASSWORD_RECOVERY'&&session){
-    passwordRecoveryActive=true;
-    resolvePasswordRecoveryEvent(true);
-    clearRecoveryUrl();
-    showPasswordUpdateForm();
-  }
-});
 
 async function doEmailLogin(){
   const email = document.getElementById('login-email').value.trim();
@@ -188,58 +118,6 @@ async function requestPasswordReset(){
   }
 }
 
-async function updateRecoveredPassword(){
-  const newPassword=document.getElementById('new-password').value;
-  const confirmation=document.getElementById('new-password-confirmation').value;
-  const btn=document.getElementById('password-update-btn');
-  clearAuthMessage('password-update-message');
-  if(newPassword.length<12){
-    authMessage('password-update-message','新しいパスワードは12文字以上で入力してください。',true);
-    return;
-  }
-  if(newPassword!==confirmation){
-    authMessage('password-update-message','確認用パスワードが一致しません。',true);
-    return;
-  }
-  btn.disabled=true;
-  btn.textContent='更新中...';
-  try{
-    const {error}=await db.auth.updateUser({password:newPassword});
-    if(error){
-      authMessage('password-update-message','パスワードを更新できませんでした。再設定メールからやり直してください。',true);
-      return;
-    }
-
-    let globalSignOutFailed=false;
-    try{
-      const {error:signOutError}=await db.auth.signOut({scope:'global'});
-      if(signOutError) globalSignOutFailed=true;
-    }catch{
-      globalSignOutFailed=true;
-    }
-    if(globalSignOutFailed){
-      try{
-        await db.auth.signOut({scope:'local'});
-      }catch{
-        // 更新自体は完了済みのため、下の完了表示で失効未確認を明示する。
-      }
-    }
-    passwordRecoveryActive=false;
-    if(globalSignOutFailed){
-      showLoginForm('パスワードは更新されましたが、ほかの端末からのログアウトを確認できませんでした。管理者へご連絡ください。',true);
-    }else{
-      showLoginForm('パスワードを更新しました。新しいパスワードでログインしてください。');
-    }
-  }catch{
-    authMessage('password-update-message','パスワードを更新できませんでした。再設定メールからやり直してください。',true);
-  }finally{
-    document.getElementById('new-password').value='';
-    document.getElementById('new-password-confirmation').value='';
-    btn.disabled=false;
-    btn.textContent='新しいパスワードを設定';
-  }
-}
-
 async function doLogoutAll(){
   await db.auth.signOut();
   sessionStorage.clear();
@@ -287,7 +165,7 @@ function navigate(page){
   else if(page==='billing'){initBillingMonths();loadBilling();}
   else if(page==='records') loadRecords();
   else if(page==='jugyoin'){
-    // Supabase Auth セッションがあれば従業員管理も自動認証
+    // Firebase Auth セッションがあれば従業員管理も自動認証
     db.auth.getSession().then(({data:{session}})=>{
       if(session){
         document.getElementById('emp-login').style.display='none';

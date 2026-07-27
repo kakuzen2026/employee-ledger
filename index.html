@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>派遣・従業員管理システム</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/employee.css">
 </head>
@@ -46,19 +49,6 @@
         <button type="button" class="login-link" onclick="showLoginForm()">ログイン画面に戻る</button>
       </form>
 
-      <form id="password-update-form" onsubmit="event.preventDefault();updateRecoveredPassword();" hidden>
-        <p class="login-help">新しいパスワードを12文字以上で入力してください。</p>
-        <div class="form-group">
-          <label class="form-label" for="new-password">新しいパスワード</label>
-          <input type="password" class="form-input" id="new-password" autocomplete="new-password" minlength="12" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="new-password-confirmation">新しいパスワード（確認）</label>
-          <input type="password" class="form-input" id="new-password-confirmation" autocomplete="new-password" minlength="12" required>
-        </div>
-        <div id="password-update-message" class="auth-message" role="alert" hidden></div>
-        <button type="submit" class="btn btn-primary" id="password-update-btn" style="width:100%;justify-content:center;">新しいパスワードを設定</button>
-      </form>
     </div>
   </div>
 </div>
@@ -710,6 +700,7 @@
 
 <div id="toast-container"></div>
 
+<script src="assets/js/firebase-adapter.js"></script>
 <script src="assets/js/core.js"></script>
 <script src="assets/js/dispatch.js"></script>
 <script src="assets/js/records-documents.js"></script>
