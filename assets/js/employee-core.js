@@ -423,9 +423,9 @@ function openDeptModal(mode,id=null,cb=null){
     document.getElementById('dm_s1').value='';
     document.getElementById('dm_s2').value='';
   }
-  document.getElementById('deptModal').style.display='flex';
+  document.getElementById('deptModal').classList.add('open');
 }
-function closeDeptModal(){document.getElementById('deptModal').style.display='none';}
+function closeDeptModal(){document.getElementById('deptModal').classList.remove('open');}
 async function saveDeptModal(){
   const s1=document.getElementById('dm_s1').value.trim();
   const s2=document.getElementById('dm_s2').value.trim();

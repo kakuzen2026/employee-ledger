@@ -245,11 +245,17 @@ test('Dynamic employee actions use delegated click handlers', async () => {
   ]);
 
   assert.match(core, /closest\?\.\('\[data-employee-action\]'\)/);
+  assert.match(core, /getElementById\('deptModal'\)\.classList\.add\('open'\)/);
+  assert.doesNotMatch(core, /getElementById\('deptModal'\)\.style\.display/);
   assert.match(settings, /data-employee-action="department-add"/);
   assert.doesNotMatch(settings, /onclick="openDeptModal/);
+  for (const modalId of ['wpModal', 'contractModal', 'visaModal']) {
+    assert.match(settings, new RegExp(`getElementById\\('${modalId}'\\)\\.classList\\.add\\('open'\\)`));
+  }
   assert.match(detail, /data-employee-action="contract-open"/);
   assert.doesNotMatch(detail, /onclick="emp_openContractModal/);
   assert.match(paidLeave, /data-select-target="f_dept_id"/);
+  assert.match(paidLeave, /getElementById\('grantModal'\)\.classList\.add\('open'\)/);
   assert.match(html, /data-employee-action="department-save"/);
   assert.match(html, /data-employee-action="contract-generate"/);
   assert.match(html, /assets\/js\/employee-core\.js\?v=\d{8}\.\d+/);

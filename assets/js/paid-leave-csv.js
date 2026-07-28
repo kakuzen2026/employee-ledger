@@ -114,9 +114,9 @@ function openGrantModal(empId,editGrantId=null){
   const dateInput=document.getElementById('gm_date');
   const daysInput=document.getElementById('gm_days');
   dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';};
-  document.getElementById('grantModal').style.display='flex';
+  document.getElementById('grantModal').classList.add('open');
 }
-function closeGrantModal(){document.getElementById('grantModal').style.display='none';}
+function closeGrantModal(){document.getElementById('grantModal').classList.remove('open');}
 async function saveGrant(){
   const d=document.getElementById('gm_date').value;
   if(!d){showToast('付与日は必須です','error');return;}
