@@ -19,6 +19,11 @@
     'yukyu_records', 'yukyu_grants', 'certificates', 'employment_contracts',
     'dispatch_contracts'
   ]);
+  const UUID_ID_TABLES = new Set([
+    'settings', 'clients', 'sites', 'assignments', 'billing', 'contracts',
+    'doc_templates', 'work_patterns', 'contract_employees', 'employee_records',
+    'dispatch_contracts'
+  ]);
   const BLOB_PREFIX = 'firebase-rtdb://blobs/migration-v1/';
 
   function appError(message, cause) {
@@ -71,6 +76,15 @@
 
   function isPlainObject(value) {
     return value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function createUuid() {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'));
+    return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
   }
 
   async function sha256(value) {
@@ -313,10 +327,10 @@
       const counter = this.firestore.collection('_meta').doc('counters');
       return this.firestore.runTransaction(async (transaction) => {
         const current = await transaction.get(counter);
-        if (!current.exists) throw appError('ID採番用の管理文書がありません。');
+        if (!current.exists) throw appError(`ID採番用の管理文書がありません（${table}）。管理者に連絡してください。`);
         const counters = current.data() || {};
         const value = Number(counters[table]);
-        if (!Number.isSafeInteger(value) || value < 0) throw appError('ID採番情報が不正です。');
+        if (!Number.isSafeInteger(value) || value < 0) throw appError(`ID採番情報が不正です（${table}）。管理者に連絡してください。`);
         const next = value + 1;
         transaction.update(counter, { [table]: next });
         return next;
@@ -325,7 +339,9 @@
 
     async insertRow(table, input) {
       if (!isPlainObject(input)) throw appError('登録内容が不正です。');
-      const id = input.id == null ? await this.nextId(table) : input.id;
+      const id = input.id == null
+        ? (UUID_ID_TABLES.has(table) ? createUuid() : await this.nextId(table))
+        : input.id;
       const stored = await this.prepareForStorage({ ...input, id });
       const documentId = String(id);
       const reference = this.firestore.collection(table).doc(documentId);

@@ -149,7 +149,7 @@ async function saveEmployeeRecord(){
   const {error}=id
     ? await db.from('employee_records').update(p).eq('id',id)
     : await db.from('employee_records').insert(p);
-  if(error){toast('保存に失敗しました','error');return;}
+  if(error){toast('保存に失敗しました：'+error.message,'error');return;}
   toast('記録を保存しました','success');
   closeModal('modal-record-edit');
   loadRecords();
@@ -953,4 +953,3 @@ async function genAllDocs(){
     toast('全書類を生成しました（印刷ダイアログで「PDFに保存」を選択してください）','success');
   }catch(e){console.error(e);toast('生成に失敗しました：'+e.message,'error');}
 }
-
