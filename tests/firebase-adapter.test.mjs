@@ -122,7 +122,7 @@ test('Firestore adapter keeps relation selection, filtering, ID allocation, and 
 
   const inserted = await db.from('clients').insert({ name: '顧客B' }).select('id,name').single();
   assert.equal(inserted.error, null);
-  assert.equal(inserted.data.id, 2);
+  assert.match(inserted.data.id, /^[0-9a-f-]{36}$/i);
   assert.equal(inserted.data.name, '顧客B');
 
   const department = await db.from('departments')
@@ -133,13 +133,13 @@ test('Firestore adapter keeps relation selection, filtering, ID allocation, and 
   assert.equal(department.data.id, 15);
   assert.equal(department.data.sort_order, 2);
 
-  const updated = await db.from('clients').update({ name: '顧客B更新' }).eq('id', 2).select('name').single();
+  const updated = await db.from('clients').update({ name: '顧客B更新' }).eq('id', inserted.data.id).select('name').single();
   assert.equal(updated.error, null);
   assert.equal(updated.data.name, '顧客B更新');
 
-  const deleted = await db.from('clients').delete().eq('id', 2);
+  const deleted = await db.from('clients').delete().eq('id', inserted.data.id);
   assert.equal(deleted.error, null);
-  const missing = await db.from('clients').select('*').eq('id', 2).maybeSingle();
+  const missing = await db.from('clients').select('*').eq('id', inserted.data.id).maybeSingle();
   assert.equal(missing.data, null);
 });
 
@@ -210,10 +210,35 @@ test('Company information can be created when the migrated collection is empty',
   assert.equal(inserts.length, 1);
 });
 
+test('Firebase adapter identifies the table when the ID counter is unavailable', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ _counters: {} });
+
+  await import(`../assets/js/firebase-adapter.js?counter-error=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  const { error } = await db.from('departments').insert({ shozoku1: 'テスト部署' });
+
+  assert.ok(error);
+  assert.match(error.message, /departments/);
+  assert.match(error.message, /ID採番/);
+});
+
+test('UUID-backed collections can create records without numeric counters', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ _counters: {} });
+
+  await import(`../assets/js/firebase-adapter.js?uuid-create=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  const { data, error } = await db.from('clients').insert({ name: 'テスト取引先' }).select('id').single();
+
+  assert.equal(error, null);
+  assert.match(data.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
 test('Every collection used by application buttons supports the basic save lifecycle', async () => {
   const tables = [
-    'billing', 'certificates', 'clients', 'company_info', 'contract_employees',
-    'contracts', 'departments', 'dispatch_contracts', 'emp_work_patterns',
+    'assignments', 'billing', 'certificates', 'clients', 'company_info', 'contract_employees',
+    'contracts', 'departments', 'dispatch_contracts', 'doc_templates', 'emp_work_patterns',
     'employee_records', 'employees', 'employment_contracts', 'settings', 'sites',
     'visa_types', 'work_patterns', 'yukyu_grants', 'yukyu_records'
   ];
@@ -224,10 +249,17 @@ test('Every collection used by application buttons supports the basic save lifec
 
   await import(`../assets/js/firebase-adapter.js?save-lifecycle=${Date.now()}`);
   const db = globalThis.createFirebaseDb();
+  const uuidTables = new Set([
+    'assignments', 'billing', 'clients', 'contract_employees', 'contracts',
+    'dispatch_contracts', 'doc_templates', 'employee_records', 'settings', 'sites',
+    'work_patterns'
+  ]);
 
   for (const table of tables) {
     const created = await db.from(table).insert({ marker: table }).select('id,marker').single();
     assert.equal(created.error, null, `${table} create`);
+    if (uuidTables.has(table)) assert.match(created.data.id, /^[0-9a-f-]{36}$/i, `${table} UUID`);
+    else assert.equal(created.data.id, 1, `${table} numeric ID`);
     assert.equal(created.data.marker, table, `${table} inserted data`);
 
     const updated = await db.from(table).update({ marker: `${table}-updated` }).eq('id', created.data.id).select('marker').single();

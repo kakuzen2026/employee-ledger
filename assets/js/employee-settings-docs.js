@@ -197,6 +197,10 @@ function generateCertificate(empId,type){
 </html>`;
 
   const w=window.open('','_blank','width=800,height=900');
+  if(!w){
+    showToast('証明書の表示をブロックしました。ブラウザでポップアップを許可して、もう一度実行してください。','warn');
+    return;
+  }
   w.document.write(content);
   w.document.close();
   w.onload=()=>{w.print();};
@@ -208,7 +212,10 @@ function generateCertificate(empId,type){
     cert_type:isZaishoku?'在職証明書':'退職証明書',
     issued_date:todayISO,
     issued_by:companyInfo.company_name||''
-  }).then(()=>loadCertificates()).catch(err=>console.error(err));
+  }).then(()=>loadCertificates()).catch(err=>{
+    console.error(err);
+    showToast('証明書は表示しましたが、発行履歴の保存に失敗しました：'+err.message,'error');
+  });
 }
 
 // ---- 雇用契約書 ----
@@ -412,6 +419,10 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
 
   closeContractModal();
   const w=window.open('','_blank','width=900,height=1100');
+  if(!w){
+    showToast('雇用契約書の表示をブロックしました。ブラウザでポップアップを許可して、もう一度実行してください。','warn');
+    return;
+  }
   w.document.write(content);
   w.document.close();
   w.onload=()=>{w.print();};
@@ -426,7 +437,10 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
     source:'this_app',
     issued_date:new Date().toISOString().slice(0,10),
     issued_by:companyInfo.company_name||''
-  }).then(()=>loadEmploymentContracts()).catch(err=>console.error(err));
+  }).then(()=>loadEmploymentContracts()).catch(err=>{
+    console.error(err);
+    showToast('雇用契約書は表示しましたが、発行履歴の保存に失敗しました：'+err.message,'error');
+  });
 }
 
 // ---- 雇用契約書一覧 ----
@@ -664,4 +678,3 @@ async function deleteVisaType(id){
   await deleteVisaTypeRecord(id);
   await loadVisaTypes();renderSettings();
 }
-

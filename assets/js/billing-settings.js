@@ -43,7 +43,7 @@ async function saveBilling(){
   const p={client_id:document.getElementById('b-client-id').value,billing_month:m+'-01',amount:parseInt(document.getElementById('b-amount').value)||0,is_billed:document.getElementById('b-billed').value==='true',notes:document.getElementById('b-notes').value,updated_at:new Date().toISOString()};
   if(!p.client_id||!p.billing_month){toast('必須項目を入力してください','error');return;}
   const {error}=id?await db.from('billing').update(p).eq('id',id):await db.from('billing').insert(p);
-  if(error){toast('保存に失敗しました','error');return;}
+  if(error){toast('保存に失敗しました：'+error.message,'error');return;}
   toast(id?'請求を更新しました':'請求を記録しました','success');closeModal('modal-billing');loadBilling();
 }
 async function deleteBilling(id){
@@ -75,7 +75,7 @@ async function saveSettings(){
     updated_at:new Date().toISOString()};
   const {data:ex}=await db.from('settings').select('id').limit(1).maybeSingle();
   const {error}=ex?await db.from('settings').update(p).eq('id',ex.id):await db.from('settings').insert(p);
-  if(error)toast('保存に失敗しました','error');else toast('自社情報を保存しました','success');
+  if(error)toast('保存に失敗しました：'+error.message,'error');else toast('自社情報を保存しました','success');
 }
 
 // ===== HELPERS =====
@@ -97,5 +97,4 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o&&mousedownOnOverlay)o.classList.remove('open');});
 });
 document.addEventListener('click',e=>{const dd=document.getElementById('ct-emp-dd');const wrap=dd?.closest('.emp-search-wrap');if(wrap&&!wrap.contains(e.target))dd.style.display='none';});
-
 
