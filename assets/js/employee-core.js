@@ -167,6 +167,11 @@ document.addEventListener('click',e=>{
   else if(action==='contract-close')closeContractModal();
   else if(action==='contract-generate')generateContract();
 });
+document.addEventListener('change',e=>{
+  const trigger=e.target.closest?.('[data-employee-change]');
+  if(!trigger)return;
+  if(trigger.dataset.employeeChange==='contract-type')toggleContractTermFields();
+});
 // ---- Data load adapters ----
 async function loadEmployees(){EMP_ST.employees=(await fetchEmployees()).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
 async function loadYukyu(){EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;}
