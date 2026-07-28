@@ -95,9 +95,9 @@ function openWorkPatternModal(id=null){
     document.getElementById('wp_holidays').value='';
     document.getElementById('wp_note').value='';
   }
-  document.getElementById('wpModal').style.display='flex';
+  document.getElementById('wpModal').classList.add('open');
 }
-function closeWpModal(){document.getElementById('wpModal').style.display='none';}
+function closeWpModal(){document.getElementById('wpModal').classList.remove('open');}
 async function saveWpModal(){
   const name=document.getElementById('wp_name').value.trim();
   if(!name){showToast('パターン名は必須です','error');return;}
@@ -261,9 +261,9 @@ function emp_openContractModal(empId){
       <div class="field"><label>試用期間</label><input type="text" id="cm_trial" value="入社後3ヶ月"></div>
       <div class="field"><label>社会保険</label><input type="text" id="cm_insurance" value="健康保険・厚生年金・雇用保険・労災保険に加入"></div>
     </div>`;
-  document.getElementById('contractModal').style.display='flex';
+  document.getElementById('contractModal').classList.add('open');
 }
-function closeContractModal(){document.getElementById('contractModal').style.display='none';}
+function closeContractModal(){document.getElementById('contractModal').classList.remove('open');}
 
 function generateContract(){
   const e=employees.find(x=>x.id===contractEmpId);
@@ -660,9 +660,9 @@ function openVisaModal(mode,id=null,name=''){
   visaModalMode=mode;visaModalId=id;
   document.getElementById('visaModalTitle').textContent=mode==='add'?'在留資格を追加':'在留資格を編集';
   document.getElementById('vm_name').value=name;
-  document.getElementById('visaModal').style.display='flex';
+  document.getElementById('visaModal').classList.add('open');
 }
-function closeVisaModal(){document.getElementById('visaModal').style.display='none';}
+function closeVisaModal(){document.getElementById('visaModal').classList.remove('open');}
 async function saveVisaModal(){
   const name=document.getElementById('vm_name').value.trim();
   if(!name){showToast('在留資格名を入力してください','error');return;}
