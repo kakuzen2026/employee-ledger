@@ -13,14 +13,14 @@ function renderSettings(){
           <div class="field"><label>電話番号</label><input type="text" id="ci_tel" value="${companyInfo.tel||''}" placeholder="0000-00-0000"></div>
           <div class="field"><label>代表者名</label><input type="text" id="ci_rep" value="${companyInfo.representative||''}" placeholder="代表取締役 〇〇 〇〇"></div>
         </div>
-        <div style="text-align:right"><button class="btn btn-primary btn-sm" onclick="saveCompanyInfo()">保存</button></div>
+        <div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" data-employee-action="company-save">保存</button></div>
       </div>
 
       <div class="settings-card" style="margin-bottom:20px">
         <h3>部署マスター管理</h3>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <span style="font-size:12px;color:var(--emp-text3)">☰ ドラッグで並び替え</span>
-          <button class="btn btn-primary btn-sm" onclick="openDeptModal('add')">＋ 部署を追加</button>
+          <button type="button" class="btn btn-primary btn-sm" data-employee-action="department-add">＋ 部署を追加</button>
         </div>
         ${departments.length===0?'<div class="empty" style="padding:20px 0">部署が登録されていません</div>':`
         <div id="deptSortList">
@@ -34,28 +34,28 @@ function renderSettings(){
               <span style="color:var(--emp-text3);font-size:16px;margin-right:4px">☰</span>
               <div class="d1">${d.shozoku1}</div>
               <div class="d2">${d.shozoku2||'<span style="color:var(--emp-text3)">所属2なし</span>'}</div>
-              <button class="btn btn-sm" onclick="openDeptModal('edit',${d.id})">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteDept(${d.id})">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="department-edit" data-id="${d.id}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="department-delete" data-id="${d.id}">削除</button>
             </div>`).join('')}
         </div>`}
       </div>
       <div class="settings-card" style="margin-top:20px">
         <h3>在留資格マスター管理</h3>
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-          <button class="btn btn-primary btn-sm" onclick="openVisaModal('add')">＋ 在留資格を追加</button>
+          <button type="button" class="btn btn-primary btn-sm" data-employee-action="visa-add">＋ 在留資格を追加</button>
         </div>
         ${visaTypes.length===0?'<div class="empty" style="padding:20px 0">在留資格が登録されていません</div>':
           visaTypes.map(v=>`
             <div class="dept-row">
               <div class="d1" style="flex:2">${v.name}</div>
-              <button class="btn btn-sm" onclick="openVisaModal('edit',${v.id},'${v.name.replace(/'/g,"\\'")}')">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteVisaType(${v.id})">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="visa-edit" data-id="${v.id}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="visa-delete" data-id="${v.id}">削除</button>
             </div>`).join('')}
       </div>
       <div class="settings-card" style="margin-top:20px">
         <h3>勤務パターン管理（雇用契約書用）</h3>
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-          <button class="btn btn-primary btn-sm" onclick="openWorkPatternModal()">＋ パターンを追加</button>
+          <button type="button" class="btn btn-primary btn-sm" data-employee-action="work-pattern-add">＋ パターンを追加</button>
         </div>
         ${workPatterns.length===0?'<div class="empty" style="padding:20px 0">勤務パターンが登録されていません</div>':
           workPatterns.map(p=>`
@@ -65,8 +65,8 @@ function renderSettings(){
                 ${p.start_time||''}〜${p.end_time||''} 休憩${p.break_minutes||60}分
                 週${p.work_days_per_week||''}日 休日：${p.holidays||''}
               </div>
-              <button class="btn btn-sm" onclick="openWorkPatternModal(${p.id})">編集</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteWorkPattern(${p.id})">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="work-pattern-edit" data-id="${p.id}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="work-pattern-delete" data-id="${p.id}">削除</button>
             </div>`).join('')}
       </div>
     </div>`;
@@ -516,7 +516,7 @@ async function renderContractList(){
             <td data-label="所属" style="font-size:12px">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="状態">${statusLabel}</td>
             <td data-label="契約終了日" style="font-size:12px">${emp_esc(ct?.contract_end||'—')}</td>
-            <td class="no-label"><button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">契約書作成</button></td>
+            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -541,8 +541,8 @@ async function renderContractList(){
         <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
-          <button class="btn btn-sm" onclick="emp_openContractModal(${r.employee_id})">再発行</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteEmploymentContract(${r.id})" style="margin-left:4px">削除</button>
+          <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${r.employee_id}">再発行</button>
+          <button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${r.id}" style="margin-left:4px">削除</button>
         </td>
       </tr>`).join('')}
       </tbody>

@@ -150,7 +150,7 @@ function renderList(){
             <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
             <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')" style="margin-left:4px">在職証明</button>
             ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')" style="margin-left:4px">退職証明</button>`:''}
-            <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})" style="margin-left:4px">契約書</button>
+            <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}" style="margin-left:4px">契約書</button>
             ${e.status==='在籍'?`<button class="btn btn-sm btn-danger" onclick="retireEmp(${e.id})" style="margin-left:4px">退職処理</button>`:''}
           </td></tr>`;
       }).join('')}</tbody>
@@ -223,7 +223,7 @@ function renderDetail(id){
       <button class="btn btn-sm" ${nextEmp?`onclick="viewDetail(${nextEmp.id})"`:'disabled'} style="${!nextEmp?'opacity:.4':''}">次へ ▶</button>
       <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
       ${e.status==='退職'?`<button class="btn btn-sm" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
-      <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">雇用契約書</button>
+      <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">雇用契約書</button>
       <button class="btn btn-sm hide-sp" style="background:var(--emp-info-light);color:var(--emp-info);border-color:var(--emp-info)" onclick="window.open('https://kakuzen2026.github.io/dispatch-kanri/','_blank')">派遣管理で確認 ↗</button>
       <button class="btn btn-sm" onclick="editEmp(${e.id})">編集</button>
     </div>
@@ -305,7 +305,7 @@ async function renderAlert(){
       <td class="no-label" style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="editEmp(${e.id})">更新</button>
         <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">証明書</button>
-        <button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">契約書</button>
+        <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書</button>
       </td>
     </tr>`;
   };
@@ -333,7 +333,7 @@ async function renderAlert(){
             <td data-label="所属">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="状態">${statusLabel}</td>
             <td data-label="契約終了日" style="font-size:12px">${emp_esc(ct?.contract_end||'—')}</td>
-            <td class="no-label"><button class="btn btn-sm" onclick="emp_openContractModal(${e.id})">契約書作成</button></td>
+            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -714,7 +714,7 @@ async function renderDT(){
           html+='<div style="font-weight:600;font-size:13px;">'+(ct.issued_date||'—')+' 発行</div>';
           html+='<div style="font-size:12px;color:var(--emp-text2);">期間: '+(ct.contract_start||'—')+' 〜 '+(ct.contract_end||'—')+'</div>';
           html+='</div>';
-          html+='<button class="btn btn-sm" onclick="emp_openContractModal('+e.id+')">再発行</button>';
+          html+=`<button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">再発行</button>`;
           html+='</div>';
         });
         html+='</div>';
@@ -807,4 +807,3 @@ async function saveMemo(id){
   e.memo=memoWithFuyouMeta(document.getElementById('memoText').value,getFuyouList(e));e.updated_at=new Date().toISOString().slice(0,10);
   await updateEmployeeMemo(id,e.memo,e.updated_at);showToast('保存しました');
 }
-

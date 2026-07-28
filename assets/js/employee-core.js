@@ -135,6 +135,38 @@ document.addEventListener('click',e=>{
     btn.classList.remove('open');
   }
 });
+// innerHTMLで描画する操作ボタンは、インラインイベントに依存せずここで一括処理する
+document.addEventListener('click',e=>{
+  const trigger=e.target.closest?.('[data-employee-action]');
+  if(!trigger)return;
+  const action=trigger.dataset.employeeAction;
+  const id=Number(trigger.dataset.id);
+  const validId=Number.isSafeInteger(id);
+  e.preventDefault();
+  if(action==='department-add'){
+    const targetId=trigger.dataset.selectTarget;
+    openDeptModal('add',null,targetId?newId=>{
+      const select=document.getElementById(targetId);
+      if(select)select.value=String(newId);
+    }:null);
+  }else if(action==='department-edit'&&validId)openDeptModal('edit',id);
+  else if(action==='department-delete'&&validId)void deleteDept(id);
+  else if(action==='department-close')closeDeptModal();
+  else if(action==='department-save')void saveDeptModal();
+  else if(action==='company-save')void saveCompanyInfo();
+  else if(action==='visa-add')openVisaModal('add');
+  else if(action==='visa-edit'&&validId){
+    const visa=visaTypes.find(item=>item.id===id);
+    openVisaModal('edit',id,visa?.name||'');
+  }else if(action==='visa-delete'&&validId)void deleteVisaType(id);
+  else if(action==='work-pattern-add')openWorkPatternModal();
+  else if(action==='work-pattern-edit'&&validId)openWorkPatternModal(id);
+  else if(action==='work-pattern-delete'&&validId)void deleteWorkPattern(id);
+  else if(action==='contract-open'&&validId)emp_openContractModal(id);
+  else if(action==='contract-delete'&&validId)void deleteEmploymentContract(id);
+  else if(action==='contract-close')closeContractModal();
+  else if(action==='contract-generate')generateContract();
+});
 // ---- Data load adapters ----
 async function loadEmployees(){EMP_ST.employees=(await fetchEmployees()).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
 async function loadYukyu(){EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;}

@@ -306,7 +306,7 @@ function renderForm(id){
         <label>部署（所属1 / 所属2）</label>
         <div class="dept-inline">
           <select id="f_dept_id">${deptOptions(e.dept_id)}</select>
-          <button type="button" class="dept-add-btn" onclick="openDeptModal('add',null,function(newId){document.getElementById('f_dept_id').value=newId;})">＋ 部署を追加</button>
+          <button type="button" class="dept-add-btn" data-employee-action="department-add" data-select-target="f_dept_id">＋ 部署を追加</button>
         </div>
       </div>
     </div>
@@ -575,4 +575,3 @@ function dlCSV(data,name){
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 // ===== END EMPLOYEE MANAGEMENT =====
-

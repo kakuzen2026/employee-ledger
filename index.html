@@ -262,8 +262,8 @@
     <div class="field"><label>所属1（勤務先）<span style="color:var(--emp-danger)"> *</span></label><input id="dm_s1" placeholder="例：株式会社〇〇"></div>
     <div class="field"><label>所属2（工場名）</label><input id="dm_s2" placeholder="例：第一工場"></div>
     <div class="actions">
-      <button class="btn" onclick="closeDeptModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveDeptModal()">保存</button>
+      <button type="button" class="btn" data-employee-action="department-close">キャンセル</button>
+      <button type="button" class="btn btn-primary" data-employee-action="department-save">保存</button>
     </div>
   </div>
 </div>
@@ -286,8 +286,8 @@
     <h3>雇用契約書を作成</h3>
     <div id="contractModalBody"></div>
     <div class="actions">
-      <button class="btn" onclick="closeContractModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="generateContract()">印刷・PDF作成</button>
+      <button type="button" class="btn" data-employee-action="contract-close">キャンセル</button>
+      <button type="button" class="btn btn-primary" data-employee-action="contract-generate">印刷・PDF作成</button>
     </div>
   </div>
 </div>
