@@ -235,6 +235,25 @@ test('UUID-backed collections can create records without numeric counters', asyn
   assert.match(data.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 });
 
+test('Dynamic employee actions use delegated click handlers', async () => {
+  const [core, settings, detail, paidLeave, html] = await Promise.all([
+    readFile(new URL('../assets/js/employee-core.js', import.meta.url), 'utf8'),
+    readFile(new URL('../assets/js/employee-settings-docs.js', import.meta.url), 'utf8'),
+    readFile(new URL('../assets/js/employee-list-detail.js', import.meta.url), 'utf8'),
+    readFile(new URL('../assets/js/paid-leave-csv.js', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8')
+  ]);
+
+  assert.match(core, /closest\?\.\('\[data-employee-action\]'\)/);
+  assert.match(settings, /data-employee-action="department-add"/);
+  assert.doesNotMatch(settings, /onclick="openDeptModal/);
+  assert.match(detail, /data-employee-action="contract-open"/);
+  assert.doesNotMatch(detail, /onclick="emp_openContractModal/);
+  assert.match(paidLeave, /data-select-target="f_dept_id"/);
+  assert.match(html, /data-employee-action="department-save"/);
+  assert.match(html, /data-employee-action="contract-generate"/);
+});
+
 test('Every collection used by application buttons supports the basic save lifecycle', async () => {
   const tables = [
     'assignments', 'billing', 'certificates', 'clients', 'company_info', 'contract_employees',
