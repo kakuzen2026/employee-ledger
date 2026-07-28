@@ -252,6 +252,8 @@ test('Dynamic employee actions use delegated click handlers', async () => {
   assert.match(paidLeave, /data-select-target="f_dept_id"/);
   assert.match(html, /data-employee-action="department-save"/);
   assert.match(html, /data-employee-action="contract-generate"/);
+  assert.match(html, /assets\/js\/employee-core\.js\?v=\d{8}\.\d+/);
+  assert.match(html, /assets\/js\/employee-settings-docs\.js\?v=\d{8}\.\d+/);
 });
 
 test('Every collection used by application buttons supports the basic save lifecycle', async () => {
