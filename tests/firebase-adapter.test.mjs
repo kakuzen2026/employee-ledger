@@ -96,7 +96,7 @@ test('Firestore adapter keeps relation selection, filtering, ID allocation, and 
   const blobId = 'a'.repeat(64);
   globalThis.window = globalThis;
   globalThis.firebase = createFirebaseMock({
-    _counters: { clients: 1, sites: 2, work_patterns: 3, departments: 14 },
+    _counters: { clients: 1, sites: 2, work_patterns: 3, departments: 14, employment_contracts: 0 },
     _blobs: { [blobId]: { data: 'data:image/png;base64,AAA' } },
     clients: [{ id: 1, name: '顧客A' }],
     sites: [{ id: 2, client_id: 1, name: '現場A' }],
@@ -132,6 +132,25 @@ test('Firestore adapter keeps relation selection, filtering, ID allocation, and 
   assert.equal(department.error, null);
   assert.equal(department.data.id, 15);
   assert.equal(department.data.sort_order, 2);
+
+  const employmentContract = await db.from('employment_contracts')
+    .insert({
+      template_id: 'mhlw-general-worker-2026-10-ready-v1',
+      terms: {
+        place_scope: '変更なし',
+        renew_limit: 'none',
+        premium_rates: { overtime: '25%以上', holiday: '35%以上' }
+      }
+    })
+    .select('*')
+    .single();
+  assert.equal(employmentContract.error, null);
+  assert.equal(employmentContract.data.id, 1);
+  assert.deepEqual(employmentContract.data.terms, {
+    place_scope: '変更なし',
+    renew_limit: 'none',
+    premium_rates: { overtime: '25%以上', holiday: '35%以上' }
+  });
 
   const updated = await db.from('clients').update({ name: '顧客B更新' }).eq('id', inserted.data.id).select('name').single();
   assert.equal(updated.error, null);
@@ -245,9 +264,12 @@ test('Dynamic employee actions use delegated click handlers', async () => {
   ]);
 
   assert.match(core, /closest\?\.\('\[data-employee-action\]'\)/);
+  assert.match(core, /closest\?\.\('\[data-employee-change\]'\)/);
+  assert.match(core, /employeeChange==='contract-type'/);
   assert.match(core, /getElementById\('deptModal'\)\.classList\.add\('open'\)/);
   assert.doesNotMatch(core, /getElementById\('deptModal'\)\.style\.display/);
   assert.match(settings, /data-employee-action="department-add"/);
+  assert.match(settings, /change:'contract-type'/);
   assert.doesNotMatch(settings, /onclick="openDeptModal/);
   for (const modalId of ['wpModal', 'contractModal', 'visaModal']) {
     assert.match(settings, new RegExp(`getElementById\\('${modalId}'\\)\\.classList\\.add\\('open'\\)`));

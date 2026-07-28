@@ -219,210 +219,372 @@ function generateCertificate(empId,type){
 }
 
 // ---- 雇用契約書 ----
+const EMPLOYMENT_CONTRACT_MODEL=Object.freeze({
+  id:'mhlw-general-worker-2026-10-ready-v1',
+  label:'厚生労働省「労働条件通知書（一般労働者用）」準拠',
+  checked_at:'2026-07-28',
+  source_url:'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roudoukijunkankei.html'
+});
+
 let contractEmpId=null;
+
+function emp_contractInput(id,label,value='',options={}){
+  const required=options.required?' <span style="color:var(--emp-danger)">*</span>':'';
+  const full=options.full?'grid-column:1/-1':'';
+  const type=options.type||'text';
+  const placeholder=options.placeholder?` placeholder="${emp_esc(options.placeholder)}"`:'';
+  return `<div class="field" style="${full}"><label>${emp_esc(label)}${required}</label><input type="${type}" id="${id}" value="${emp_esc(value)}"${placeholder}></div>`;
+}
+
+function emp_contractArea(id,label,value='',options={}){
+  const required=options.required?' <span style="color:var(--emp-danger)">*</span>':'';
+  const full=options.full===false?'':'grid-column:1/-1';
+  const placeholder=options.placeholder?` placeholder="${emp_esc(options.placeholder)}"`:'';
+  return `<div class="field" style="${full}"><label>${emp_esc(label)}${required}</label><textarea id="${id}" rows="${options.rows||2}"${placeholder}>${emp_esc(value)}</textarea></div>`;
+}
+
+function emp_contractSelect(id,label,choices,selected='',options={}){
+  const required=options.required?' <span style="color:var(--emp-danger)">*</span>':'';
+  const full=options.full?'grid-column:1/-1':'';
+  const change=options.change?` data-employee-change="${emp_esc(options.change)}"`:'';
+  return `<div class="field" style="${full}"><label>${emp_esc(label)}${required}</label><select id="${id}"${change}>
+    ${choices.map(([value,text])=>`<option value="${emp_esc(value)}" ${String(value)===String(selected)?'selected':''}>${emp_esc(text)}</option>`).join('')}
+  </select></div>`;
+}
+
+function emp_contractSection(title,body){
+  return `<section style="border:1px solid var(--emp-border2,#ddd);border-radius:8px;padding:12px;margin:12px 0">
+    <h4 style="margin:0 0 10px;font-size:14px">${emp_esc(title)}</h4>
+    <div class="field-grid" style="gap:8px">${body}</div>
+  </section>`;
+}
+
 function emp_openContractModal(empId){
   contractEmpId=empId;
   const e=employees.find(x=>x.id===empId);
   if(!e)return;
   if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
   const isFixed=e.employment_type!=='permanent';
+  const contractType=isFixed?'fixed':'permanent';
   const dept=departments.find(d=>d.id===Number(e.dept_id));
+  const deptName=dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join(' '):'';
+  const wageType=e.kyuyo?'monthly':e.jikyu?'hourly':'';
+  const wage=e.kyuyo?`${e.kyuyo}円（月額）`:e.jikyu?`${e.jikyu}円（時給）`:'';
+  const blankChoice=[['','選択してください'],['yes','有'],['no','無'],['rules','就業規則・会社規定による']];
   document.getElementById('contractModalBody').innerHTML=`
-    <div style="font-size:12px;color:var(--emp-text2);margin-bottom:12px">
-      従業員データから自動入力されています。必要に応じて修正してください。
+    <div style="font-size:12px;line-height:1.7;color:var(--emp-text2);margin-bottom:12px">
+      従業員台帳から確実に分かる項目のみ自動入力しています。<span style="color:var(--emp-danger);font-weight:600">「選択してください」や空欄を確認してから発行してください。</span><br>
+      <a href="${EMPLOYMENT_CONTRACT_MODEL.source_url}" target="_blank" rel="noopener noreferrer" style="color:var(--emp-accent,#2563eb)">${EMPLOYMENT_CONTRACT_MODEL.label}</a>
+      （確認日 ${EMPLOYMENT_CONTRACT_MODEL.checked_at}／2026年10月改正版の説明請求項目を含む）
     </div>
-    <div class="field-grid" style="gap:8px">
-      <div class="field"><label>契約開始日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_start" value="${e.nyusha_date||''}"></div>
-      ${isFixed?`<div class="field"><label>契約終了日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_end" value=""></div>`:''}
-      <div class="field"><label>就業場所</label><input type="text" id="cm_place" value="${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join(' '):''}"></div>
-      <div class="field"><label>業務内容</label><input type="text" id="cm_work" value="" placeholder="例：製造業務全般"></div>
-      <div class="field"><label>始業時刻</label><input type="text" id="cm_start_time" value="08:00"></div>
-      <div class="field"><label>終業時刻</label><input type="text" id="cm_end_time" value="17:00"></div>
-      <div class="field"><label>休憩時間</label><input type="text" id="cm_break" value="60分"></div>
-      <div class="field"><label>所定労働時間</label><input type="text" id="cm_work_hours" value="8時間"></div>
-      <div class="field"><label>時間外労働</label><input type="text" id="cm_overtime" value="有（月45時間以内）"></div>
-      <div class="field"><label>休日</label><input type="text" id="cm_holiday" value="土・日・祝日、年末年始"></div>
-      <div class="field"><label>年次有給休暇</label><input type="text" id="cm_yukyu" value="労働基準法に定める日数付与"></div>
-      <div class="field"><label>賃金形態</label><select id="cm_wage_type">
-        <option value="monthly" ${e.kyuyo?'selected':''}>月給制</option>
-        <option value="hourly" ${!e.kyuyo&&e.jikyu?'selected':''}>時給制</option>
-      </select></div>
-      <div class="field"><label>基本賃金</label><input type="text" id="cm_wage" value="${e.kyuyo?e.kyuyo+'円（月額）':e.jikyu?e.jikyu+'円（時給）':''}"></div>
-      <div class="field"><label>賃金締め日</label><input type="text" id="cm_pay_close" value="毎月末日"></div>
-      <div class="field"><label>賃金支払日</label><input type="text" id="cm_pay_date" value="翌月25日"></div>
-      <div class="field"><label>昇給</label><input type="text" id="cm_raise" value="有（会社業績・本人評価による）"></div>
-      <div class="field"><label>賞与</label><input type="text" id="cm_bonus" value="有（会社業績による）"></div>
-      <div class="field"><label>退職金</label><input type="text" id="cm_retirement" value="無"></div>
-      ${isFixed?`<div class="field"><label>契約更新</label><select id="cm_renew">
-        <option value="auto">自動更新あり（条件による）</option>
-        <option value="discuss">更新する場合があり得る</option>
-        <option value="none">契約の更新はしない</option>
-      </select></div>`:''}
-      <div class="field"><label>試用期間</label><input type="text" id="cm_trial" value="入社後3ヶ月"></div>
-      <div class="field"><label>社会保険</label><input type="text" id="cm_insurance" value="健康保険・厚生年金・雇用保険・労災保険に加入"></div>
-    </div>`;
+    ${emp_contractSection('1. 契約期間',`
+      ${emp_contractSelect('cm_contract_type','契約種別',[
+        ['fixed','有期契約（期間の定めあり）'],['permanent','無期契約（期間の定めなし）']
+      ],contractType,{required:true,full:true,change:'contract-type'})}
+      ${emp_contractInput('cm_start','契約開始日',e.nyusha_date||'',{type:'date',required:true})}
+      <div id="cm_fixed_fields" class="field-grid" style="gap:8px;grid-column:1/-1;${isFixed?'':'display:none'}">
+      ${emp_contractInput('cm_end','契約終了日','',{type:'date',required:true})}
+      ${emp_contractSelect('cm_renew','契約更新',[
+        ['','選択してください'],['auto','自動的に更新する'],['possible','更新する場合があり得る'],['none','更新しない']
+      ],'',{required:true})}
+      ${emp_contractArea('cm_renew_criteria','更新の判断基準','',{
+        required:true,placeholder:'勤務成績・態度、能力、業務量、会社の経営状況、従事業務の進捗状況など'
+      })}
+      ${emp_contractSelect('cm_renew_limit','更新上限（通算契約期間・更新回数）',[
+        ['','選択してください'],['none','上限なし'],['yes','上限あり']
+      ],'',{required:true})}
+      ${emp_contractInput('cm_renew_limit_detail','更新上限の内容','',{full:true,placeholder:'例：通算5年／更新4回まで'})}
+      ${emp_contractArea('cm_indefinite_conversion','無期転換申込機会・転換後の労働条件','',{
+        required:true,placeholder:'例：法定の要件を満たした場合、申込みにより期間満了日の翌日から無期契約へ転換。変更する条件：なし'
+      })}
+      </div>
+    `)}
+    ${emp_contractSection('2. 就業場所・業務内容',`
+      ${emp_contractInput('cm_place','就業場所（雇入れ直後）',deptName,{required:true})}
+      ${emp_contractInput('cm_place_scope','就業場所の変更範囲','',{required:true,placeholder:'例：変更なし／会社の定める事業所'})}
+      ${emp_contractInput('cm_work','業務内容（雇入れ直後）','',{required:true,placeholder:'例：製造業務'})}
+      ${emp_contractInput('cm_work_scope','業務内容の変更範囲','',{required:true,placeholder:'例：変更なし／会社の定める業務'})}
+    `)}
+    ${emp_contractSection('3. 労働時間・休憩・休日',`
+      ${emp_contractSelect('cm_work_system','勤務制度',[
+        ['','選択してください'],['fixed','固定時間制'],['shift','交替制・シフト制'],
+        ['variable','変形労働時間制'],['flex','フレックスタイム制'],['other','その他']
+      ],'',{required:true})}
+      ${emp_contractInput('cm_work_days','勤務日','',{required:true,placeholder:'例：月曜日から金曜日'})}
+      ${emp_contractInput('cm_start_time','始業時刻','',{required:true,placeholder:'例：08:00'})}
+      ${emp_contractInput('cm_end_time','終業時刻','',{required:true,placeholder:'例：17:00'})}
+      ${emp_contractInput('cm_break','休憩時間','',{required:true,placeholder:'例：60分（12:00〜13:00）'})}
+      ${emp_contractInput('cm_work_hours','所定労働時間','',{required:true,placeholder:'例：1日8時間・週40時間'})}
+      ${emp_contractSelect('cm_overtime','所定時間外労働',blankChoice,'',{required:true})}
+      ${emp_contractInput('cm_overtime_detail','時間外労働の条件','',{full:true,placeholder:'例：業務上必要な場合に命じることがある（36協定の範囲内）'})}
+      ${emp_contractSelect('cm_holiday_work','休日労働',blankChoice,'',{required:true})}
+      ${emp_contractInput('cm_holiday_work_detail','休日労働の条件','',{full:true,placeholder:'例：業務上必要な場合に命じることがある'})}
+      ${emp_contractArea('cm_holiday','休日','',{required:true,placeholder:'例：毎週土・日曜日、国民の祝日、年末年始'})}
+    `)}
+    ${emp_contractSection('4. 休暇',`
+      ${emp_contractArea('cm_yukyu','年次有給休暇','',{required:true,placeholder:'付与時期・日数、時間単位年休の有無などを記載'})}
+      ${emp_contractInput('cm_other_leave','その他の休暇','',{full:true,placeholder:'例：慶弔休暇、育児・介護休業（就業規則による）'})}
+    `)}
+    ${emp_contractSection('5. 賃金',`
+      ${emp_contractSelect('cm_wage_type','賃金形態',[
+        ['','選択してください'],['monthly','月給制'],['daily','日給制'],['hourly','時給制'],['other','その他']
+      ],wageType,{required:true})}
+      ${emp_contractInput('cm_wage','基本賃金',wage,{required:true,placeholder:'例：250,000円（月額）'})}
+      ${emp_contractArea('cm_allowances','諸手当・計算方法','',{placeholder:'手当名、金額、計算方法を記載'})}
+      ${emp_contractInput('cm_premium_overtime','時間外割増率（60時間以内）','',{placeholder:'例：25%以上'})}
+      ${emp_contractInput('cm_premium_overtime_over60','時間外割増率（60時間超）','',{placeholder:'例：50%以上'})}
+      ${emp_contractInput('cm_premium_holiday','法定休日割増率','',{placeholder:'例：35%以上'})}
+      ${emp_contractInput('cm_premium_night','深夜割増率','',{placeholder:'例：25%以上'})}
+      ${emp_contractInput('cm_pay_close','賃金締切日','',{required:true,placeholder:'例：毎月末日'})}
+      ${emp_contractInput('cm_pay_date','賃金支払日','',{required:true,placeholder:'例：翌月25日'})}
+      ${emp_contractInput('cm_pay_method','支払方法','',{required:true,placeholder:'例：本人名義の銀行口座へ振込'})}
+      ${emp_contractInput('cm_deductions','労使協定による控除','',{full:true,placeholder:'例：なし／食事代〇円'})}
+      ${emp_contractSelect('cm_raise','昇給',blankChoice,'',{required:true})}
+      ${emp_contractSelect('cm_bonus','賞与',blankChoice,'',{required:true})}
+      ${emp_contractSelect('cm_retirement','退職金',blankChoice,'',{required:true})}
+    `)}
+    ${emp_contractSection('6. 退職・解雇',`
+      ${emp_contractInput('cm_retirement_age','定年制・継続雇用制度','',{full:true,placeholder:'例：定年60歳、継続雇用65歳まで／定年制なし'})}
+      ${emp_contractArea('cm_resignation','自己都合退職の手続','',{required:true,placeholder:'例：就業規則第○条に基づき、退職希望日の○日前までに申し出る'})}
+      ${emp_contractArea('cm_dismissal','解雇の事由・手続','',{required:true,placeholder:'就業規則の該当条項、解雇事由および手続を記載'})}
+    `)}
+    ${emp_contractSection('7. その他',`
+      ${emp_contractInput('cm_trial','試用期間','',{placeholder:'例：入社日から3か月／なし'})}
+      ${emp_contractInput('cm_social_insurance','社会保険の加入','',{placeholder:'健康保険・厚生年金の加入有無'})}
+      ${emp_contractInput('cm_employment_insurance','雇用保険の適用','',{placeholder:'有／無'})}
+      ${emp_contractInput('cm_consultation','雇用管理・相談窓口','',{required:true,placeholder:'部署名・担当者名・連絡先'})}
+      ${emp_contractArea('cm_treatment_explanation','待遇差の説明請求窓口','',{
+        required:true,placeholder:'短時間・有期雇用労働者が待遇差の内容・理由の説明を求める場合の窓口'
+      })}
+      ${emp_contractInput('cm_rules','適用される就業規則','',{required:true,placeholder:'例：正社員就業規則／有期契約社員就業規則'})}
+      ${emp_contractInput('cm_rules_access','就業規則の確認方法・場所','',{required:true,placeholder:'例：総務部で閲覧、社内ポータルに掲載'})}
+      ${emp_contractArea('cm_other_terms','安全衛生・教育訓練・災害補償・休職等','',{placeholder:'その他の適用条件や参照規程を記載'})}
+    `)}`;
   document.getElementById('contractModal').classList.add('open');
 }
 function closeContractModal(){document.getElementById('contractModal').classList.remove('open');}
 
+function toggleContractTermFields(){
+  const isFixed=document.getElementById('cm_contract_type')?.value==='fixed';
+  const fields=document.getElementById('cm_fixed_fields');
+  if(fields)fields.style.display=isFixed?'grid':'none';
+}
+
+function collectEmploymentContractTerms(){
+  const value=id=>document.getElementById(id)?.value?.trim()||'';
+  const ids=[
+    'cm_contract_type','cm_start','cm_end','cm_renew','cm_renew_criteria','cm_renew_limit','cm_renew_limit_detail',
+    'cm_indefinite_conversion','cm_place','cm_place_scope','cm_work','cm_work_scope',
+    'cm_work_system','cm_work_days','cm_start_time','cm_end_time','cm_break','cm_work_hours',
+    'cm_overtime','cm_overtime_detail','cm_holiday_work','cm_holiday_work_detail','cm_holiday',
+    'cm_yukyu','cm_other_leave','cm_wage_type','cm_wage','cm_allowances','cm_premium_overtime',
+    'cm_premium_overtime_over60','cm_premium_holiday','cm_premium_night','cm_pay_close',
+    'cm_pay_date','cm_pay_method','cm_deductions','cm_raise','cm_bonus','cm_retirement',
+    'cm_retirement_age','cm_resignation','cm_dismissal','cm_trial','cm_social_insurance',
+    'cm_employment_insurance','cm_consultation','cm_treatment_explanation','cm_rules',
+    'cm_rules_access','cm_other_terms'
+  ];
+  return Object.fromEntries(ids.map(id=>[id.replace(/^cm_/,''),value(id)]));
+}
+
+function validateEmploymentContractTerms(terms,isFixed){
+  const required=[
+    ['contract_type','契約種別'],['start','契約開始日'],['place','就業場所（雇入れ直後）'],['place_scope','就業場所の変更範囲'],
+    ['work','業務内容（雇入れ直後）'],['work_scope','業務内容の変更範囲'],['work_system','勤務制度'],
+    ['work_days','勤務日'],['start_time','始業時刻'],['end_time','終業時刻'],['break','休憩時間'],
+    ['work_hours','所定労働時間'],['overtime','所定時間外労働'],['holiday_work','休日労働'],
+    ['holiday','休日'],['yukyu','年次有給休暇'],['wage_type','賃金形態'],['wage','基本賃金'],
+    ['pay_close','賃金締切日'],['pay_date','賃金支払日'],['pay_method','支払方法'],
+    ['raise','昇給'],['bonus','賞与'],['retirement','退職金'],['resignation','自己都合退職の手続'],
+    ['dismissal','解雇の事由・手続'],['consultation','雇用管理・相談窓口'],
+    ['treatment_explanation','待遇差の説明請求窓口'],['rules','適用される就業規則'],
+    ['rules_access','就業規則の確認方法・場所']
+  ];
+  if(isFixed)required.push(
+    ['end','契約終了日'],['renew','契約更新'],['renew_criteria','更新の判断基準'],
+    ['renew_limit','更新上限'],['indefinite_conversion','無期転換申込機会・転換後の労働条件']
+  );
+  if(isFixed&&terms.renew_limit==='yes'&&!terms.renew_limit_detail){
+    required.push(['renew_limit_detail','更新上限の内容']);
+  }
+  return required.filter(([key])=>!terms[key]);
+}
+
 function generateContract(){
   const e=employees.find(x=>x.id===contractEmpId);
   if(!e)return;
-  const g=id=>document.getElementById(id)?.value||'';
-  const isFixed=e.employment_type!=='permanent';
-  const dept=departments.find(d=>d.id===Number(e.dept_id));
+  const terms=collectEmploymentContractTerms();
+  const isFixed=terms.contract_type==='fixed';
+  const missing=validateEmploymentContractTerms(terms,isFixed);
+  if(missing.length){
+    const labels=missing.map(([,label])=>label);
+    showToast(`未入力の必須項目があります：${labels.slice(0,5).join('、')}${labels.length>5?` ほか${labels.length-5}件`:''}`,'warn');
+    document.getElementById(`cm_${missing[0][0]}`)?.focus();
+    return;
+  }
+  if(isFixed&&terms.end<terms.start){
+    showToast('契約終了日は契約開始日以降の日付を指定してください','warn');
+    document.getElementById('cm_end')?.focus();
+    return;
+  }
   const today=new Date();
   const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
-  const renewMap={'auto':'自動更新あり（勤務成績・会社の経営状況等を考慮のうえ判断）','discuss':'更新する場合があり得る','none':'契約の更新はしない'};
-  const renewText=isFixed?renewMap[g('cm_renew')]||'—':'—';
+  const text=value=>emp_esc(value||'—');
+  const labels={
+    renew:{auto:'自動的に更新する',possible:'更新する場合があり得る',none:'更新しない'},
+    renew_limit:{none:'上限なし',yes:'上限あり'},
+    work_system:{fixed:'固定時間制',shift:'交替制・シフト制',variable:'変形労働時間制',flex:'フレックスタイム制',other:'その他'},
+    yes_no:{yes:'有',no:'無',rules:'就業規則・会社規定による'},
+    wage_type:{monthly:'月給制',daily:'日給制',hourly:'時給制',other:'その他'}
+  };
+  const label=(group,value)=>labels[group]?.[value]||value||'—';
+  const row=(name,value)=>`<tr><th>${emp_esc(name)}</th><td>${text(value)}</td></tr>`;
+  const companyName=text(companyInfo.company_name);
+  const representative=text(companyInfo.representative);
+  const employeeName=text(`${e.sei||''} ${e.mei||''}`.trim());
 
   const content=`<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<title>労働条件通知書兼雇用契約書</title>
 <style>
-  body{font-family:'MS Mincho','Yu Mincho',serif;margin:0;padding:30px 40px;color:#000;font-size:13px;line-height:1.8}
-  h1{text-align:center;font-size:20px;font-weight:bold;margin:10px 0 6px;letter-spacing:4px}
-  .sub{text-align:center;font-size:12px;margin-bottom:20px;color:#333}
-  .date{text-align:right;margin-bottom:16px;font-size:12px}
-  .parties{display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px}
-  .party{width:48%}
-  .party-label{font-weight:bold;border-bottom:1px solid #000;margin-bottom:4px;padding-bottom:2px}
-  .section{margin:14px 0}
-  .section-title{font-weight:bold;background:#f0f0f0;padding:4px 8px;margin-bottom:6px;font-size:13px}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  td{padding:5px 8px;border:1px solid #999;vertical-align:top}
-  td:first-child{width:32%;background:#f8f8f8;font-weight:bold}
-  .sign-area{margin-top:30px;display:flex;justify-content:space-between}
-  .sign-box{width:46%;border:1px solid #999;padding:12px;min-height:80px}
-  .sign-label{font-size:11px;color:#555;margin-bottom:6px}
-  .note{font-size:11px;color:#555;margin-top:16px;line-height:1.6}
-  @media print{body{padding:15px 25px}h1{font-size:18px}}
+  @page{size:A4;margin:5.5mm 7mm}
+  *{box-sizing:border-box}
+  body{font-family:'Yu Mincho','Hiragino Mincho ProN',serif;margin:0;color:#111;font-size:8.8px;line-height:1.32}
+  h1{text-align:center;font-size:16px;margin:0;letter-spacing:1.5px;line-height:1.2}
+  .sub{text-align:center;font-size:8.5px;margin-bottom:4px}
+  .date{text-align:right;margin-bottom:2px;font-size:8px}
+  .section{margin:4px 0;break-inside:avoid}
+  .section-title{font-weight:bold;background:#e9e9e9;border:1px solid #777;border-bottom:0;padding:1.5px 4.5px}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{padding:1.6px 4.5px;border:1px solid #777;vertical-align:top;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}
+  th{width:28%;background:#f7f7f7;font-weight:bold}
+  .sign-area{margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:6px;break-inside:avoid}
+  .sign-box{border:1px solid #777;padding:5px 6px;min-height:58px}
+  .sign-label{font-size:7.5px;color:#444;margin-bottom:1px}
+  .note{font-size:7.5px;margin-top:3px;line-height:1.28}
+  .model{font-size:6.8px;color:#555;text-align:right;margin-top:2px}
 </style>
-
-<style>
-/* テーマ切り替え */
-body.theme-dark{background:var(--bg,#141210);color:var(--text,#F5F0EB);}
-body.theme-light{background:#f5f4f0;color:#1a1a18;}
-body.theme-light #sidebar{display:none!important;}
-body.theme-light .topbar{display:none!important;}
-body.theme-light #main{margin-left:0!important;padding:0!important;}
-body.theme-light #main .page{display:none!important;}
-body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overflow:auto;}
-#emp-back-btn{position:fixed;top:10px;right:16px;z-index:1000;background:rgba(217,119,6,.12);color:#F59E0B;border:1px solid rgba(217,119,6,.3);border-radius:5px;padding:4px 11px;font-size:11px;cursor:pointer;display:none;font-family:'JetBrains Mono',monospace;}
-
-</style></head>
-<body class="theme-dark">
-<button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
+</head>
+<body>
   <div class="date">作成日：${todayStr}</div>
   <h1>労働条件通知書兼雇用契約書</h1>
   <div class="sub">（${isFixed?'有期':'無期'}雇用契約）</div>
 
-  <div class="parties">
-    <div class="party">
-      <div class="party-label">使用者（甲）</div>
-      〒${companyInfo.postal_code||''}<br>
-      ${companyInfo.address||''}<br>
-      ${companyInfo.company_name||''}<br>
-      代表者：${companyInfo.representative||''}<br>
-      TEL：${companyInfo.tel||''}
-    </div>
-    <div class="party">
-      <div class="party-label">労働者（乙）</div>
-      ${e.address||''}<br>
-      氏名：${e.sei} ${e.mei}　　　　㊞<br>
-      生年月日：${e.birthday||''}
-    </div>
-  </div>
-
   <div class="section">
-    <div class="section-title">第１条　契約期間</div>
+    <div class="section-title">1. 契約期間</div>
     <table>
-      <tr><td>契約形態</td><td>${isFixed?'有期雇用契約（期間の定めあり）':'無期雇用契約（期間の定めなし）'}</td></tr>
-      <tr><td>契約開始日</td><td>${g('cm_start')||'—'}</td></tr>
-      ${isFixed?`<tr><td>契約終了日</td><td>${g('cm_end')||'—'}</td></tr>`:''}
-      ${isFixed?`<tr><td>契約の更新</td><td>${renewText}</td></tr>`:''}
+      ${row('契約形態',isFixed?'期間の定めあり':'期間の定めなし')}
+      ${row('契約開始日',terms.start)}
+      ${isFixed?row('契約終了日',terms.end):''}
+      ${isFixed?row('契約の更新',label('renew',terms.renew)):''}
+      ${isFixed?row('更新の判断基準',terms.renew_criteria):''}
+      ${isFixed?row('更新上限',`${label('renew_limit',terms.renew_limit)}${terms.renew_limit_detail?`（${terms.renew_limit_detail}）`:''}`):''}
+      ${isFixed?row('無期転換申込機会・転換後の条件',terms.indefinite_conversion):''}
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">第２条　就業の場所・業務内容</div>
+    <div class="section-title">2. 就業場所・業務内容</div>
     <table>
-      <tr><td>就業場所</td><td>${g('cm_place')||'—'}</td></tr>
-      <tr><td>業務内容</td><td>${g('cm_work')||'—'}</td></tr>
+      ${row('就業場所（雇入れ直後）',terms.place)}
+      ${row('就業場所の変更範囲',terms.place_scope)}
+      ${row('業務内容（雇入れ直後）',terms.work)}
+      ${row('業務内容の変更範囲',terms.work_scope)}
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">第３条　労働時間・休憩・休日</div>
+    <div class="section-title">3. 労働時間・休憩・休日</div>
     <table>
-      <tr><td>始業時刻</td><td>${g('cm_start_time')}</td></tr>
-      <tr><td>終業時刻</td><td>${g('cm_end_time')}</td></tr>
-      <tr><td>休憩時間</td><td>${g('cm_break')}</td></tr>
-      <tr><td>所定労働時間</td><td>${g('cm_work_hours')}</td></tr>
-      <tr><td>時間外労働</td><td>${g('cm_overtime')}</td></tr>
-      <tr><td>休日</td><td>${g('cm_holiday')}</td></tr>
-      <tr><td>年次有給休暇</td><td>${g('cm_yukyu')}</td></tr>
+      ${row('勤務制度',label('work_system',terms.work_system))}
+      ${row('勤務日',terms.work_days)}
+      ${row('始業・終業時刻',`${terms.start_time} ～ ${terms.end_time}`)}
+      ${row('休憩時間',terms.break)}
+      ${row('所定労働時間',terms.work_hours)}
+      ${row('所定時間外労働',`${label('yes_no',terms.overtime)}${terms.overtime_detail?`：${terms.overtime_detail}`:''}`)}
+      ${row('休日労働',`${label('yes_no',terms.holiday_work)}${terms.holiday_work_detail?`：${terms.holiday_work_detail}`:''}`)}
+      ${row('休日',terms.holiday)}
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">第４条　賃金</div>
+    <div class="section-title">4. 休暇</div>
     <table>
-      <tr><td>賃金形態</td><td>${g('cm_wage_type')==='monthly'?'月給制':'時給制'}</td></tr>
-      <tr><td>基本賃金</td><td>${g('cm_wage')||'—'}</td></tr>
-      <tr><td>賃金締め日</td><td>${g('cm_pay_close')}</td></tr>
-      <tr><td>賃金支払日</td><td>${g('cm_pay_date')}</td></tr>
-      <tr><td>昇給</td><td>${g('cm_raise')}</td></tr>
-      <tr><td>賞与</td><td>${g('cm_bonus')}</td></tr>
-      <tr><td>退職金</td><td>${g('cm_retirement')}</td></tr>
+      ${row('年次有給休暇',terms.yukyu)}
+      ${row('その他の休暇',terms.other_leave)}
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">第５条　試用期間・社会保険</div>
+    <div class="section-title">5. 賃金</div>
     <table>
-      <tr><td>試用期間</td><td>${g('cm_trial')}</td></tr>
-      <tr><td>社会保険</td><td>${g('cm_insurance')}</td></tr>
+      ${row('賃金形態・基本賃金',`${label('wage_type',terms.wage_type)}　${terms.wage}`)}
+      ${row('諸手当・計算方法',terms.allowances)}
+      ${row('割増賃金率',`時間外（60時間以内）${terms.premium_overtime||'—'}／時間外（60時間超）${terms.premium_overtime_over60||'—'}／法定休日${terms.premium_holiday||'—'}／深夜${terms.premium_night||'—'}`)}
+      ${row('締切日・支払日',`${terms.pay_close}締め／${terms.pay_date}支払`)}
+      ${row('支払方法',terms.pay_method)}
+      ${row('労使協定による控除',terms.deductions)}
+      ${row('昇給・賞与・退職金',`昇給：${label('yes_no',terms.raise)}／賞与：${label('yes_no',terms.bonus)}／退職金：${label('yes_no',terms.retirement)}`)}
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">第６条　退職・解雇</div>
+    <div class="section-title">6. 退職・解雇</div>
     <table>
-      <tr><td>自己都合退職</td><td>退職希望日の30日前までに書面で通知すること</td></tr>
-      <tr><td>解雇</td><td>労働基準法の定めに従い、少なくとも30日前に予告するか、または30日分以上の平均賃金を支払う</td></tr>
+      ${row('定年・継続雇用制度',terms.retirement_age)}
+      ${row('自己都合退職の手続',terms.resignation)}
+      ${row('解雇の事由・手続',terms.dismissal)}
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">7. その他</div>
+    <table>
+      ${row('試用期間',terms.trial)}
+      ${row('社会保険・雇用保険',`社会保険：${terms.social_insurance||'—'}／雇用保険：${terms.employment_insurance||'—'}`)}
+      ${row('雇用管理・相談窓口',terms.consultation)}
+      ${row('待遇差の説明請求窓口',terms.treatment_explanation)}
+      ${row('適用される就業規則',terms.rules)}
+      ${row('就業規則の確認方法・場所',terms.rules_access)}
+      ${row('安全衛生・教育訓練・災害補償・休職等',terms.other_terms)}
     </table>
   </div>
 
   <div class="note">
-    ※本契約書に定めのない事項については、就業規則その他の社内規程の定めるところによります。<br>
-    ※本契約書は２通作成し、甲乙各１通を保有します。
+    ${isFixed?'※短時間・有期雇用労働者は、通常の労働者との待遇差の内容および理由について、使用者に説明を求めることができます。<br>':''}
+    ※本書に定めのない事項は、法令、適用される就業規則および社内規程によります。本書は2通作成し、甲乙各1通を保有します。
   </div>
 
   <div class="sign-area">
     <div class="sign-box">
       <div class="sign-label">使用者（甲）署名欄</div>
-      会社名：${companyInfo.company_name||''}<br>
-      代表者：${companyInfo.representative||''}<br><br>
+      会社名：${companyName}<br>
+      所在地：〒${text(companyInfo.postal_code)}　${text(companyInfo.address)}<br>
+      代表者：${representative}<br><br>
+      TEL：${text(companyInfo.tel)}<br>
       署名：　　　　　　　　　㊞
     </div>
     <div class="sign-box">
       <div class="sign-label">労働者（乙）署名欄</div>
-      氏名：${e.sei} ${e.mei}<br><br>
+      氏名：${employeeName}<br><br>
+      住所：${text(e.address)}<br>
+      生年月日：${text(e.birthday)}<br>
       署名：　　　　　　　　　㊞<br>
       日付：　　年　　月　　日
     </div>
   </div>
+  <div class="model">作成様式：${emp_esc(EMPLOYMENT_CONTRACT_MODEL.label)}／確認日 ${EMPLOYMENT_CONTRACT_MODEL.checked_at}</div>
 </body>
 </html>`;
 
-  closeContractModal();
   const w=window.open('','_blank','width=900,height=1100');
   if(!w){
     showToast('雇用契約書の表示をブロックしました。ブラウザでポップアップを許可して、もう一度実行してください。','warn');
     return;
   }
+  closeContractModal();
   w.document.write(content);
   w.document.close();
   w.onload=()=>{w.print();};
@@ -431,12 +593,16 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   createEmploymentContract({
     employee_id:contractEmpId,
     employee_name:e.sei+' '+e.mei,
-    contract_start:g('cm_start'),
-    contract_end:g('cm_end')||null,
-    is_fixed:e.employment_type!=='permanent',
+    contract_start:terms.start,
+    contract_end:terms.end||null,
+    is_fixed:isFixed,
+    contract_type:terms.contract_type,
     source:'this_app',
     issued_date:new Date().toISOString().slice(0,10),
-    issued_by:companyInfo.company_name||''
+    issued_by:companyInfo.company_name||'',
+    template_id:EMPLOYMENT_CONTRACT_MODEL.id,
+    template_checked_at:EMPLOYMENT_CONTRACT_MODEL.checked_at,
+    terms
   }).then(()=>loadEmploymentContracts()).catch(err=>{
     console.error(err);
     showToast('雇用契約書は表示しましたが、発行履歴の保存に失敗しました：'+err.message,'error');
