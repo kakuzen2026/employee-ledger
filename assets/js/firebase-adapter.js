@@ -24,12 +24,25 @@
     'doc_templates', 'work_patterns', 'contract_employees', 'employee_records',
     'dispatch_contracts'
   ]);
+  const REVISIONED_TABLES = new Set(['yukyu_records', 'yukyu_grants']);
+  const STALE_WRITE_MESSAGE = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
   const BLOB_PREFIX = 'firebase-rtdb://blobs/migration-v1/';
 
-  function appError(message, cause) {
+  function appError(message, cause, code) {
     const error = new Error(message);
     if (cause) error.cause = cause;
+    if (code) error.code = code;
     return error;
+  }
+
+  function staleWriteError() {
+    return appError(STALE_WRITE_MESSAGE, null, 'STALE_WRITE');
+  }
+
+  function revisionOf(value) {
+    if (value === null || value === undefined) return 0;
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw staleWriteError();
+    return value;
   }
 
   function equal(left, right) {
@@ -359,9 +372,60 @@
       return { ...current, ...stored, __documentId: documentId };
     }
 
+    async updateByRevision(table, id, expectedRevision, patch) {
+      try {
+        return { data: [await this.updateRowByRevision(table, id, expectedRevision, patch)], error: null };
+      } catch (error) {
+        return { data: null, error: appError(error.message || STALE_WRITE_MESSAGE, error, error.code) };
+      }
+    }
+
+    async updateRowByRevision(table, id, expectedRevision, patch) {
+      if (!REVISIONED_TABLES.has(table)) throw appError('この更新方法は有給データ専用です。');
+      if (!isPlainObject(patch)) throw appError('更新内容が不正です。');
+      const expected = revisionOf(expectedRevision);
+      const { _revision, ...changes } = patch;
+      const storedChanges = await this.prepareForStorage(changes);
+      const documentId = String(id);
+      const reference = this.firestore.collection(table).doc(documentId);
+      return this.firestore.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists) throw staleWriteError();
+        const current = snapshot.data() || {};
+        const currentRevision = revisionOf(current._revision);
+        if (currentRevision !== expected) throw staleWriteError();
+        const nextRevision = currentRevision + 1;
+        if (!Number.isSafeInteger(nextRevision)) throw staleWriteError();
+        const stored = { ...storedChanges, _revision: nextRevision };
+        transaction.update(reference, stored);
+        return { ...current, ...stored, id: current.id == null ? id : current.id, __documentId: documentId };
+      });
+    }
+
     async deleteRow(table, row) {
       const documentId = row.__documentId || String(row.id);
       await this.firestore.collection(table).doc(documentId).delete();
+    }
+
+    async deleteByRevision(table, id, expectedRevision) {
+      try {
+        await this.deleteRowByRevision(table, id, expectedRevision);
+        return { data: [], error: null };
+      } catch (error) {
+        return { data: null, error: appError(error.message || STALE_WRITE_MESSAGE, error, error.code) };
+      }
+    }
+
+    async deleteRowByRevision(table, id, expectedRevision) {
+      if (!REVISIONED_TABLES.has(table)) throw appError('この削除方法は有給データ専用です。');
+      const expected = revisionOf(expectedRevision);
+      const reference = this.firestore.collection(table).doc(String(id));
+      return this.firestore.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists) throw staleWriteError();
+        if (revisionOf((snapshot.data() || {})._revision) !== expected) throw staleWriteError();
+        transaction.delete(reference);
+      });
     }
 
     async prepareForStorage(value) {

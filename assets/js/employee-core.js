@@ -411,7 +411,7 @@ async function checkAndAutoGrant(todayValue){
     existingGrants.filter(g=>g.grant_date&&yukyuGrantNeedsDays(g)).forEach(g=>{
       const days=calcYukyuLegalDays(e.id,g.grant_date);
       const expiry=resolveGrantExpiryForEligibility(g);
-      if(days!==null&&expiry.mode!=='ambiguous'&&expiry.date>=todayStr)updates.push({id:g.id,patch:{days}});
+      if(days!==null&&expiry.mode!=='ambiguous'&&expiry.date>=todayStr)updates.push({id:g.id,expectedRevision:g._revision??0,patch:{days}});
     });
     for(const d of dates){
       if(d>todayStr||existingDates.includes(d))continue;
@@ -423,13 +423,13 @@ async function checkAndAutoGrant(todayValue){
       const days=calcYukyuLegalDays(e.id,d);
       const id=autoGrantRecordId(e.id,d);
       if(days===null||id===null)continue;
-      batch.push({id,employee_id:e.id,grant_date:d,days,expire_date:expireDate});
+      batch.push({id,employee_id:e.id,grant_date:d,days,expire_date:expireDate,_revision:1});
     }
   }
   if(batch.length||updates.length){
     try{
       if(batch.length)await createYukyuGrants(batch);
-      if(updates.length)await Promise.all(updates.map(u=>saveYukyuGrant(u.id,u.patch)));
+      for(const u of updates)await saveYukyuGrant(u.id,u.patch,u.expectedRevision);
     }catch(err){console.error('自動付与エラー',err);}
     await loadGrants();
   }
