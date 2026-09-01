@@ -43,12 +43,13 @@ async function updateEmployeeShikaku(id,shikakuList,updatedAt){return updateEmpl
 async function updateEmployeeKenko(id,kenkouList,updatedAt){return updateEmployee(id,{kenkou_list:kenkouList,updated_at:updatedAt});}
 async function updateKousokuStartDate(id,date,updatedAt){return updateEmployee(id,{kousoku_start_date:date||null,updated_at:updatedAt});}
 
-async function createYukyuGrants(batch){return firebaseRows(db.from('yukyu_grants').insert(batch));}
-async function saveYukyuGrant(id,data){return id?firebaseRows(db.from('yukyu_grants').update(data).eq('id',id)):firebaseRows(db.from('yukyu_grants').insert(data));}
-async function deleteYukyuGrant(id){return firebaseRows(db.from('yukyu_grants').delete().eq('id',id));}
-async function createYukyuRecord(data){return firebaseRows(db.from('yukyu_records').insert(data));}
-async function updateYukyuRecord(id,data){return firebaseRows(db.from('yukyu_records').update(data).eq('id',id));}
-async function deleteYukyuRecord(id){return firebaseRows(db.from('yukyu_records').delete().eq('id',id));}
+function newYukyuRow(data){const {_revision,...row}=data;return{...row,_revision:1};}
+async function createYukyuGrants(batch){return firebaseRows(db.from('yukyu_grants').insert(batch.map(newYukyuRow)));}
+async function saveYukyuGrant(id,data,expectedRevision){return id==null?firebaseRows(db.from('yukyu_grants').insert(newYukyuRow(data))):firebaseRows(db.updateByRevision('yukyu_grants',id,expectedRevision,data));}
+async function deleteYukyuGrant(id,expectedRevision){return firebaseRows(db.deleteByRevision('yukyu_grants',id,expectedRevision));}
+async function createYukyuRecord(data){return firebaseRows(db.from('yukyu_records').insert(newYukyuRow(data)));}
+async function updateYukyuRecord(id,data,expectedRevision){return firebaseRows(db.updateByRevision('yukyu_records',id,expectedRevision,data));}
+async function deleteYukyuRecord(id,expectedRevision){return firebaseRows(db.deleteByRevision('yukyu_records',id,expectedRevision));}
 
 async function createDepartment(data){
   const sortOrder=Math.max(0,...(departments||[]).map(d=>Number(d.sort_order)).filter(Number.isFinite))+1;

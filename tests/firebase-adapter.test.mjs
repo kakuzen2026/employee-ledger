@@ -7,12 +7,13 @@ function clone(value) {
   return structuredClone(value);
 }
 
-function createFirebaseMock(seed, signInUser = null) {
+function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
   const stores = new Map(Object.entries(seed)
     .filter(([table]) => table !== '_counters' && table !== '_blobs')
     .map(([table, rows]) => [table, new Map(rows.map((row) => [String(row.id), clone(row)]))]));
   const counter = new Map(Object.entries(seed._counters || {}));
   const blobs = new Map(Object.entries(seed._blobs || {}).map(([id, value]) => [id, clone(value)]));
+  const versions = new Map();
   const app = {};
   const authClient = {
     currentUser: null,
@@ -29,6 +30,8 @@ function createFirebaseMock(seed, signInUser = null) {
   };
 
   function refFor(table, id) {
+    const key = `${table}/${id}`;
+    const touch = () => versions.set(key, (versions.get(key) || 0) + 1);
     return {
       async get() {
         if (table === '_meta' && id === 'counters') {
@@ -41,11 +44,15 @@ function createFirebaseMock(seed, signInUser = null) {
         const current = stores.get(table)?.get(String(id)) || {};
         if (!stores.has(table)) stores.set(table, new Map());
         stores.get(table).set(String(id), clone(options.merge ? { ...current, ...value } : value));
+        touch();
       },
       async delete() {
         stores.get(table)?.delete(String(id));
+        touch();
       },
-      _counter: table === '_meta' && id === 'counters'
+      _counter: table === '_meta' && id === 'counters',
+      _key: key,
+      _version: () => versions.get(key) || 0
     };
   }
 
@@ -62,13 +69,32 @@ function createFirebaseMock(seed, signInUser = null) {
       };
     },
     async runTransaction(work) {
-      return work({
-        get: (reference) => reference.get(),
-        update: (reference, patch) => {
-          if (!reference._counter) throw new Error('unexpected transaction target');
-          Object.entries(patch).forEach(([key, value]) => counter.set(key, value));
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const reads = new Map();
+        const writes = [];
+        const result = await work({
+          async get(reference) {
+            const snapshot = await reference.get();
+            reads.set(reference._key, reference._version());
+            if (attempt === 0 && onTransactionRead) await onTransactionRead(reference);
+            return snapshot;
+          },
+          update(reference, patch) {
+            writes.push({ type: 'update', reference, patch });
+          },
+          delete(reference) {
+            writes.push({ type: 'delete', reference });
+          }
+        });
+        if ([...reads].some(([key, version]) => (versions.get(key) || 0) !== version)) continue;
+        for (const write of writes) {
+          if (write.type === 'delete') await write.reference.delete();
+          else if (write.reference._counter) Object.entries(write.patch).forEach(([key, value]) => counter.set(key, value));
+          else await write.reference.set(write.patch, { merge: true });
         }
-      });
+        return result;
+      }
+      throw new Error('transaction conflict');
     }
   };
 
@@ -89,6 +115,17 @@ function createFirebaseMock(seed, signInUser = null) {
     auth() { return authClient; },
     firestore() { return firestore; },
     database() { return realtime; }
+  };
+}
+
+function createTwoPartyBarrier() {
+  let arrivals = 0;
+  let release;
+  const ready = new Promise(resolve => { release = resolve; });
+  return async () => {
+    arrivals += 1;
+    if (arrivals === 2) release();
+    await ready;
   };
 }
 
@@ -252,6 +289,127 @@ test('UUID-backed collections can create records without numeric counters', asyn
 
   assert.equal(error, null);
   assert.match(data.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test('Paid-leave transaction updates lazy-upgrade legacy revisions and increment current revisions', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({
+    yukyu_grants: [{ id: 1, days: null }],
+    yukyu_records: [{ id: 2, use_type: '全日', _revision: 3 }]
+  });
+
+  await import(`../assets/js/firebase-adapter.js?revision-update=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  const legacy = await db.updateByRevision('yukyu_grants', 1, 0, { days: 10 });
+  const current = await db.updateByRevision('yukyu_records', 2, 3, { use_type: '半休（午前）' });
+
+  assert.equal(legacy.error, null);
+  assert.equal(legacy.data[0]._revision, 1);
+  assert.equal(current.error, null);
+  assert.equal(current.data[0]._revision, 4);
+});
+
+test('Paid-leave transaction rejects a stale concurrent update and keeps the first committed value', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({
+    yukyu_grants: [{ id: 1, days: 10 }]
+  }, null, createTwoPartyBarrier());
+
+  await import(`../assets/js/firebase-adapter.js?stale-update=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  const results = await Promise.all([
+    db.updateByRevision('yukyu_grants', 1, 0, { days: 12 }),
+    db.updateByRevision('yukyu_grants', 1, 0, { days: 15 })
+  ]);
+  const success = results.find(result => result.error === null);
+  const stale = results.find(result => result.error?.code === 'STALE_WRITE');
+  const saved = await db.from('yukyu_grants').select('*').eq('id', 1).single();
+
+  assert.ok(success);
+  assert.ok(stale);
+  assert.equal(stale.error.message, '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。');
+  assert.equal(saved.data.days, success.data[0].days);
+  assert.equal(saved.data._revision, 1);
+});
+
+test('Paid-leave transaction rejects stale deletes and permits a current delete', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({
+    yukyu_records: [{ id: 2, use_type: '全日', _revision: 4 }]
+  });
+
+  await import(`../assets/js/firebase-adapter.js?revision-delete=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  const updated = await db.updateByRevision('yukyu_records', 2, 4, { use_type: '半休（午後）' });
+  const staleDelete = await db.deleteByRevision('yukyu_records', 2, 4);
+  const present = await db.from('yukyu_records').select('*').eq('id', 2).single();
+  const currentDelete = await db.deleteByRevision('yukyu_records', 2, 5);
+  const missing = await db.from('yukyu_records').select('*').eq('id', 2).maybeSingle();
+
+  assert.equal(updated.data[0]._revision, 5);
+  assert.equal(staleDelete.error.code, 'STALE_WRITE');
+  assert.equal(present.data._revision, 5);
+  assert.equal(currentDelete.error, null);
+  assert.equal(missing.data, null);
+});
+
+test('Paid-leave transaction fails closed for invalid expected or stored revisions', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({
+    yukyu_grants: [
+      { id: 1, _revision: 'abc' },
+      { id: 2, _revision: -1 },
+      { id: 3, _revision: 1.5 },
+      { id: 4, _revision: 0 }
+    ]
+  });
+
+  await import(`../assets/js/firebase-adapter.js?invalid-revision=${Date.now()}`);
+  const db = globalThis.createFirebaseDb();
+  for (const id of [1, 2, 3]) {
+    const result = await db.updateByRevision('yukyu_grants', id, 0, { days: 10 });
+    assert.equal(result.error.code, 'STALE_WRITE');
+  }
+  for (const expected of ['0', -1, 1.5, Number.NaN]) {
+    const result = await db.updateByRevision('yukyu_grants', 4, expected, { days: 10 });
+    assert.equal(result.error.code, 'STALE_WRITE');
+  }
+});
+
+test('Paid-leave API forces revision 1 for new rows and forwards expected revisions', async () => {
+  const inserted = [];
+  const updates = [];
+  const deletes = [];
+  const context = {
+    db: {
+      from(table) {
+        return { insert(row) { inserted.push({ table, row }); return Promise.resolve({ data: Array.isArray(row) ? row : [row], error: null }); } };
+      },
+      updateByRevision(table, id, expectedRevision, patch) {
+        updates.push({ table, id, expectedRevision, patch });
+        return Promise.resolve({ data: [patch], error: null });
+      },
+      deleteByRevision(table, id, expectedRevision) {
+        deletes.push({ table, id, expectedRevision });
+        return Promise.resolve({ data: [], error: null });
+      }
+    }
+  };
+  const source = await readFile(new URL('../assets/js/employee-api.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+
+  await context.createYukyuGrants([{ id: -10, _revision: 99 }]);
+  await context.saveYukyuGrant(null, { employee_id: 1, _revision: 98 });
+  await context.createYukyuRecord({ employee_id: 1, _revision: 97 });
+  await context.saveYukyuGrant(-10, { days: 0, _revision: 96 }, 3);
+  await context.updateYukyuRecord(11, { use_type: '全日', _revision: 95 }, 4);
+  await context.deleteYukyuGrant(-10, 3);
+  await context.deleteYukyuRecord(11, 4);
+
+  const createdRows = inserted.flatMap(call => Array.isArray(call.row) ? call.row : [call.row]);
+  assert.deepEqual(createdRows.map(row => row._revision), [1, 1, 1]);
+  assert.deepEqual(updates.map(call => [call.table, call.expectedRevision]), [['yukyu_grants', 3], ['yukyu_records', 4]]);
+  assert.deepEqual(deletes.map(call => [call.table, call.expectedRevision]), [['yukyu_grants', 3], ['yukyu_records', 4]]);
 });
 
 test('Dynamic employee actions use delegated click handlers', async () => {

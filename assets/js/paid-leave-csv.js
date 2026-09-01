@@ -64,10 +64,33 @@ function renderYukyuList(){
       </tr>`).join('')}</tbody>
     </table></div>`}`;
 }
+const PAID_LEAVE_STALE_MESSAGE='別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
+function paidLeaveRevision(row){return row?._revision==null?0:row._revision;}
+function isStaleWrite(error){return error?.code==='STALE_WRITE';}
+async function reloadPaidLeaveAfterStale(kind,employeeId=null){
+  if(kind==='grant'){
+    closeGrantModal();await loadGrants();renderDT();
+  }else{
+    const fromDetail=yfFromDetail;
+    const targetEmployeeId=employeeId??yf?.employee_id??null;
+    yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};yfFromDetail=false;
+    await loadYukyu();
+    if(fromDetail&&targetEmployeeId!=null){detailTab='yukyu';viewingId=targetEmployeeId;currentView='detail';render();}
+    else {currentView='yukyu_list';renderYukyuList();}
+  }
+  showToast(PAID_LEAVE_STALE_MESSAGE,'warn');
+}
 async function delYR(id){
   if(!confirmPermanentDelete('この有給記録'))return;
-  await deleteYukyuRecord(id);await loadYukyu();
-  if(currentView==='yukyu_list')renderYukyuList();else renderDT();
+  const record=yukyuRecords.find(row=>row.id===Number(id));
+  if(!record){showToast('有給記録が見つかりません','error');return;}
+  try{
+    await deleteYukyuRecord(id,paidLeaveRevision(record));await loadYukyu();
+    if(currentView==='yukyu_list')renderYukyuList();else renderDT();
+  }catch(error){
+    if(isStaleWrite(error))await reloadPaidLeaveAfterStale('record',record.employee_id);
+    else showToast('削除に失敗しました：'+error.message,'error');
+  }
 }
 
 function toggleKousoku(id,useKousoku,btn){
@@ -95,12 +118,13 @@ async function saveKousokuDate(id,clear=false){
 }
 
 // ---- 有給付与 ----
-let grantEmpId=null,grantEditId=null;
+let grantEmpId=null,grantEditId=null,grantEditRevision=null;
 function openGrantModal(empId,editGrantId=null){
-  grantEmpId=empId;grantEditId=editGrantId;
+  grantEmpId=empId;grantEditId=editGrantId;grantEditRevision=null;
   document.getElementById('grantModalTitle').textContent=editGrantId?'有給付与を編集':'有給付与を登録';
   if(editGrantId){
     const g=yukyuGrants.find(x=>x.id===editGrantId);
+    grantEditRevision=paidLeaveRevision(g);
     document.getElementById('gm_date').value=g?.grant_date||'';
     document.getElementById('gm_days').value=g?.days!=null?g.days:'';
     document.getElementById('gm_expire').value=g?.expire_date||'';
@@ -116,7 +140,7 @@ function openGrantModal(empId,editGrantId=null){
   dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';};
   document.getElementById('grantModal').classList.add('open');
 }
-function closeGrantModal(){document.getElementById('grantModal').classList.remove('open');}
+function closeGrantModal(){document.getElementById('grantModal').classList.remove('open');grantEmpId=null;grantEditId=null;grantEditRevision=null;}
 async function saveGrant(){
   const d=document.getElementById('gm_date').value;
   if(!d){showToast('付与日は必須です','error');return;}
@@ -129,17 +153,27 @@ async function saveGrant(){
   }
   try{
     if(grantEditId){
-      await saveYukyuGrant(grantEditId,{grant_date:d,days,expire_date:expire});
+      await saveYukyuGrant(grantEditId,{grant_date:d,days,expire_date:expire},grantEditRevision);
     } else {
       await saveYukyuGrant(null,{employee_id:grantEmpId,grant_date:d,days,expire_date:expire});
     }
     await loadGrants();closeGrantModal();renderDT();
-  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){
+    if(isStaleWrite(e))await reloadPaidLeaveAfterStale('grant');
+    else showToast('保存に失敗しました：'+e.message,'error');
+  }
 }
 async function delGrant(id,empId){
   if(!confirmPermanentDelete('この付与記録'))return;
-  await deleteYukyuGrant(id);
-  await loadGrants();renderDT();
+  const grant=yukyuGrants.find(row=>row.id===Number(id));
+  if(!grant){showToast('有給付与が見つかりません','error');return;}
+  try{
+    await deleteYukyuGrant(id,paidLeaveRevision(grant));
+    await loadGrants();renderDT();
+  }catch(error){
+    if(isStaleWrite(error))await reloadPaidLeaveAfterStale('grant',empId);
+    else showToast('削除に失敗しました：'+error.message,'error');
+  }
 }
 
 // ---- 有給登録 ----
@@ -151,7 +185,7 @@ function openYukyuFromDetail(empId){
 function openYukyuEdit(id,fromDetail=false){
   const r=yukyuRecords.find(x=>x.id===Number(id));
   if(!r){showToast('有給記録が見つかりません','error');return;}
-  yf={id:r.id,employee_id:r.employee_id,employee_name:r.employee_name||'',use_date:r.use_date||'',use_type:r.use_type||'',shubetsu:r.shubetsu||'',kubun:r.kubun||'',input_by:r.input_by||'',biko:r.biko||''};
+  yf={id:r.id,_revision:paidLeaveRevision(r),employee_id:r.employee_id,employee_name:r.employee_name||'',use_date:r.use_date||'',use_type:r.use_type||'',shubetsu:r.shubetsu||'',kubun:r.kubun||'',input_by:r.input_by||'',biko:r.biko||''};
   yfFromDetail=fromDetail;currentView='yukyu_add';setNav('tYukyuAdd');renderYukyuAdd();
 }
 function renderYukyuAdd(){
@@ -241,12 +275,15 @@ async function saveYR(){
   if(!yf.input_by){showToast('入力者を選択してください','error');return;}
   try{
     const payload={employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,biko:document.getElementById('yBiko')?.value||''};
-    if(yf.id)await updateYukyuRecord(yf.id,payload);
+    if(yf.id)await updateYukyuRecord(yf.id,payload,yf._revision);
     else await createYukyuRecord({...payload,touroku_date:new Date().toISOString().slice(0,10)});
     await loadYukyu();showToast(yf.id?'更新しました':'登録しました');
     if(yfFromDetail){detailTab='yukyu';currentView='detail';yfFromDetail=false;render();}
     else showView('yukyu_list');
-  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
+  }catch(e){
+    if(isStaleWrite(e))await reloadPaidLeaveAfterStale('record');
+    else showToast('保存に失敗しました：'+e.message,'error');
+  }
 }
 
 // ---- 従業員フォーム ----

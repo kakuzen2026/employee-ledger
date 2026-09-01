@@ -44,10 +44,10 @@ function wireGrantWrites(context) {
     context.__syncEmployeeTestState();
     return rows;
   };
-  context.saveYukyuGrant = async (id, patch) => {
-    calls.update.push({ id, patch });
+  context.saveYukyuGrant = async (id, patch, expectedRevision) => {
+    calls.update.push({ id, patch, expectedRevision });
     const grant = context.__employeeTestState.yukyuGrants.find(row => row.id === id);
-    if (grant) Object.assign(grant, patch);
+    if (grant) Object.assign(grant, patch, { _revision: expectedRevision + 1 });
     context.__syncEmployeeTestState();
     return grant;
   };
@@ -206,6 +206,7 @@ test('日数の手入力値は保持し、未設定値だけを期限に応じ�
   for (const call of calls.update) {
     assert.deepEqual(Object.keys(call.patch), ['days']);
     assert.equal(call.patch.days, 11);
+    assert.equal(call.expectedRevision, 0);
   }
   assert.equal(context.__employeeTestState.yukyuGrants.find(row => row.id === 11).expire_date, undefined);
   assert.equal(context.__employeeTestState.yukyuGrants.find(row => row.id === 12).expire_date, '');
@@ -215,6 +216,52 @@ test('日数の手入力値は保持し、未設定値だけを期限に応じ�
   assert.equal(context.__employeeTestState.yukyuGrants.find(row => row.id === 15).days, 3);
   assert.equal(context.__employeeTestState.yukyuGrants.find(row => row.id === 16).days, null);
   assert.equal(context.__employeeTestState.yukyuGrants.find(row => row.id === 17).days, null);
+});
+
+test('自動days補完は読込時revisionを使い、成功時にrevisionを増やす', async () => {
+  const context = loadCore([
+    { id: 1, status: '在籍', nyusha_date: '2024-01-01', kousoku_start_date: '' }
+  ], [
+    { id: 20, employee_id: 1, grant_date: '2025-07-01', days: null, expire_date: '2027-06-30', _revision: 2 }
+  ]);
+  const calls = wireGrantWrites(context);
+
+  await context.checkAndAutoGrant('2026-01-01');
+
+  assert.equal(calls.update.length, 1);
+  assert.equal(calls.update[0].expectedRevision, 2);
+  assert.equal(context.__employeeTestState.yukyuGrants[0].days, 11);
+  assert.equal(context.__employeeTestState.yukyuGrants[0]._revision, 3);
+});
+
+test('自動days補完がstaleなら手動変更を上書きせず最新grantを再取得する', async () => {
+  const context = loadCore([
+    { id: 1, status: '在籍', nyusha_date: '2024-01-01', kousoku_start_date: '' }
+  ], [
+    { id: 21, employee_id: 1, grant_date: '2025-07-01', days: null, expire_date: '2027-06-30', _revision: 2 }
+  ]);
+  let reloads = 0;
+  context.console={...console,error(){}};
+  context.createYukyuGrants = async () => [];
+  context.saveYukyuGrant = async (id, patch, expectedRevision) => {
+    assert.equal(id, 21);
+    assert.deepEqual(Object.keys(patch), ['days']);
+    assert.equal(expectedRevision, 2);
+    Object.assign(context.__employeeTestState.yukyuGrants[0], { days: 12, _revision: 3 });
+    const error = new Error('stale');
+    error.code = 'STALE_WRITE';
+    throw error;
+  };
+  context.fetchYukyuGrants = async () => {
+    reloads += 1;
+    return context.__employeeTestState.yukyuGrants;
+  };
+
+  await context.checkAndAutoGrant('2026-01-01');
+
+  assert.equal(reloads, 1);
+  assert.equal(context.__employeeTestState.yukyuGrants[0].days, 12);
+  assert.equal(context.__employeeTestState.yukyuGrants[0]._revision, 3);
 });
 
 test('期限切れの欠落年を遡及作成せず、無効な参照勤続は新規付与を抑制する', async () => {
@@ -242,6 +289,6 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260901\.2/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260901\.3/);
   assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260901\.1/);
 });
