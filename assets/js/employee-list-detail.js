@@ -235,7 +235,7 @@ function renderDetail(id){
 // ---- 警告一覧 ----
 async function renderAlert(){
   const today=new Date();
-  const todayStr=today.toISOString().slice(0,10);
+  const todayStr=localDateStr(today);
 
   // 有給日数未設定の従業員
   const yukyuAlerts=employees.filter(e=>e.status==='在籍'&&calcYukyuInfo(e.id).unsetDays);
@@ -499,12 +499,12 @@ async function renderDT(){
     const startDate=e.kousoku_start_date||e.nyusha_date||null;
     let nensuStr='—';
     if(startDate&&info.nextDate){
-      const s=new Date(startDate),n=new Date(info.nextDate);
-      let years=n.getFullYear()-s.getFullYear();
-      let months=n.getMonth()-s.getMonth();
-      if(n.getDate()<s.getDate())months--;
-      if(months<0){years--;months+=12;}
-      nensuStr=`${years}年${months}ヶ月`;
+      const monthsBetween=fullMonthsBetween(startDate,info.nextDate);
+      if(monthsBetween!==null){
+        const years=Math.floor(monthsBetween/12);
+        const months=monthsBetween%12;
+        nensuStr=`${years}年${months}ヶ月`;
+      }
     }
 
     c.innerHTML=`
@@ -526,8 +526,9 @@ async function renderDT(){
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">以前の勤務先の入社日</div>
           <input type="date" id="kousokuInput" value="${e.kousoku_start_date||''}" style="padding:6px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
           <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${e.id})">保存</button>
+          <div style="font-size:12px;color:var(--emp-text3);flex-basis:100%">付与日：毎年1月1日</div>
         </div>
-        ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--emp-text3)">→ 本人の入社日（${e.nyusha_date||'未登録'}）で計算します</div>`:''}
+        <div style="font-size:12px;color:var(--emp-text3);display:${e.kousoku_start_date?'none':'block'}">付与日：入社6か月後、その後は毎年同月同日${!e.kousoku_start_date?`（本人の入社日：${e.nyusha_date||'未登録'}）`:''}</div>
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
