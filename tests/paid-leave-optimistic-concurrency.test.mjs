@@ -4,6 +4,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../assets/js/paid-leave-csv.js', import.meta.url), 'utf8');
+const pointsSource = await readFile(new URL('../assets/js/attendance-points.js', import.meta.url), 'utf8');
 const staleMessage = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
 
 function staleError() {
@@ -61,6 +62,7 @@ function loadPaidLeaveUi({ grants = [], records = [] } = {}) {
   };
   context.window = context;
   vm.createContext(context);
+  vm.runInContext(pointsSource, context);
   vm.runInContext(source, context, { filename: 'paid-leave-csv.js' });
   context.renderDT = () => { calls.renderDetail += 1; };
   context.renderYukyuList = () => { calls.renderList += 1; };
@@ -113,7 +115,7 @@ test('Paid-leave record edit keeps the opened revision and stale handling return
   const { context, calls, elements } = loadPaidLeaveUi({
     records: [{
       id: 20, employee_id: 1, employee_name: 'テスト 従業員', use_date: '2026-09-01',
-      use_type: '全日', shubetsu: '有給', kubun: '通常', input_by: '管理者', biko: '', _revision: 4
+      use_type: '全日', shubetsu: '有給', kubun: '計画', input_by: '管理者', biko: '', _revision: 4
     }]
   });
   const updates = [];

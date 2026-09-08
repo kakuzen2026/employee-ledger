@@ -289,6 +289,6 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260901\.3/);
-  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260901\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260908\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260908\.1/);
 });

@@ -2,7 +2,9 @@
 // Firebase移行済みのデータを共有アダプター経由で利用する。
 const KOYOU=['正社員','パート・アルバイト','契約社員','派遣社員','業務委託'];
 const CHECKRES=['異常なし','要経過観察','要精密検査','受診未了'];
-const USE_TYPES=['全日','半休（午前）','半休（午後）'];
+const USE_TYPES=['全日','半休（午前）','半休（午後）','欠勤','遅刻','早退'];
+// Preserve historical leave-day interpretation; only new non-leave types consume zero.
+function paidLeaveDays(record){return ['欠勤','遅刻','早退'].includes(record.use_type)?0:record.use_type==='全日'?1:0.5;}
 const SHUBETSU=['自己都合','会社都合'];
 const KUBUN=['計画','突発'];
 const INPUT_BY=['三上','金森','岩本'];
@@ -173,8 +175,10 @@ document.addEventListener('change',e=>{
   if(trigger.dataset.employeeChange==='contract-type')toggleContractTermFields();
 });
 // ---- Data load adapters ----
-async function loadEmployees(){EMP_ST.employees=(await fetchEmployees()).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;}
-async function loadYukyu(){EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;}
+let attendanceEmployeesReady=false;
+async function loadEmployees(){attendanceEmployeesReady=false;EMP_ST.employees=(await fetchEmployees()).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;attendanceEmployeesReady=true;}
+let attendanceRecordsReady=false;
+async function loadYukyu(){attendanceRecordsReady=false;EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;attendanceRecordsReady=true;}
 async function loadGrants(){EMP_ST.yukyuGrants=await fetchYukyuGrants();yukyuGrants=EMP_ST.yukyuGrants;}
 async function loadDepts(){EMP_ST.departments=await fetchDepartments();departments=EMP_ST.departments;}
 async function loadVisaTypes(){EMP_ST.visaTypes=await fetchVisaTypes();visaTypes=EMP_ST.visaTypes;}
@@ -369,7 +373,7 @@ function calcYukyuInfo(empId,todayValue){
   // 付与合計・取得合計
   const granted=grants.reduce((s,g)=>s+Number(g.days),0);
   const recs=yukyuRecords.filter(r=>r.employee_id===empId);
-  const used=recs.reduce((s,r)=>s+(r.use_type==='全日'?1:0.5),0);
+  const used=recs.reduce((s,r)=>s+paidLeaveDays(r),0);
 
   // FIFO残日数：古い付与から順に消化し、期限切れの残は加算しない
   let usedBuf=used;
