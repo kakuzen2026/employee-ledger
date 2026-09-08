@@ -33,6 +33,7 @@ function loadCore(employees = [], yukyuGrants = [], yukyuRecords = []) {
   context.__employeeTestState.yukyuGrants = yukyuGrants;
   context.__employeeTestState.yukyuRecords = yukyuRecords;
   context.__syncEmployeeTestState();
+  vm.runInContext('attendanceEmployeesReady=true;attendanceGrantsReady=true;',context);
   return context;
 }
 
@@ -289,6 +290,17 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260908\.1/);
-  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260908\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260908\.3/);
+  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260908\.3/);
+});
+
+test('従業員または付与の読込が未確認なら自動付与は書込みを行わない', async () => {
+  for (const flags of ['attendanceEmployeesReady=false','attendanceGrantsReady=false']) {
+    const context = loadCore([{id:1,status:'在籍',nyusha_date:'2025-01-01'}]);
+    const calls = wireGrantWrites(context);
+    vm.runInContext(flags, context);
+    assert.equal(await context.checkAndAutoGrant('2026-09-08'), false);
+    assert.equal(calls.create.length, 0);
+    assert.equal(calls.update.length, 0);
+  }
 });

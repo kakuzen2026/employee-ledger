@@ -139,8 +139,10 @@ async function saveCompanyInfo(){
 
 // ---- 証明書生成 ----
 function generateCertificate(empId,type){
+  if(!canCreateEmployeeDocument())return;
   const e=employees.find(x=>x.id===empId);
   if(!e){showToast('従業員が見つかりません','error');return;}
+  if(!canIssueCertificate(e,type))return;
   if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
 
   const today=new Date();
@@ -212,7 +214,7 @@ function generateCertificate(empId,type){
     cert_type:isZaishoku?'在職証明書':'退職証明書',
     issued_date:todayISO,
     issued_by:companyInfo.company_name||''
-  }).then(()=>loadCertificates()).catch(err=>{
+  }).then(()=>loadCertificates()).then(()=>{if(currentView==='cert_list')renderCertList()}).catch(err=>{
     console.error(err);
     showToast('証明書は表示しましたが、発行履歴の保存に失敗しました：'+err.message,'error');
   });
@@ -260,6 +262,7 @@ function emp_contractSection(title,body){
 }
 
 function emp_openContractModal(empId){
+  if(!canCreateEmployeeDocument())return;
   contractEmpId=empId;
   const e=employees.find(x=>x.id===empId);
   if(!e)return;
@@ -611,14 +614,16 @@ function generateContract(){
 
 // ---- 雇用契約書一覧 ----
 async function renderContractList(){
+  const generation=++renderContractList.generation;
   const today=new Date();
   const todayStr=today.toISOString().slice(0,10);
 
   // 派遣管理アプリの雇用契約書を取得
-  let dispatchContracts=[];
+  let dispatchContracts=[],dispatchReady=true;
   try{
     dispatchContracts=await fetchDispatchContractEmployeeSummaries();
-  }catch(e){dispatchContracts=[];}
+  }catch(e){dispatchReady=false;}
+  if(generation!==renderContractList.generation||currentView!=='contract_list')return;
 
   // 従業員ごとの最新雇用契約書を集計
   // このアプリ: employment_contracts
@@ -643,25 +648,27 @@ async function renderContractList(){
   });
 
   // アラート対象の在籍中従業員を抽出
-  const activeEmps=employees.filter(e=>e.status==='在籍');
+  const activeEmps=employees.filter(e=>e.status==='在籍'&&!e.contract_other_system);
   const alertEmps=activeEmps.filter(e=>{
     const ct=empContractMap[e.id];
-    if(!ct)return true; // 契約書なし
+    if(!ct)return dispatchReady; // 読み込みに失敗した場合は契約書なしと断定しない
     if(!ct.contract_end)return false; // 無期または終了日なし
     const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
     return days<=15; // 期限切れ or 15日以内
   });
 
   // 絞り込み
-  const fe=(document.getElementById('fceEmp')||{}).value||'';
-  const fstat=(document.getElementById('fceStatus')||{}).value||'all';
-  let thisList=employmentContracts;
+  const filters=documentFilters('contract_list'),fe=filters.employee||'',tab=filters.tab==='history'?'history':'attention';
+  let thisList=[...employmentContracts].sort((a,b)=>String(b.issued_date||'').localeCompare(String(a.issued_date||'')));
   if(fe)thisList=thisList.filter(r=>r.employee_id===Number(fe));
 
   document.getElementById('mainContent').innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:16px;font-weight:700">雇用契約書一覧</span>
-    </div>
+    <div class="workspace-heading document-heading"><div><h1>雇用契約書</h1><p class="workspace-help">契約期限を確認し、対象者の契約書を作成できます。</p></div><button class="btn btn-primary" ${attendanceEmployeesReady?'':'disabled'} onclick="openDocumentComposer()">＋ 契約書を作成</button></div>
+    ${documentComposer('contract')}
+    <nav class="workspace-tabs document-task-tabs" aria-label="契約書の確認内容"><button class="${tab==='attention'?'active':''}" onclick="setDocumentFilter('contract_list','tab','attention')">要確認</button><button class="${tab==='history'?'active':''}" onclick="setDocumentFilter('contract_list','tab','history')">発行履歴</button></nav>
+    ${!documentContractsReady||!attendanceEmployeesReady?'<div class="empty" role="alert">従業員または契約書の読み込みが未完了です。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':''}
+    <section ${tab!=='attention'||!documentContractsReady||!attendanceEmployeesReady?'hidden':''}>
+    ${!dispatchReady?'<p class="workspace-help" role="alert">派遣管理の契約情報を取得できませんでした。確認できた期限のみ表示しています。<button class="btn btn-sm" onclick="renderContractList()">再読み込み</button></p>':''}
 
     ${alertEmps.length>0?`
     <div style="margin-bottom:20px">
@@ -678,7 +685,7 @@ async function renderContractList(){
             :`<span class="badge badge-warn">残${days}日</span>`;
           const rowBg=!ct||days<0?'background:#fdf0f0':'background:#fdf3e7';
           return`<tr style="${rowBg}">
-            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
+            <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td>
             <td data-label="所属" style="font-size:12px">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="状態">${statusLabel}</td>
             <td data-label="契約終了日" style="font-size:12px">${emp_esc(ct?.contract_end||'—')}</td>
@@ -687,13 +694,14 @@ async function renderContractList(){
         }).join('')}
         </tbody>
       </table></div>
-    </div>`:'<div style="background:#e8f0eb;border:1px solid #b8d4be;border-radius:var(--emp-radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1a5c30">✓ アラート対象の従業員はいません</div>'}
+    </div>`:dispatchReady?'<div class="empty">現在、期限切れ・15日以内の期限・契約書なしの対象者はいません。</div>':'<div class="empty">契約書の不足は未確認です。</div>'}
+    </section><section ${tab!=='history'||!documentContractsReady?'hidden':''}>
 
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">発行履歴（このアプリ）</div>
     <div class="search-bar" style="margin-bottom:12px">
-      <select id="fceEmp" onchange="renderContractList()" style="min-width:160px">
+      <select id="fceEmp" aria-label="従業員で絞り込み" onchange="setDocumentFilter('contract_list','employee',this.value)" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+        ${documentEmployeeOptions(fe)}
       </select>
     </div>
     ${thisList.length===0?'<div class="empty">雇用契約書の発行履歴がありません</div>':`
@@ -701,19 +709,20 @@ async function renderContractList(){
       <thead><tr><th>発行日</th><th>氏名</th><th>契約開始</th><th>契約終了</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${thisList.map(r=>`<tr>
         <td data-label="発行日" style="font-size:13px">${emp_esc(r.issued_date||'—')}</td>
-        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</span></td>
+        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</button></td>
         <td data-label="契約開始" style="font-size:12px">${emp_esc(r.contract_start||'—')}</td>
         <td data-label="契約終了" style="font-size:12px">${emp_esc(r.contract_end||'無期')}</td>
         <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
           <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${r.employee_id}">再発行</button>
-          <button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${r.id}" style="margin-left:4px">削除</button>
+          <details class="row-actions"><summary>その他</summary><button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${r.id}" style="margin-left:4px">削除</button></details>
         </td>
       </tr>`).join('')}
       </tbody>
-    </table></div>`}`;
+    </table></div>`}</section>`;
 }
+renderContractList.generation=0;
 
 async function deleteEmploymentContract(id){
   if(!confirmPermanentDelete('この雇用契約書の発行履歴'))return;
@@ -724,47 +733,41 @@ async function deleteEmploymentContract(id){
 
 // ---- 証明書一覧 ----
 function renderCertList(){
-  const fe=(document.getElementById('fcEmp')||{}).value||'';
-  const ft=(document.getElementById('fcType')||{}).value||'';
-  const fm=(document.getElementById('fcMonth')||{}).value||'';
+  const filters=documentFilters('cert_list'),fe=filters.employee||'',ft=filters.type||'',fm=filters.month||'';
   // 雇用契約書は別タブで管理するため除外
-  let list=certificates.filter(r=>r.cert_type!=='雇用契約書');
+  let list=certificates.filter(r=>r.cert_type!=='雇用契約書').sort((a,b)=>String(b.issued_date||'').localeCompare(String(a.issued_date||'')));
   if(fe)list=list.filter(r=>r.employee_id===Number(fe));
   if(ft)list=list.filter(r=>r.cert_type===ft);
   if(fm)list=list.filter(r=>r.issued_date&&r.issued_date.startsWith(fm));
 
   document.getElementById('mainContent').innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:16px;font-weight:700">証明書発行一覧</span>
-      <div class="summary-grid" style="max-width:360px;margin:0">
-        <div class="scard"><div class="scard-label">発行総数</div><div class="scard-val">${list.length}</div></div>
-        <div class="scard"><div class="scard-label">在職証明</div><div class="scard-val" style="color:var(--emp-info)">${certificates.filter(c=>c.cert_type==='在職証明書').length}</div></div>
-        <div class="scard"><div class="scard-label">退職証明</div><div class="scard-val" style="color:var(--emp-text2)">${certificates.filter(c=>c.cert_type==='退職証明書').length}</div></div>
-      </div>
-    </div>
-    <div class="search-bar">
-      <select id="fcEmp" onchange="renderCertList()" style="min-width:160px">
+    <div class="workspace-heading document-heading"><div><h1>証明書</h1><p class="workspace-help">在職・退職証明書の発行と、過去の発行履歴を確認できます。</p></div><button class="btn btn-primary" ${attendanceEmployeesReady?'':'disabled'} onclick="openDocumentComposer()">＋ 証明書を発行</button></div>
+    ${documentComposer('cert')}
+    <h2 class="document-section-title">発行履歴</h2>
+    <div class="search-bar document-filters">
+      <label>従業員<select id="fcEmp" onchange="setDocumentFilter('cert_list','employee',this.value)" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
-      </select>
-      <select id="fcType" onchange="renderCertList()">
+        ${documentEmployeeOptions(fe)}
+      </select></label>
+      <label>証明書の種類<select id="fcType" onchange="setDocumentFilter('cert_list','type',this.value)">
         <option value="">種別：全て</option>
         <option value="在職証明書" ${ft==='在職証明書'?'selected':''}>在職証明書</option>
         <option value="退職証明書" ${ft==='退職証明書'?'selected':''}>退職証明書</option>
-      </select>
-      <input type="month" id="fcMonth" value="${fm}" onchange="renderCertList()">
+      </select></label>
+      <label>発行月<input type="month" id="fcMonth" value="${emp_attr(fm)}" onchange="setDocumentFilter('cert_list','month',this.value)"></label>
     </div>
-    ${list.length===0?'<div class="empty">証明書の発行履歴がありません</div>':`
+    ${!documentCertificatesReady?'<div class="empty" role="alert">発行履歴を読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':list.length===0?'<div class="empty">条件に合う発行履歴がありません</div>':`
+    <p class="result-count document-count">${list.length}件の発行履歴</p>
     <div class="table-wrap"><table>
       <thead><tr><th>発行日</th><th>氏名</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${list.map(r=>`<tr>
         <td data-label="発行日" style="font-size:13px">${emp_esc(r.issued_date||'—')}</td>
-        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</span></td>
+        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</button></td>
         <td data-label="種別"><span class="badge ${r.cert_type==='在職証明書'?'badge-visa':'badge-retired'}">${emp_esc(r.cert_type||'—')}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
           <button class="btn btn-sm" onclick="${r.cert_type==='雇用契約書'?`emp_openContractModal(${r.employee_id})`:`reissueCert(${r.employee_id},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')`}">再発行</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button>
+          <details class="row-actions"><summary>その他</summary><button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button></details>
         </td>
       </tr>`).join('')}
       </tbody>

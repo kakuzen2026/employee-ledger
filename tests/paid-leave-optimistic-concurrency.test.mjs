@@ -51,7 +51,17 @@ function loadPaidLeaveUi({ grants = [], records = [] } = {}) {
     viewingId: null,
     yf: { employee_id: null, employee_name: '', use_type: '', shubetsu: '', kubun: '', input_by: '' },
     yfFromDetail: false,
+    EMP_UI: {saving:false,dirty:false,formReturn:null},
+    canLeaveEmployeeView() { return true; },
+    openEmployeeFormContext() { context.EMP_UI.formReturn={view:context.currentView}; },
+    setEmployeeSaving(value) { context.EMP_UI.saving=value; },
+    returnFromEmployeeForm() {
+      context.currentView=context.EMP_UI.formReturn?.view||'yukyu_list';context.yfFromDetail=false;
+      if(context.currentView==='detail')calls.renderDetail++;else calls.renderList++;
+    },
     confirmPermanentDelete() { return true; },
+    employeeGrantDataReady(){return true;},
+    markEmployeeDirty(){},
     calcYukyuInfo() { return { nextDate: '2026-09-01' }; },
     calcYukyuLegalDays() { return 10; },
     setNav() {},
@@ -131,4 +141,42 @@ test('Paid-leave record edit keeps the opened revision and stale handling return
   assert.equal(calls.recordReload, 1);
   assert.equal(calls.renderList, 1);
   assert.deepEqual(calls.toast, [{ message: staleMessage, type: 'warn' }]);
+});
+
+test('New grant double submission writes once while the first save is pending', async () => {
+  const {context,calls,elements}=loadPaidLeaveUi();
+  let release,writes=0;
+  const pending=new Promise(resolve=>{release=resolve;});
+  context.saveYukyuGrant=async()=>{writes++;await pending;};
+  context.openGrantModal(1);
+  const first=context.saveGrant();
+  await context.saveGrant();
+  assert.equal(writes,1);
+  assert.equal(context.EMP_UI.saving,true);
+  release();await first;
+  assert.equal(context.EMP_UI.saving,false);
+  assert.equal(elements.get('grantModal').classList.open,false);
+  assert.equal(calls.grantReload,1);
+});
+
+test('Unconfirmed grant data blocks opening and direct saving', async () => {
+  const {context,elements}=loadPaidLeaveUi();let writes=0;
+  context.employeeGrantDataReady=()=>false;
+  context.saveYukyuGrant=async()=>{writes++;};
+  context.openGrantModal(1);
+  elements.get('gm_date').value='2026-09-08';
+  await context.saveGrant();
+  assert.equal(elements.get('grantModal').classList.open,false);
+  assert.equal(writes,0);
+});
+
+test('Grant save success with failed reload closes the form without inviting another insert', async () => {
+  const {context,calls,elements}=loadPaidLeaveUi();let writes=0;
+  context.saveYukyuGrant=async()=>{writes++;};
+  context.loadGrants=async()=>{throw new Error('offline');};
+  context.openGrantModal(1);await context.saveGrant();
+  assert.equal(writes,1);
+  assert.equal(elements.get('grantModal').classList.open,false);
+  assert.equal(context.EMP_UI.saving,false);
+  assert.match(calls.toast.at(-1).message,/保存は完了/);
 });

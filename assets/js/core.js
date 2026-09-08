@@ -138,7 +138,12 @@ const NAV_BTNS={
   billing:`<button class="btn btn-primary" onclick="openBillingModal()">＋ <span class="btn-text">請求を記録</span></button>`,
 };
 function navigate(page){
+  if(typeof EMP_UI!=='undefined'&&EMP_UI.initialized&&ST.page==='jugyoin'&&page!=='jugyoin'){
+    if(!beginEmployeeNavigation())return;
+    if(['edit','add','yukyu_add'].includes(currentView))returnFromEmployeeForm(false);
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.body.classList.toggle('employee-workspace',page==='jugyoin');
   if(page!=='jugyoin'){
     document.body.classList.remove('theme-light');
     document.body.classList.add('theme-dark');

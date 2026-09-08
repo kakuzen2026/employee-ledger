@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <link rel="stylesheet" href="assets/css/app.css?v=20260728.2">
 <link rel="stylesheet" href="assets/css/employee.css?v=20260728.2">
+<link rel="stylesheet" href="assets/css/workspace.css?v=20260908.3">
 </head>
 <body class="theme-light app-booting login-only">
 <button id="emp-back-btn" onclick="navigate('jugyoin')">← 従業員管理に戻る</button>
@@ -220,39 +221,35 @@
 <div id="emp-app-inner" style="display:flex;flex-direction:column;min-height:100%">
   <header>
     <div class="emp-header-brand">
-      <h1>従業員管理台帳</h1>
-      <span>探す・登録する・確認するをここから</span>
+      <strong>KAKUZEN</strong>
+      <span>従業員台帳</span>
     </div>
-    <button class="emp-top-return" onclick="navigate('dashboard')">派遣管理へ</button>
-    <button class="hamburger" onclick="toggleMenu()" id="hamburgerBtn" aria-label="メニュー">
+    <button class="hamburger" onclick="toggleMenu()" id="hamburgerBtn" aria-label="メニュー" aria-expanded="false" aria-controls="navMenu">
       <span></span><span></span><span></span>
     </button>
-    <div class="nav-menu" id="navMenu">
-      <div class="emp-nav-group emp-nav-primary">
-        <span class="emp-nav-label">主要作業</span>
-        <button class="nav-btn" id="tList" onclick="showView('list');closeMenu()">一覧を見る</button>
-        <button class="nav-btn" id="tAdd" onclick="showView('add');closeMenu()">新規登録</button>
-        <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()" style="color:var(--emp-warn);border-color:var(--emp-warn)">警告確認<span class="nav-badge" id="navAlertBadge" style="display:none"></span></button>
-      </div>
-      <div class="emp-nav-group">
-        <span class="emp-nav-label">勤怠・書類</span>
-        <button class="nav-btn" id="tYukyu" onclick="showView('yukyu_list');closeMenu()">有休・勤怠一覧<span class="nav-badge" id="navYukyuBadge" style="display:none"></span></button>
-        <button class="nav-btn" id="tYukyuAdd" onclick="showView('yukyu_add');closeMenu()">有休・勤怠登録</button>
-        <button class="nav-btn" id="tKenko" onclick="showView('kenko_list');closeMenu()">健康診断</button>
-        <button class="nav-btn" id="tCert" onclick="showView('cert_list');closeMenu()">証明書</button>
-        <button class="nav-btn" id="tContract" onclick="showView('contract_list');closeMenu()">雇用契約書</button>
-      </div>
-      <div class="emp-nav-group emp-nav-actions">
-        <span class="emp-nav-label">管理</span>
+    <nav class="nav-menu" id="navMenu" aria-label="従業員台帳">
+      <button class="nav-btn" id="tList" onclick="showView('list');closeMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2Z"/></svg>従業員</button>
+      <button class="nav-btn" id="tYukyu" onclick="showView('yukyu_list');closeMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18M7 15h3m4 0h3m-10 3h3"/></svg>有休・勤怠<span class="nav-badge" id="navYukyuBadge" style="display:none"></span></button>
+      <button class="nav-btn" id="tAlert" onclick="showView('alert');closeMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h6"/></svg>書類・期限<span class="nav-badge" id="navAlertBadge" style="display:none"></span></button>
+      <div class="workspace-nav-bottom">
+        <button class="nav-btn" onclick="navigate('dashboard');closeMenu()">その他の業務</button>
         <button class="nav-btn" id="tSettings" onclick="showView('settings');closeMenu()">設定</button>
-        <button class="btn btn-sm" onclick="exportCSV();closeMenu()">CSV出力</button>
-        <label class="btn btn-sm" style="cursor:pointer">CSV取込<input type="file" accept=".csv" id="csvImportInput" style="display:none" onchange="importCSV(this)"></label>
-        <button class="btn btn-sm" onclick="downloadSampleCSV();closeMenu()">サンプル</button>
-        <button class="btn btn-sm" onclick="doLogout()">ログアウト</button>
+        <details class="workspace-data-menu"><summary>データの入出力</summary>
+          <button class="btn btn-sm" onclick="exportCSV();closeMenu()">CSV出力</button>
+          <label class="file-dropzone file-dropzone-csv" tabindex="0" role="button" aria-label="CSV取込"><strong>CSV取込</strong><span>ここにドロップ<br>またはクリック・タップ</span><small>CSV・1ファイルずつ</small><input type="file" accept=".csv" id="csvImportInput" onchange="importCSV(this)"></label>
+          <button class="btn btn-sm" onclick="downloadSampleCSV();closeMenu()">サンプルCSV</button>
+        </details>
+        <button class="nav-btn workspace-logout" onclick="doLogout()">ログアウト</button>
       </div>
-    </div>
+    </nav>
   </header>
+  <div id="employeeDocumentNav" hidden></div>
   <main id="mainContent"><div class="loading">読み込み中...</div></main>
+  <nav class="employee-mobile-nav" aria-label="主要画面">
+    <button data-employee-nav="tList" onclick="showView('list')">従業員</button>
+    <button data-employee-nav="tYukyu" onclick="showView('yukyu_list')">有休・勤怠</button>
+    <button data-employee-nav="tAlert" onclick="showView('alert')">書類・期限</button>
+  </nav>
 </div>
 
 <!-- 部署追加モーダル -->
@@ -701,18 +698,19 @@
 <div id="toast-container"></div>
 
 <script src="assets/js/firebase-adapter.js?v=20260901.3"></script>
-<script src="assets/js/core.js?v=20260728.2"></script>
+<script src="assets/js/core.js?v=20260908.3"></script>
 <script src="assets/js/dispatch.js?v=20260728.2"></script>
 <script src="assets/js/records-documents.js?v=20260728.2"></script>
 <script src="assets/js/billing-settings.js?v=20260728.2"></script>
 <script src="assets/js/employee-api.js?v=20260901.3"></script>
-<script src="assets/js/employee-core.js?v=20260908.1"></script>
-<script src="assets/js/employee-list-detail.js?v=20260908.1"></script>
-<script src="assets/js/employee-files.js?v=20260728.2"></script>
-<script src="assets/js/employee-settings-docs.js?v=20260728.5"></script>
-<script src="assets/js/employee-health.js?v=20260728.2"></script>
+<script src="assets/js/employee-core.js?v=20260908.3"></script>
+<script src="assets/js/employee-navigation.js?v=20260908.3"></script>
+<script src="assets/js/employee-list-detail.js?v=20260908.3"></script>
+<script src="assets/js/employee-files.js?v=20260908.4"></script>
+<script src="assets/js/employee-settings-docs.js?v=20260908.3"></script>
+<script src="assets/js/employee-health.js?v=20260908.3"></script>
 <script src="assets/js/attendance-points.js?v=20260908.2"></script>
-<script src="assets/js/paid-leave-csv.js?v=20260908.2"></script>
+<script src="assets/js/paid-leave-csv.js?v=20260908.3"></script>
 <script src="assets/js/init.js?v=20260728.2"></script>
 </body>
 </html>
