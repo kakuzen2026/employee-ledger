@@ -48,9 +48,10 @@ function confirmPermanentDelete(label){
 
 // ---- トースト通知 ----
 function _ensureToastWrap(){
-  if(document.getElementById('emp-toast-wrap'))return;
-  const wrap=document.createElement('div');wrap.id='emp-toast-wrap';
-  document.body.appendChild(wrap);
+  const target=document.querySelector('#attendanceDrawer[open],#documentEditor[open]')||document.getElementById('emp-app');
+  const wrap=document.getElementById('emp-toast-wrap')||document.createElement('div');wrap.id='emp-toast-wrap';
+  wrap.setAttribute('role','status');wrap.setAttribute('aria-live','polite');
+  if(wrap.parentElement!==target)target.appendChild(wrap);
 }
 function showToast(msg,type='success'){
   _ensureToastWrap();
@@ -93,19 +94,20 @@ syncFromST();
 
 // ---- 一覧表示列の設定 ----
 const ALL_COLS=[
-  {key:'name',label:'氏名',default:true},
-  {key:'company',label:'会社',default:true},
+  {key:'name',label:'氏名',default:true,always:true},
+  {key:'company',label:'会社',default:false},
   {key:'shozoku1',label:'所属1',default:true},
-  {key:'shozoku2',label:'所属2',default:true},
-  {key:'koyou',label:'雇用形態',default:true},
+  {key:'shozoku2',label:'所属2',default:false},
+  {key:'koyou',label:'雇用形態',default:false},
   {key:'status',label:'在籍',default:true},
-  {key:'visa',label:'在留資格',default:true},
-  {key:'visa_expiry',label:'在留期限',default:true},
-  {key:'license_expiry',label:'免許期限',default:true},
+  {key:'remaining',label:'有休残数',default:true},
+  {key:'attention',label:'確認事項',default:true},
+  {key:'visa',label:'在留資格',default:false},
+  {key:'visa_expiry',label:'在留期限',default:false},
+  {key:'license_expiry',label:'免許期限',default:false},
   {key:'nyusha_date',label:'入社日',default:false},
-  {key:'birthday',label:'生年月日',default:false},
-  {key:'dept',label:'部署',default:false},
-  {key:'updated_at',label:'更新日',default:true},
+  {key:'shain_no',label:'社員番号',default:false},
+  {key:'updated_at',label:'更新日',default:false},
 ];
 let visibleCols=ALL_COLS.filter(c=>c.default).map(c=>c.key);
 try{const s=localStorage.getItem('emp_cols')||localStorage.getItem('visibleCols');if(s)visibleCols=JSON.parse(s);}catch(e){}
@@ -123,18 +125,19 @@ function toggleMenu(){
   const btn=document.getElementById('hamburgerBtn');
   menu.classList.toggle('open');
   btn.classList.toggle('open');
+  btn.setAttribute('aria-expanded',String(menu.classList.contains('open')));
 }
 function closeMenu(){
   document.getElementById('navMenu')?.classList.remove('open');
   document.getElementById('hamburgerBtn')?.classList.remove('open');
+  document.getElementById('hamburgerBtn')?.setAttribute('aria-expanded','false');
 }
 // メニュー外タップで閉じる
 document.addEventListener('click',e=>{
   const menu=document.getElementById('navMenu');
   const btn=document.getElementById('hamburgerBtn');
   if(menu&&btn&&!menu.contains(e.target)&&!btn.contains(e.target)){
-    menu.classList.remove('open');
-    btn.classList.remove('open');
+    closeMenu();
   }
 });
 // innerHTMLで描画する操作ボタンは、インラインイベントに依存せずここで一括処理する
@@ -179,14 +182,18 @@ let attendanceEmployeesReady=false;
 async function loadEmployees(){attendanceEmployeesReady=false;EMP_ST.employees=(await fetchEmployees()).map(r=>({...r,yukyu_list:r.yukyu_list||[],kenkou_list:r.kenkou_list||[],shikaku_list:r.shikaku_list||[],residence_card_imgs:r.residence_card_imgs||[],license_imgs:r.license_imgs||[]}));employees=EMP_ST.employees;attendanceEmployeesReady=true;}
 let attendanceRecordsReady=false;
 async function loadYukyu(){attendanceRecordsReady=false;EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;attendanceRecordsReady=true;}
-async function loadGrants(){EMP_ST.yukyuGrants=await fetchYukyuGrants();yukyuGrants=EMP_ST.yukyuGrants;}
+let attendanceGrantsReady=false;
+async function loadGrants(){attendanceGrantsReady=false;EMP_ST.yukyuGrants=await fetchYukyuGrants();yukyuGrants=EMP_ST.yukyuGrants;attendanceGrantsReady=true;}
 async function loadDepts(){EMP_ST.departments=await fetchDepartments();departments=EMP_ST.departments;}
 async function loadVisaTypes(){EMP_ST.visaTypes=await fetchVisaTypes();visaTypes=EMP_ST.visaTypes;}
 async function loadCompanyInfo(){EMP_ST.companyInfo=await fetchCompanyInfo();companyInfo=EMP_ST.companyInfo;}
-async function loadCertificates(){EMP_ST.certificates=await fetchCertificates();certificates=EMP_ST.certificates;}
+let documentCertificatesReady=false,documentContractsReady=false;
+async function loadCertificates(){documentCertificatesReady=false;EMP_ST.certificates=await fetchCertificates();certificates=EMP_ST.certificates;documentCertificatesReady=true;}
 async function loadWorkPatterns(){EMP_ST.workPatterns=await fetchWorkPatterns();workPatterns=EMP_ST.workPatterns;}
-async function loadEmploymentContracts(){EMP_ST.employmentContracts=await fetchEmploymentContracts();employmentContracts=EMP_ST.employmentContracts;}
+async function loadEmploymentContracts(){documentContractsReady=false;EMP_ST.employmentContracts=await fetchEmploymentContracts();employmentContracts=EMP_ST.employmentContracts;documentContractsReady=true;}
 async function loadAndRender(){
+  const uiContext=EMP_UI.initialized?employeeSnapshot():null;
+  if(uiContext&&!canLeaveEmployeeView())return;
   // 優先度高（毎回取得）と低（初回のみ）に分けて並列実行
   const tasks=[
     {fn:loadEmployees,name:'従業員'},
@@ -208,11 +215,9 @@ async function loadAndRender(){
   syncFromST();
   // 有給自動付与は今日初回のみ実行
   const _grantKey='autoGrant_'+localDateStr();
-  if(!sessionStorage.getItem(_grantKey)){
-    sessionStorage.setItem(_grantKey,'1');
-    await checkAndAutoGrant();
-  }
-  render();
+  if(!sessionStorage.getItem(_grantKey)&&await checkAndAutoGrant())sessionStorage.setItem(_grantKey,'1');
+  if(uiContext){applyEmployeeSnapshot(uiContext);rememberEmployeeNavigation('replace');}
+  else{render();initializeEmployeeNavigation();}
 }
 
 // ---- 有給計算ヘルパー ----
@@ -402,7 +407,12 @@ function calcYukyuInfo(empId,todayValue){
 }
 
 // ---- 自動付与チェック（ログイン時に実行） ----
+function employeeGrantDataReady(){return attendanceEmployeesReady&&attendanceGrantsReady;}
+let autoGrantRunning=false;
 async function checkAndAutoGrant(todayValue){
+  if(!employeeGrantDataReady()||autoGrantRunning)return false;
+  autoGrantRunning=true;
+  try{
   const todayStr=resolveTodayStr(todayValue);
   const batch=[];
   const updates=[];
@@ -430,13 +440,17 @@ async function checkAndAutoGrant(todayValue){
       batch.push({id,employee_id:e.id,grant_date:d,days,expire_date:expireDate,_revision:1});
     }
   }
+  let succeeded=true;
   if(batch.length||updates.length){
     try{
       if(batch.length)await createYukyuGrants(batch);
       for(const u of updates)await saveYukyuGrant(u.id,u.patch,u.expectedRevision);
-    }catch(err){console.error('自動付与エラー',err);}
+    }catch(err){succeeded=false;console.error('自動付与エラー',err);}
     await loadGrants();
   }
+  return succeeded;
+  }catch(error){console.error('自動付与の再確認に失敗',error);return false;}
+  finally{autoGrantRunning=false;}
 }
 function deptLabel(d){return d?[d.shozoku1,d.shozoku2].filter(Boolean).join(' / '):''}
 function deptLabelById(id){const d=departments.find(x=>x.id===Number(id));return d?deptLabel(d):''}
@@ -551,23 +565,30 @@ async function saveDeptModal(){
 
 // ---- Nav ----
 function setNav(active){
-  ['tList','tAdd','tAlert','tYukyu','tYukyuAdd','tKenko','tCert','tContract','tSettings'].forEach(id=>{
+  const section=['tKenko','tCert','tContract','tAlert'].includes(active)?'tAlert':active==='tAdd'?'tList':active==='tYukyuAdd'?'tYukyu':active;
+  ['tList','tAlert','tYukyu','tSettings'].forEach(id=>{
     const el=document.getElementById(id);
     if(el){
-      el.className='nav-btn'+(id===active?' active':'');
-      if(id==='tAlert'&&id!==active)el.style.cssText='color:var(--emp-warn);border-color:var(--emp-warn)';
-      else if(id==='tAlert'&&id===active)el.style.cssText='';
+      el.classList.toggle('active',id===section);
+      if(id===section)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
     }
+  });
+  document.querySelectorAll('[data-employee-nav]').forEach(el=>{
+    const on=el.dataset.employeeNav===section;
+    el.classList.toggle('active',on);if(on)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
   });
   updateNavBadges();
 }
 function showView(v){
-  currentView=v;editingId=null;yfFromDetail=false;
-  if(v==='yukyu_add')yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};
+  if(v==='yukyu_add'){openYukyuFromList();return;}
+  if(!beginEmployeeNavigation())return;
+  if(v==='add')openEmployeeFormContext();
+  currentView=v;editingId=null;yfFromDetail=false;EMP_UI.dirty=false;
   render();
   setTimeout(()=>{const el=document.getElementById('page-jugyoin');if(el)el.scrollTop=0;},0);
 }
 function render(){
+  document.body.classList.toggle('employee-editing',['add','edit','yukyu_add'].includes(currentView));
   if(currentView==='list'){setNav('tList');renderList();}
   else if(currentView==='add'){setNav('tAdd');renderForm(null);}
   else if(currentView==='edit'){setNav('tList');renderForm(editingId);}
@@ -579,4 +600,16 @@ function render(){
   else if(currentView==='cert_list'){setNav('tCert');renderCertList();}
   else if(currentView==='contract_list'){setNav('tContract');renderContractList();}
   else if(currentView==='settings'){setNav('tSettings');renderSettings();}
+  renderEmployeeDocumentNav();
+  bindEmployeeLabels();
+  rememberEmployeeNavigation();
+}
+
+function renderEmployeeDocumentNav(){
+  const host=document.getElementById('employeeDocumentNav');
+  host.hidden=!['alert','kenko_list','cert_list','contract_list'].includes(currentView);
+  if(host.hidden)return;
+  const nav=document.createElement('nav');nav.className='workspace-tabs';nav.setAttribute('aria-label','書類・期限');
+  nav.innerHTML=[['alert','期限・確認事項'],['kenko_list','健康診断'],['cert_list','証明書'],['contract_list','雇用契約書']].map(([view,label])=>`<button class="${view===currentView?'active':''}" ${view===currentView?'aria-current="page"':''} onclick="showView('${view}')">${label}</button>`).join('');
+  host.replaceChildren(nav);
 }

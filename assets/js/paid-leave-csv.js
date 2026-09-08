@@ -1,84 +1,45 @@
-// ---- 有給一覧 ----
+// Shared record presentation for the all-staff list and employee detail.
+function employeeAttendanceTable(records,showEmployee=false,fromDetail=false){
+  if(!attendanceRecordsReady)return '<div class="empty" role="alert">勤怠記録を読み込めませんでした。<button class="btn" onclick="retryAttendanceLoad()">再読み込み</button></div>';
+  if(!records.length)return '<div class="empty">この条件の勤怠記録はありません。</div>';
+  return `<div class="table-wrap attendance-table"><table><thead><tr><th>日付</th>${showEmployee?'<th>氏名</th>':''}<th>内容</th><th>種別</th><th>区分</th><th>ポイント</th><th>入力者</th><th><span class="sr-only">操作</span></th></tr></thead><tbody>${records.map(r=>`<tr id="attendance-record-${Number(r.id)}" class="${EMP_UI.highlightId===r.id?'record-highlight':''}">
+    <td data-label="日付">${emp_esc(r.use_date||'日付未設定')}</td>
+    ${showEmployee?`<td data-label="氏名"><button class="emp-name" onclick="viewDetail(${Number(r.employee_id)},'yukyu')">${emp_esc(r.employee_name||'氏名未設定')}</button></td>`:''}
+    <td data-label="内容"><strong>${emp_esc(r.use_type||'未設定')}</strong>${r.biko?`<div class="record-note">${emp_esc(r.biko)}</div>`:''}<div class="record-note">${r.touroku_date?'登録 '+emp_esc(r.touroku_date):''}</div></td>
+    <td data-label="種別">${emp_esc(r.shubetsu||'—')}</td><td data-label="区分">${emp_esc(r.kubun||'未分類')}</td>
+    <td data-label="ポイント">${attendancePoints(r)===null?'未確定':attendancePoints(r)+'pt'}</td><td data-label="入力者">${emp_esc(r.input_by||'—')}</td>
+    <td class="no-label"><button class="btn btn-sm" onclick="openYukyuEdit(${Number(r.id)},${fromDetail})">編集</button><button class="text-button danger-text" onclick="delYR(${Number(r.id)})">削除</button></td></tr>`).join('')}</tbody></table></div>`;
+}
 function renderYukyuList(){
-  const fq=(document.getElementById('fyQ')||{}).value||'';
-  const fe=(document.getElementById('fyEmp')||{}).value||'';
-  const fm=(document.getElementById('fyMonth')||{}).value||'';
-  let list=yukyuRecords;
-  if(fq)list=list.filter(r=>{
+  const fq=EMP_UI.attendanceFilter.q,fe=EMP_UI.attendanceFilter.employee,fm=EMP_UI.attendanceFilter.month;
+  const list=yukyuRecords.filter(r=>{
     const e=employees.find(x=>x.id===Number(r.employee_id));
-    return(employeeSearchText(e)+(r.employee_name||'').toLowerCase()).includes(fq.toLowerCase());
-  });
-  if(fe)list=list.filter(r=>r.employee_id===Number(fe));
-  if(fm)list=list.filter(r=>r.use_date&&r.use_date.startsWith(fm));
-
-  // 在籍中全員の残日数一覧
-  const activeEmps=employees.filter(e=>e.status==='在籍'&&(!fq||employeeSearchText(e).includes(fq.toLowerCase())));
+    return (!fq||(employeeSearchText(e)+(r.employee_name||'').toLowerCase()).includes(fq.toLowerCase()))&&(!fe||Number(r.employee_id)===Number(fe))&&(!fm||r.use_date?.startsWith(fm));
+  }).sort((a,b)=>(b.use_date||'').localeCompare(a.use_date||''));
+  const activeEmps=employees.filter(e=>e.status==='在籍'&&(!fe||Number(e.id)===Number(fe))&&(!fq||employeeSearchText(e).includes(fq.toLowerCase())));
+  const tab=EMP_UI.attendanceTab;
   document.getElementById('mainContent').innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:16px;font-weight:700">有休・勤怠管理</span>
-      <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="exportYukyuCSV()">CSV出力</button><button class="btn btn-primary btn-sm" onclick="showView('yukyu_add')">＋ 有休・勤怠登録</button></div>
+    <div class="workspace-heading"><h1>有休・勤怠</h1><div class="workspace-actions"><button class="btn btn-sm" onclick="exportYukyuCSV()">勤怠CSV</button><button class="btn btn-primary" onclick="showView('yukyu_add')">＋ 有休・勤怠を登録</button></div></div>
+    <nav class="workspace-tabs" aria-label="有休・勤怠の表示">${[['records','勤怠記録'],['balance','有休残数・付与'],['allowance','皆勤手当']].map(([key,label])=>`<button class="${key===tab?'active':''}" ${key===tab?'aria-current="page"':''} onclick="setAttendanceTab('${key}')">${label}</button>`).join('')}</nav>
+    <div class="search-bar attendance-search"><div class="search-input-group"><input id="fyQ" aria-label="勤怠の氏名・所属で検索" placeholder="氏名・所属で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)updateAttendanceFilters()"><button class="btn" onclick="updateAttendanceFilters()">検索</button></div>
+      <select id="fyEmp" aria-label="従業員" onchange="updateAttendanceFilters()"><option value="">すべての従業員</option>${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}${e.status==='退職'?'（退職）':''}</option>`).join('')}</select>
+      ${tab==='records'?`<label class="month-filter">対象月<input type="month" id="fyMonth" value="${emp_attr(fm)}" onchange="updateAttendanceFilters()"></label>`:''}
     </div>
-
-    <div class="search-bar" style="flex-wrap:wrap">
-      <input id="fyQ" style="flex:1 1 200px;min-width:140px" aria-label="氏名・部署・在留資格で検索" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
-      <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
-      <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
-        <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
-      </select>
-      <label style="display:flex;align-items:center;gap:6px">履歴の月 <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()"></label>
-    </div>
-
-    ${attendanceReportHtml(attendanceFilteredEmployees(fq,fe))}
-    <div style="font-size:13px;font-weight:500;margin-bottom:8px">残日数一覧（在籍中）</div>
-    <div class="table-wrap" style="margin-bottom:20px"><table>
-      <thead><tr><th>氏名</th><th>所属</th><th>残日数</th><th>付与合計</th><th>取得合計</th><th>次回付与日</th><th></th></tr></thead>
-      <tbody>${activeEmps.map(e=>{
-        const info=calcYukyuInfo(e.id);
-        return`<tr>
-          <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
-          <td data-label="所属" style="font-size:12px;color:var(--emp-text2)">${emp_esc(deptLabelById(e.dept_id)||'—')}</td>
-          <td data-label="残日数"><span style="font-weight:700;color:${info.remaining>0?'#1a5c30':'var(--emp-text2)'}">${info.remaining}日</span></td>
-          <td data-label="付与合計" style="font-size:13px">${info.granted}日</td>
-          <td data-label="取得合計" style="font-size:13px">${info.used}日</td>
-          <td data-label="次回付与日" style="font-size:12px;color:var(--emp-text2)">${emp_esc(info.nextDate||'—')}</td>
-          <td class="no-label"><button class="btn btn-sm" onclick="detailTab='yukyu';viewingId=${e.id};currentView='detail';render()">詳細</button></td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table></div>
-
-    <div style="font-size:13px;font-weight:500;margin-bottom:8px">有休・勤怠履歴</div>
-    ${list.length===0?'<div class="empty">有休・勤怠記録がありません</div>':`
-    <div class="table-wrap"><table>
-      <thead><tr><th>使用日</th><th>氏名</th><th>使用内容</th><th>種別</th><th>区分</th><th>ポイント</th><th>入力者</th><th>登録日</th><th>備考</th><th></th></tr></thead>
-      <tbody>${list.map(r=>`<tr>
-        <td data-label="使用日">${emp_esc(r.use_date||'—')}</td>
-        <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</span></td>
-        <td data-label="使用内容"><span class="badge badge-visa">${emp_esc(r.use_type||'—')}</span></td>
-        <td data-label="種別"><span class="chip">${emp_esc(r.shubetsu||'—')}</span></td>
-        <td data-label="区分"><span class="chip">${emp_esc(r.kubun||'未分類')}</span></td>
-        <td data-label="ポイント">${attendancePoints(r)===null?'未分類等':attendancePoints(r)+'pt'}</td>
-        <td data-label="入力者">${emp_esc(r.input_by||'—')}</td>
-        <td data-label="登録日" style="font-size:12px;color:var(--emp-text3)">${emp_esc(r.touroku_date||'—')}</td>
-        <td data-label="備考" style="font-size:12px;color:var(--emp-text2);max-width:140px">${emp_esc(r.biko||'')}</td>
-        <td class="no-label"><button class="btn btn-sm" onclick="openYukyuEdit(${r.id})">編集</button> <button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></td>
-      </tr>`).join('')}</tbody>
-    </table></div>`}`;
+    ${tab==='allowance'?attendanceReportHtml(attendanceFilteredEmployees(fq,fe)):tab==='balance'?`
+      <p class="workspace-help">在籍中の従業員を表示しています。詳細から付与の登録・編集ができます。</p>
+      ${!attendanceGrantsReady||!attendanceRecordsReady?'<div class="empty" role="alert">有休データを読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':`<div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th><th>有休残数</th><th>付与済み合計</th><th>記録上の取得合計</th><th>次回付与日</th><th></th></tr></thead><tbody>${activeEmps.map(e=>{const info=calcYukyuInfo(e.id);return `<tr><td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td><td data-label="有休残数"><strong>${info.remaining}日</strong></td><td data-label="付与済み合計">${info.granted}日</td><td data-label="記録上の取得合計">${info.used}日</td><td data-label="次回付与日">${emp_esc(info.nextDate||'—')}</td><td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id},'yukyu')">付与・詳細</button></td></tr>`;}).join('')||'<tr><td colspan="7">該当する従業員がいません。</td></tr>'}</tbody></table></div>`}`:employeeAttendanceTable(list,true)}`;
 }
 const PAID_LEAVE_STALE_MESSAGE='別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
 function paidLeaveRevision(row){return row?._revision==null?0:row._revision;}
 function isStaleWrite(error){return error?.code==='STALE_WRITE';}
 async function reloadPaidLeaveAfterStale(kind,employeeId=null){
   if(kind==='grant'){
-    closeGrantModal();await loadGrants();renderDT();
+    closeGrantModal(true);await loadGrants();renderDT();
   }else{
-    const fromDetail=yfFromDetail;
-    const targetEmployeeId=employeeId??yf?.employee_id??null;
-    yf={employee_id:null,employee_name:'',use_type:'',shubetsu:'',kubun:'',input_by:''};yfFromDetail=false;
     await loadYukyu();
-    if(fromDetail&&targetEmployeeId!=null){detailTab='yukyu';viewingId=targetEmployeeId;currentView='detail';render();}
-    else {currentView='yukyu_list';renderYukyuList();}
+    if(currentView==='yukyu_add')returnFromEmployeeForm();
+    else if(currentView==='detail')renderDT();
+    else renderYukyuList();
   }
   showToast(PAID_LEAVE_STALE_MESSAGE,'warn');
 }
@@ -121,7 +82,13 @@ async function saveKousokuDate(id,clear=false){
 
 // ---- 有給付与 ----
 let grantEmpId=null,grantEditId=null,grantEditRevision=null;
+function requireGrantData(){
+  if(employeeGrantDataReady())return true;
+  showToast('従業員・有休付与データを再読み込みしてから操作してください。','error');return false;
+}
 function openGrantModal(empId,editGrantId=null){
+  if(!requireGrantData()||!canLeaveEmployeeView())return;
+  if(EMP_UI.dirty)renderDT();EMP_UI.dirty=false;
   grantEmpId=empId;grantEditId=editGrantId;grantEditRevision=null;
   document.getElementById('grantModalTitle').textContent=editGrantId?'有給付与を編集':'有給付与を登録';
   if(editGrantId){
@@ -139,11 +106,15 @@ function openGrantModal(empId,editGrantId=null){
   }
   const dateInput=document.getElementById('gm_date');
   const daysInput=document.getElementById('gm_days');
-  dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';};
+  dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';markEmployeeDirty();};
   document.getElementById('grantModal').classList.add('open');
 }
-function closeGrantModal(){document.getElementById('grantModal').classList.remove('open');grantEmpId=null;grantEditId=null;grantEditRevision=null;}
+function closeGrantModal(force=false){
+  if(!force&&!canLeaveEmployeeView())return;
+  document.getElementById('grantModal').classList.remove('open');grantEmpId=null;grantEditId=null;grantEditRevision=null;EMP_UI.dirty=false;
+}
 async function saveGrant(){
+  if(EMP_UI.saving||!requireGrantData())return;
   const d=document.getElementById('gm_date').value;
   if(!d){showToast('付与日は必須です','error');return;}
   const daysVal=document.getElementById('gm_days').value;
@@ -153,19 +124,23 @@ async function saveGrant(){
     const ed=new Date(d);ed.setFullYear(ed.getFullYear()+2);ed.setDate(ed.getDate()-1);
     expire=ed.toISOString().slice(0,10);
   }
+  let saved=false;setEmployeeSaving(true);
   try{
     if(grantEditId){
       await saveYukyuGrant(grantEditId,{grant_date:d,days,expire_date:expire},grantEditRevision);
     } else {
       await saveYukyuGrant(null,{employee_id:grantEmpId,grant_date:d,days,expire_date:expire});
     }
-    await loadGrants();closeGrantModal();renderDT();
+    saved=true;EMP_UI.dirty=false;
+    await loadGrants();closeGrantModal(true);renderDT();
   }catch(e){
-    if(isStaleWrite(e))await reloadPaidLeaveAfterStale('grant');
+    if(saved){closeGrantModal(true);renderDT();showToast('付与の保存は完了しました。最新データを再読み込みしてください。','warn');}
+    else if(isStaleWrite(e))await reloadPaidLeaveAfterStale('grant');
     else showToast('保存に失敗しました：'+e.message,'error');
-  }
+  }finally{setEmployeeSaving(false);}
 }
 async function delGrant(id,empId){
+  if(EMP_UI.saving||!requireGrantData())return;
   if(!confirmPermanentDelete('この付与記録'))return;
   const grant=yukyuGrants.find(row=>row.id===Number(id));
   if(!grant){showToast('有給付与が見つかりません','error');return;}
@@ -179,66 +154,74 @@ async function delGrant(id,empId){
 }
 
 // ---- 有給登録 ----
+function newAttendanceDraft(employeeId=null){
+  const e=employees.find(x=>x.id===employeeId);
+  return {employee_id:e?.id||null,employee_name:e?e.sei+' '+e.mei:'',use_date:localDateStr(),use_type:'',shubetsu:'',kubun:'',input_by:'',biko:''};
+}
+function openYukyuFromList(){
+  if(!canLeaveEmployeeView())return;
+  openEmployeeFormContext();
+  yf=newAttendanceDraft(Number(EMP_UI.attendanceFilter.employee)||null);yfFromDetail=false;
+  currentView='yukyu_add';setNav('tYukyu');renderYukyuAdd();
+}
 function openYukyuFromDetail(empId){
-  const e=employees.find(x=>x.id===empId);
-  yf={employee_id:empId,employee_name:e.sei+' '+e.mei,use_type:'',shubetsu:'',kubun:'',input_by:''};
-  yfFromDetail=true;currentView='yukyu_add';setNav('tYukyuAdd');renderYukyuAdd();
+  if(!canLeaveEmployeeView()||!employees.some(e=>e.id===empId))return;
+  openEmployeeFormContext();yf=newAttendanceDraft(empId);
+  yfFromDetail=true;currentView='yukyu_add';setNav('tList');renderYukyuAdd();
 }
 function openYukyuEdit(id,fromDetail=false){
   const r=yukyuRecords.find(x=>x.id===Number(id));
-  if(!r){showToast('有休・勤怠記録が見つかりません','error');return;}
+  if(!r){showToast('有休・勤怠記録が見つかりません','error');return false;}
+  if(!canLeaveEmployeeView())return false;
+  if(currentView!=='yukyu_add')openEmployeeFormContext();
+  EMP_UI.dirty=false;
   yf={id:r.id,_revision:paidLeaveRevision(r),employee_id:r.employee_id,employee_name:r.employee_name||'',use_date:r.use_date||'',use_type:r.use_type||'',shubetsu:r.shubetsu||'',kubun:r.kubun||'',input_by:r.input_by||'',biko:r.biko||''};
-  yfFromDetail=fromDetail;currentView='yukyu_add';setNav('tYukyuAdd');renderYukyuAdd();
+  yfFromDetail=fromDetail;currentView='yukyu_add';setNav(fromDetail?'tList':'tYukyu');renderYukyuAdd();return true;
 }
 function renderYukyuAdd(){
-  document.getElementById('mainContent').innerHTML=`
-    <div class="sticky-back">
-      <button class="btn btn-sm" onclick="${yfFromDetail?`detailTab='yukyu';currentView='detail';yfFromDetail=false;render()`:"showView('yukyu_list')"}">← 戻る</button>
-      <h2>${yf.id?'有休・勤怠編集':'有休・勤怠登録'}</h2>
-    </div>
-    <div class="yukyu-form">
-      <div class="frow">
-        <label>従業員を選択 <span style="color:var(--emp-danger)">*</span></label>
-        ${yf.employee_id?`
-          <div class="emp-selected-box">
-            <span style="font-weight:500;font-size:14px">${yf.employee_name}</span>
-            ${!yfFromDetail?`<button class="btn btn-sm" style="margin-left:auto" onclick="yf.employee_id=null;yf.employee_name='';renderYukyuAdd()">変更</button>`:''}
-          </div>`:`
-          <div class="emp-search-wrap">
-            <input class="emp-search-input" id="empQ" placeholder="氏名で検索して選択..." oninput="filterEmpDD()" onfocus="showEmpDD()" onblur="setTimeout(hideEmpDD,200)" autocomplete="off">
-            <div class="emp-dropdown" id="empDD">${empDDItems('')}</div>
-          </div>`}
+  let dialog=document.getElementById('attendanceDrawer');
+  const isNew=!dialog;
+  if(isNew){
+    dialog=document.createElement('dialog');dialog.id='attendanceDrawer';dialog.className='attendance-drawer';
+    dialog.setAttribute('aria-labelledby','attendanceFormTitle');
+    dialog.addEventListener('cancel',event=>{event.preventDefault();cancelEmployeeForm();});
+    document.getElementById('emp-app-inner').appendChild(dialog);
+  }
+  const options=(key,label,values)=>`<fieldset class="frow"><legend>${label}<span class="required-mark">必須</span></legend><div class="sel-group">${values.map(t=>`<button type="button" class="sel-btn ${yf[key]===t?'selected':''}" aria-pressed="${yf[key]===t}" onclick="selYF('${key}','${t}',this)">${t}</button>`).join('')}</div></fieldset>`;
+  dialog.innerHTML=`<form onsubmit="event.preventDefault();saveYR()" novalidate>
+    <div class="drawer-header"><div><h2 id="attendanceFormTitle">有休・勤怠を${yf.id?'編集':'登録'}</h2><p>保存後は、元の画面に戻ります。</p></div><button class="drawer-close" type="button" aria-label="登録画面を閉じる" onclick="cancelEmployeeForm()">×</button></div>
+    <div class="drawer-fields">
+      <div class="frow"><label for="empQ">従業員<span class="required-mark">必須</span></label>
+        ${yf.employee_id?`<div class="emp-selected-box"><strong>${emp_esc(yf.employee_name)}</strong>${!yfFromDetail?'<button type="button" class="text-button" onclick="changeYukyuEmployee()">変更</button>':''}</div>`:`<div class="emp-search-wrap"><input class="emp-search-input" id="empQ" aria-label="従業員を検索" placeholder="氏名で検索して選択" oninput="filterEmpDD()" onfocus="showEmpDD()" onkeydown="if(event.key==='ArrowDown'){event.preventDefault();document.querySelector('#empDD button')?.focus()}" autocomplete="off"><div class="emp-dropdown" id="empDD">${empDDItems('')}</div></div>`}
       </div>
-      <div class="frow"><label>日付 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${yf.use_date||new Date().toISOString().slice(0,10)}" style="max-width:200px" oninput="yf.use_date=this.value;renderYukyuDuplicateWarning()"></div>
-      <div id="yukyuDupWarning">${yukyuDuplicateWarningHtml(yf.use_date||new Date().toISOString().slice(0,10))}</div>
-      <div class="frow"><label>内容（全日・半休は有休） <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>種別 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${SHUBETSU.map(t=>`<button class="sel-btn ${yf.shubetsu===t?'selected':''}" onclick="selYF('shubetsu','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>区分 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${KUBUN.map(t=>`<button class="sel-btn ${yf.kubun===t?'selected':''}" onclick="selYF('kubun','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>入力者 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${INPUT_BY.map(t=>`<button class="sel-btn ${yf.input_by===t?'selected':''}" onclick="selYF('input_by','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>備考</label><textarea id="yBiko" oninput="yf.biko=this.value" rows="3" style="max-width:500px">${emp_esc(yf.biko||'')}</textarea></div>
-      <div style="height:80px"></div>
-    </div>
-    <div class="sticky-footer">
-      <button class="btn" onclick="${yfFromDetail?`detailTab='yukyu';currentView='detail';yfFromDetail=false;render()`:"showView('yukyu_list')"}">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveYR()">${yf.id?'更新する':'登録する'}</button>
-    </div>`;
+      <div class="frow"><label for="yDate">日付<span class="required-mark">必須</span></label><input type="date" id="yDate" value="${emp_attr(yf.use_date||localDateStr())}" oninput="yf.use_date=this.value;renderYukyuDuplicateWarning()" aria-required="true"></div>
+      <div id="yukyuDupWarning">${yukyuDuplicateWarningHtml(yf.use_date||localDateStr())}</div>
+      ${options('use_type','内容（全日・半休は有休）',USE_TYPES)}
+      ${options('shubetsu','種別',SHUBETSU)}${options('kubun','区分',KUBUN)}${options('input_by','入力者',INPUT_BY)}
+      <div class="frow"><label for="yBiko">備考（任意）</label><textarea id="yBiko" rows="3" oninput="yf.biko=this.value">${emp_textarea(yf.biko||'')}</textarea></div>
+    </div><div class="drawer-footer"><button type="button" class="btn" onclick="cancelEmployeeForm()">キャンセル</button><button id="saveAttendanceButton" type="submit" class="btn btn-primary">保存する</button></div>
+  </form>`;
+  document.body.classList.add('employee-form-open','employee-editing');
+  if(isNew)dialog.showModal();
 }
 function empDDItems(q){
-  return employees.filter(e=>e.status==='在籍'&&(!q||(e.sei+e.mei+(e.seikana||'')+(e.meikana||'')+(e.shain_no||'')).toLowerCase().includes(q.toLowerCase())))
-    .map(e=>`<div class="emp-option" onclick="pickEmp(${e.id},'${e.sei} ${e.mei}')">
-      <div style="font-weight:500">${e.sei} ${e.mei}</div>
-      <div style="font-size:11px;color:var(--emp-text3);display:flex;gap:8px;margin-top:2px">
-        ${e.seikana||e.meikana?`<span>${e.seikana||''} ${e.meikana||''}</span>`:''}
-        ${e.shain_no?`<span>No.${e.shain_no}</span>`:''}
-        <span>${deptLabelById(e.dept_id)||''}</span>
-      </div>
-    </div>`).join('');
+  const list=employees.filter(e=>e.status==='在籍'&&(!q||employeeSearchText(e).includes(q.toLowerCase())));
+  return list.map(e=>`<button type="button" class="emp-option" onclick="pickEmp(${e.id})"><strong>${emp_esc(e.sei)} ${emp_esc(e.mei)}</strong><span>${emp_esc(e.shain_no||'')} · ${emp_esc(deptLabelById(e.dept_id)||'')}</span></button>`).join('')||'<p class="workspace-help">該当する従業員がいません。</p>';
 }
 function showEmpDD(){document.getElementById('empDD')?.classList.add('show');}
 function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');}
-function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
-function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
-function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');if(key==='use_type')renderYukyuDuplicateWarning();}
+function filterEmpDD(){const q=document.getElementById('empQ')?.value||'',d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
+function pickEmp(id){const e=employees.find(x=>x.id===id);if(!e)return;yf.employee_id=id;yf.employee_name=e.sei+' '+e.mei;markEmployeeDirty();renderYukyuAdd();document.getElementById('yDate').focus();}
+function changeYukyuEmployee(){yf.employee_id=null;yf.employee_name='';markEmployeeDirty();renderYukyuAdd();document.getElementById('empQ').focus();}
+function selYF(key,val,btn){yf[key]=val;markEmployeeDirty();btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>{const active=b===btn;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));});if(key==='use_type')renderYukyuDuplicateWarning();}
+function previewYukyuRecord(id){
+  const r=yukyuRecords.find(x=>x.id===id);if(!r)return;
+  const dialog=document.createElement('dialog');dialog.className='attendance-preview';dialog.setAttribute('aria-label','同日の申請');
+  dialog.innerHTML=`<h2>同日の申請</h2><p>${emp_esc(r.employee_name)}</p><dl><dt>日付・内容</dt><dd>${emp_esc(r.use_date)} · ${emp_esc(r.use_type||'未設定')}</dd><dt>種別・区分</dt><dd>${emp_esc(r.shubetsu||'—')} · ${emp_esc(r.kubun||'未分類')}</dd><dt>入力者</dt><dd>${emp_esc(r.input_by||'—')}</dd><dt>備考</dt><dd>${emp_esc(r.biko||'—')}</dd></dl><div class="workspace-actions"><button class="btn" data-close>入力に戻る</button><button class="btn btn-primary" data-edit>この申請を編集</button></div>`;
+  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+  dialog.querySelector('[data-edit]').onclick=()=>{if(openYukyuEdit(id,yfFromDetail))dialog.close();};
+  dialog.addEventListener('close',()=>dialog.remove());document.getElementById('emp-app').appendChild(dialog);dialog.showModal();
+}
 function findYukyuSameDayRecords(employeeId,useDate,ignoreId=null){
   if(!employeeId||!useDate)return [];
   const emp=employees.find(e=>e.id===Number(employeeId));
@@ -263,7 +246,7 @@ function yukyuDuplicateWarningHtml(useDate){
   const duplicate=findYukyuDuplicateRecord(yf.employee_id,useDate,yf.id);
   return `<div class="alert alert-warning" style="margin-bottom:16px">
     <div>同じ従業員・同じ日付の申請が${records.length}件あります。${duplicate?'同じ内容の重複登録はできません。':''}</div>
-    <ul style="margin:8px 0 0;padding-left:20px">${records.map(r=>`<li>${Number.isSafeInteger(Number(r.id))?`<a href="#attendance-record-${Number(r.id)}" onclick="event.preventDefault();openYukyuEdit(${Number(r.id)},yfFromDetail)">${emp_esc(r.use_date)}・${emp_esc(r.use_type||'内容未設定')}・${emp_esc(r.kubun||'未分類')}の申請を開く</a>`:'申請IDを確認してください'}</li>`).join('')}</ul>
+    <ul style="margin:8px 0 0;padding-left:20px">${records.map(r=>`<li>${Number.isSafeInteger(Number(r.id))?`<a href="#attendance-record-${Number(r.id)}" onclick="event.preventDefault();previewYukyuRecord(${Number(r.id)})">${emp_esc(r.use_date)}・${emp_esc(r.use_type||'内容未設定')}・${emp_esc(r.kubun||'未分類')}の申請を開く</a>`:'申請IDを確認してください'}</li>`).join('')}</ul>
   </div>`;
 }
 function renderYukyuDuplicateWarning(){
@@ -271,6 +254,7 @@ function renderYukyuDuplicateWarning(){
   if(el)el.innerHTML=yukyuDuplicateWarningHtml(document.getElementById('yDate')?.value||'');
 }
 async function saveYR(){
+  if(EMP_UI.saving)return;
   if(!yf.employee_id){showToast('従業員を選択してください','error');return;}
   const d=document.getElementById('yDate')?.value;
   if(!d){showToast('使用日を入力してください','error');return;}
@@ -284,17 +268,18 @@ async function saveYR(){
   if(!yf.shubetsu){showToast('種別を選択してください','error');return;}
   if(!['計画','突発'].includes(yf.kubun)){showToast('計画または突発を選択してください','error');return;}
   if(!yf.input_by){showToast('入力者を選択してください','error');return;}
+  let saved=false;
+  setEmployeeSaving(true);
   try{
     const payload={employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,biko:document.getElementById('yBiko')?.value||''};
-    if(yf.id)await updateYukyuRecord(yf.id,payload,yf._revision);
-    else await createYukyuRecord({...payload,touroku_date:new Date().toISOString().slice(0,10)});
-    await loadYukyu();showToast(yf.id?'更新しました':'登録しました');
-    if(yfFromDetail){detailTab='yukyu';currentView='detail';yfFromDetail=false;render();}
-    else showView('yukyu_list');
+    const result=yf.id?await updateYukyuRecord(yf.id,payload,yf._revision):await createYukyuRecord({...payload,touroku_date:new Date().toISOString().slice(0,10)});
+    saved=true;EMP_UI.dirty=false;EMP_UI.highlightId=yf.id||result?.[0]?.id||null;
+    await loadYukyu();returnFromEmployeeForm();showToast('保存しました');
   }catch(e){
-    if(isStaleWrite(e))await reloadPaidLeaveAfterStale('record');
+    if(saved){returnFromEmployeeForm();showToast('保存は完了しました。一覧の再読み込みに失敗したため、再読み込みしてください。','warn');}
+    else if(isStaleWrite(e))await reloadPaidLeaveAfterStale('record');
     else showToast('保存に失敗しました：'+e.message,'error');
-  }
+  }finally{setEmployeeSaving(false);}
 }
 
 // ---- 従業員フォーム ----
@@ -306,7 +291,7 @@ function renderForm(id){
   while(skFormImgData.length<3)skFormImgData.push('');
   document.getElementById('mainContent').innerHTML=`
     <div class="sticky-back">
-      <button class="btn btn-sm" onclick="currentView='list';render()">← 一覧</button>
+      <button class="btn btn-sm" onclick="cancelEmployeeForm()">← 戻る</button>
       <h2>${isEdit?'従業員情報を編集':'新規従業員登録'}</h2>
     </div>
     <div class="form-wrap">
@@ -394,8 +379,8 @@ function renderForm(id){
     </div>
     <div class="field" style="margin-top:10px">
       <label>在留カード写真</label>
-      <label class="photo-upload" id="rcDropArea" style="display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer">
-        <input type="file" accept="image/*,application/pdf" id="f_rc" style="display:none" onchange="previewRC(this)">
+      <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="rcDropArea" style="display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer">
+        <input type="file" accept="image/*,application/pdf" id="f_rc" style="display:none" onchange="previewRC(this)">${fileDropHint("image/*,application/pdf")}
         <span id="rcPreview">${e.residence_card?`<img src="${e.residence_card}" style="max-height:120px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして在留カードを追加'}</span>
       </label>
     </div>
@@ -409,8 +394,8 @@ function renderForm(id){
     </div>
     <div class="field" style="margin-top:10px">
       <label>免許証写真</label>
-      <label class="photo-upload" id="licDropArea" style="display:flex;align-items:center;justify-content:center;min-height:70px;cursor:pointer">
-        <input type="file" accept="image/*,application/pdf" id="f_lic_img" style="display:none" onchange="previewLicForm(this)">
+      <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="licDropArea" style="display:flex;align-items:center;justify-content:center;min-height:70px;cursor:pointer">
+        <input type="file" accept="image/*,application/pdf" id="f_lic_img" style="display:none" onchange="previewLicForm(this)">${fileDropHint("image/*,application/pdf")}
         <span id="licFormPreview">${e.license_img?`<img src="${e.license_img}" style="max-height:100px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして免許証を追加'}</span>
       </label>
     </div>
@@ -423,8 +408,8 @@ function renderForm(id){
           <div class="field"><label>資格名</label><input type="text" id="f_sk${i}_name" value="${sk.name||''}"></div>
           <div class="field">
             <label>写真・PDF</label>
-            <label class="photo-upload" id="skDrop${i}" style="display:flex;align-items:center;justify-content:center;min-height:50px;cursor:pointer">
-              <input type="file" accept="image/*,application/pdf" id="f_sk${i}_img" style="display:none" onchange="previewSkForm(this,${i})">
+            <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="skDrop${i}" style="display:flex;align-items:center;justify-content:center;min-height:50px;cursor:pointer">
+              <input type="file" accept="image/*,application/pdf" id="f_sk${i}_img" style="display:none" onchange="previewSkForm(this,${i})">${fileDropHint("image/*,application/pdf")}
               <span id="skFormPreview${i}">${sk.img?`<img src="${sk.img}" style="max-height:60px;border-radius:4px">`:'クリックまたはドロップ'}</span>
             </label>
           </div>
@@ -441,15 +426,28 @@ function renderForm(id){
     <div class="page-actions" style="visibility:hidden;height:0;margin:0;padding:0"></div>
     </div>
     <div class="sticky-footer">
-      <button class="btn" onclick="currentView='list';render()">キャンセル</button>
+      <button class="btn" onclick="cancelEmployeeForm()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveForm(${isEdit},${e.id||'null'})">保存</button>
     </div>`;
-  setTimeout(setupFormDropZones,50);
+  groupEmployeeFormSections();bindEmployeeLabels();
+}
+function groupEmployeeFormSections(){
+  const wrap=document.querySelector('#mainContent .form-wrap');
+  const openFor={visa:'在留',insurance:'保険',license:'免許',memo:'メモ'}[detailTab]||'基本';
+  let section;
+  for(const node of [...wrap.children]){
+    if(node.classList.contains('section-title')){
+      section=document.createElement('details');section.className='employee-form-section';
+      section.open=node.textContent.includes(openFor);
+      const summary=document.createElement('summary');summary.textContent=node.textContent;
+      section.appendChild(summary);wrap.insertBefore(section,node);node.remove();
+    }else if(section)section.appendChild(node);
+  }
 }
 function fi(key,label,val,type='text',isTA=false,full=false){
   const v=val||'',s=full?'style="grid-column:1/-1"':'';
-  if(isTA)return`<div class="field" ${s}><label>${emp_esc(label)}</label><textarea id="f_${key}" rows="3">${emp_textarea(v)}</textarea></div>`;
-  return`<div class="field" ${s}><label>${emp_esc(label)}</label><input type="${type}" id="f_${key}" value="${emp_attr(v)}"></div>`;
+  if(isTA)return`<div class="field" ${s}><label for="f_${key}">${emp_esc(label||'メモ')}</label><textarea id="f_${key}" rows="3">${emp_textarea(v)}</textarea></div>`;
+  return`<div class="field" ${s}><label for="f_${key}">${emp_esc(label)}</label><input type="${type}" id="f_${key}" value="${emp_attr(v)}"></div>`;
 }
 function onTaishokuChange(){
   const d=document.getElementById('f_taishoku_date')?.value;
@@ -472,31 +470,19 @@ function calcAge(){
   d.textContent=v?calcAgeVal(v)+'歳':'生年月日を入力してください';
 }
 function previewRC(input){
-  const f=input.files[0];if(!f)return;
-  if(!validateUploadFile(f)){input.value='';return;}
-  (f.type.startsWith('image/')?compressImage(f):fileToDataURL(f)).then(data=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=f.type.startsWith('image/')?`<img src="${data}" style="max-height:120px;border-radius:var(--emp-radius)">`:'PDFを添付済み';});
+  return readAttachment(input,(data,file)=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=filePreviewHtml(data,'120px');});
 }
 let licFormImgData='';
 let skFormImgData=['','',''];
 function previewLicForm(input){
-  const f=input.files[0];if(!f)return;
-  if(!validateUploadFile(f)){input.value='';return;}
-  (f.type.startsWith('image/')?compressImage(f):fileToDataURL(f)).then(data=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=f.type.startsWith('image/')?`<img src="${data}" style="max-height:100px;border-radius:var(--emp-radius)">`:'PDFを添付済み';});
+  return readAttachment(input,(data,file)=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=filePreviewHtml(data,'100px');});
 }
 function previewSkForm(input,i){
-  const f=input.files[0];if(!f)return;
-  if(!validateUploadFile(f)){input.value='';return;}
-  (f.type.startsWith('image/')?compressImage(f):fileToDataURL(f)).then(data=>{skFormImgData[i]=data;document.getElementById('skFormPreview'+i).innerHTML=f.type.startsWith('image/')?`<img src="${data}" style="max-height:60px;border-radius:4px">`:'PDF添付済み';});
-}
-function setupFormDropZones(){
-  setupDrop('rcDropArea',(data)=>{rcImgData=data;document.getElementById('rcPreview').innerHTML=`<img src="${data}" style="max-height:120px;border-radius:var(--emp-radius)">`;});
-  setupDrop('licDropArea',(data)=>{licFormImgData=data;document.getElementById('licFormPreview').innerHTML=`<img src="${data}" style="max-height:100px;border-radius:var(--emp-radius)">`;});
-  [0,1,2].forEach(i=>{
-    setupDrop('skDrop'+i,(data)=>{skFormImgData[i]=data;document.getElementById('skFormPreview'+i).innerHTML=`<img src="${data}" style="max-height:60px;border-radius:4px">`;});
-  });
+  return readAttachment(input,(data,file)=>{skFormImgData[i]=data;document.getElementById('skFormPreview'+i+'').innerHTML=filePreviewHtml(data,'60px');});
 }
 
 async function saveForm(isEdit,id){
+  if(EMP_UI.saving||attachmentsStillLoading())return;
   const g=k=>{const el=document.getElementById('f_'+k);return el?el.value:'';};
   if(!g('sei')||!g('mei')){showToast('姓・名は必須です','error');return;}
   if(!g('company')){showToast('会社（セレクト／覚善）を選択してください','error');return;}
@@ -524,6 +510,7 @@ async function saveForm(isEdit,id){
     bank_name:g('bank_name'),bank_branch:g('bank_branch'),bank_account_no:g('bank_account_no'),bank_account_name:g('bank_account_name'),
     memo:memoWithFuyouMeta(g('memo'),getFuyouList(existingEmp)),updated_at:new Date().toISOString().slice(0,10)
   };
+  let saved=false;setEmployeeSaving(true);
   try{
     if(isEdit){
       const ex=existingEmp;
@@ -546,9 +533,12 @@ async function saveForm(isEdit,id){
       }).filter(Boolean);
       await createEmployee(emp);
     }
-    licFormImgData='';skFormImgData=['','',''];
-    await loadEmployees();currentView='list';render();
-  }catch(e){showToast('保存に失敗しました：'+e.message,'error');}
+    saved=true;EMP_UI.dirty=false;licFormImgData='';skFormImgData=['','',''];
+    await loadEmployees();returnFromEmployeeForm();showToast('従業員情報を保存しました');
+  }catch(e){
+    if(saved){returnFromEmployeeForm();showToast('保存は完了しました。最新の従業員情報を再読み込みしてください。','warn');}
+    else showToast('保存に失敗しました：'+e.message,'error');
+  }finally{setEmployeeSaving(false);}
 }
 
 // ---- CSV インポート ----

@@ -28,26 +28,52 @@ function multiImgGrid(imgs,onDelete){
 }
 
 // ---- ドラッグ＆ドロップ共通 ----
-function setupDrop(areaId,callback){
-  const el=document.getElementById(areaId);
-  if(!el)return;
-  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dragover');});
-  el.addEventListener('dragleave',()=>el.classList.remove('dragover'));
-  el.addEventListener('drop',e=>{
-    e.preventDefault();el.classList.remove('dragover');
-    const file=e.dataTransfer.files[0];
-    if(!file)return;
-    if(!validateUploadFile(file))return;
-    if(file.type.startsWith('image/')){
-      compressImage(file).then(data=>callback(data,file.name));
-    } else {
-      // PDF等は圧縮せずbase64に
-      const r=new FileReader();
-      r.onload=ev=>callback(ev.target.result,file.name);
-      r.readAsDataURL(file);
-    }
-  });
+function fileDropHint(accept){
+  return '<span class="file-drop-instruction">ファイルをここにドロップ<br><span>またはクリック・タップして選択</span></span><small>'+(accept.includes('.csv')?'CSV':accept.includes('pdf')?'画像・PDF（5MB以下）':'画像（5MB以下）')+'・1ファイルずつ</small>';
 }
+function fileDropZone(id,accept,onchange){
+  return '<label class="file-dropzone" tabindex="0" role="button" aria-label="ファイルを添付"><input type="file" id="'+id+'" accept="'+accept+'" onchange="'+onchange+'">'+fileDropHint(accept)+'</label>';
+}
+function isFileDrag(event){return Array.from(event.dataTransfer?.types||[]).includes('Files');}
+function fileDropBlocked(input){return input.disabled||input.dataset.filePending==='true'||(typeof EMP_UI!=='undefined'&&EMP_UI.saving);}
+function validFileSelection(input,files){
+  if(files.length!==1){showToast('ファイルは1つずつ追加してください','error');return false;}
+  const file=files[0],accept=input.accept;
+  if(accept.includes('.csv')){if(/\.csv$/i.test(file.name))return true;showToast('CSVファイルを選択してください','error');return false;}
+  if(!validateUploadFile(file))return false;
+  if(!accept.includes('pdf')&&!file.type.startsWith('image/')){showToast('画像ファイルを選択してください','error');return false;}
+  return true;
+}
+document.addEventListener('dragover',event=>{
+  if(!isFileDrag(event))return;
+  event.preventDefault();
+  const zone=event.target.closest('.file-dropzone');
+  if(zone&&!fileDropBlocked(zone.querySelector('input[type="file"]')))zone.classList.add('dragover');
+});
+document.addEventListener('dragleave',event=>{const zone=event.target.closest('.file-dropzone');if(zone&&!zone.contains(event.relatedTarget))zone.classList.remove('dragover');});
+document.addEventListener('drop',event=>{
+  if(!isFileDrag(event))return;
+  event.preventDefault();
+  document.querySelectorAll('.file-dropzone.dragover').forEach(zone=>zone.classList.remove('dragover'));
+  const input=event.target.closest('.file-dropzone')?.querySelector('input[type="file"]');
+  if(!input||fileDropBlocked(input))return;
+  if(!validFileSelection(input,event.dataTransfer.files))return;
+  input.files=event.dataTransfer.files;
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+});
+document.addEventListener('change',event=>{
+  const input=event.target;
+  if(!input.matches('input[type="file"]')||!input.files.length)return;
+  if(fileDropBlocked(input)||!validFileSelection(input,input.files)){event.stopImmediatePropagation();input.value='';}
+},true);
+document.addEventListener('click',event=>{
+  const zone=event.target.closest('.file-dropzone');
+  if(zone&&fileDropBlocked(zone.querySelector('input[type="file"]'))){event.preventDefault();event.stopImmediatePropagation();}
+},true);
+document.addEventListener('keydown',event=>{
+  const zone=event.target.closest('.file-dropzone');
+  if(zone&&event.target===zone&&(event.key==='Enter'||event.key===' ')){event.preventDefault();const input=zone.querySelector('input[type="file"]');if(!fileDropBlocked(input))input.click();}
+});
 
 // ---- 画像圧縮共通関数 ----
 function validateUploadFile(file){
@@ -57,13 +83,16 @@ function validateUploadFile(file){
   return true;
 }
 function fileToDataURL(file){
-  return new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(file);});
+  return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=ev=>resolve(ev.target.result);r.onerror=()=>reject(new Error('ファイルを読み込めません'));r.onabort=()=>reject(new Error('読み込みを中断しました'));r.readAsDataURL(file);});
 }
 function compressImage(file,maxPx=1200,quality=0.8){
-  return new Promise(resolve=>{
+  return new Promise((resolve,reject)=>{
     const r=new FileReader();
+    r.onerror=()=>reject(new Error("画像を読み込めません"));
+    r.onabort=()=>reject(new Error("読み込みを中断しました"));
     r.onload=ev=>{
       const img=new Image();
+      img.onerror=()=>reject(new Error("画像を読み込めません"));
       img.onload=()=>{
         let w=img.width,h=img.height;
         if(w>maxPx||h>maxPx){
@@ -81,6 +110,19 @@ function compressImage(file,maxPx=1200,quality=0.8){
   });
 }
 
+
+async function readAttachment(input,apply){
+  const file=input.files[0];if(!file||!validateUploadFile(file))return;
+  input.dataset.filePending='true';input.closest('.file-dropzone')?.setAttribute('aria-busy','true');
+  try{const data=await (file.type.startsWith('image/')?compressImage(file):fileToDataURL(file));if(input.isConnected)await apply(data,file);}
+  catch(error){if(input.isConnected)showToast('ファイルを読み込めませんでした。もう一度選択してください。','error');}
+  finally{input.dataset.filePending='false';input.closest('.file-dropzone')?.removeAttribute('aria-busy');input.value='';}
+}
+function attachmentsStillLoading(){
+  if(!document.querySelector('input[data-file-pending="true"]'))return false;
+  showToast('ファイルの準備が終わるまでお待ちください。','warn');return true;
+}
+
 let licImgData='',skImgData='';
 async function previewLicImg(input){
   const f=input.files[0];if(!f)return;
@@ -93,28 +135,15 @@ async function previewLicImg(input){
 
 // ---- 在留カード複数枚 ----
 async function addRcImg(empId,input){
-  const f=input.files[0];if(!f)return;
-  if(!validateUploadFile(f)){input.value='';return;}
   const e=employees.find(x=>x.id===empId);
-  e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
-  let data;
-  if(f.type.startsWith('image/')){data=await compressImage(f);}
-  else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
-  e.residence_card_imgs.push(data);
-  e.updated_at=new Date().toISOString().slice(0,10);
-  await updateResidenceCardImages(empId,e.residence_card_imgs,e.updated_at);
-  renderDT();
-  setTimeout(()=>setupDrop('rcDetailDrop',(d)=>addRcImgDrop(empId,d)),50);
-}
-async function addRcImgDrop(empId,data){
-  const e=employees.find(x=>x.id===empId);
-  e.residence_card_imgs=e.residence_card_imgs||[];
-  if(e.residence_card_imgs.length>=4){showToast('最大4枚です','warn');return;}
-  e.residence_card_imgs.push(data);
-  e.updated_at=new Date().toISOString().slice(0,10);
-  await updateResidenceCardImages(empId,e.residence_card_imgs,e.updated_at);
-  renderDT();
+  if(!e)return;
+  if((e.residence_card_imgs||[]).length>=4){showToast('最大4枚です','warn');return;}
+  return readAttachment(input,async(data)=>{
+    const images=[...(e.residence_card_imgs||[]),data],updated=new Date().toISOString().slice(0,10);
+    await updateResidenceCardImages(empId,images,updated);
+    e.residence_card_imgs=images;e.updated_at=updated;
+    if(input.isConnected)renderDT();
+  });
 }
 async function delRcImg(i){
   const e=employees.find(x=>x.id===viewingId);
@@ -127,28 +156,15 @@ async function delRcImg(i){
 
 // ---- 免許証複数枚 ----
 async function addLicImg(empId,input){
-  const f=input.files[0];if(!f)return;
-  if(!validateUploadFile(f)){input.value='';return;}
   const e=employees.find(x=>x.id===empId);
-  e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
-  let data;
-  if(f.type.startsWith('image/')){data=await compressImage(f);}
-  else{data=await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});}
-  e.license_imgs.push(data);
-  e.updated_at=new Date().toISOString().slice(0,10);
-  await updateLicenseImages(empId,e.license_imgs,e.updated_at);
-  renderDT();
-  setTimeout(()=>setupDrop('licDetailDrop',(d)=>addLicImgDrop(empId,d)),50);
-}
-async function addLicImgDrop(empId,data){
-  const e=employees.find(x=>x.id===empId);
-  e.license_imgs=e.license_imgs||[];
-  if(e.license_imgs.length>=4){showToast('最大4枚です','warn');return;}
-  e.license_imgs.push(data);
-  e.updated_at=new Date().toISOString().slice(0,10);
-  await updateLicenseImages(empId,e.license_imgs,e.updated_at);
-  renderDT();
+  if(!e)return;
+  if((e.license_imgs||[]).length>=4){showToast('最大4枚です','warn');return;}
+  return readAttachment(input,async(data)=>{
+    const images=[...(e.license_imgs||[]),data],updated=new Date().toISOString().slice(0,10);
+    await updateLicenseImages(empId,images,updated);
+    e.license_imgs=images;e.updated_at=updated;
+    if(input.isConnected)renderDT();
+  });
 }
 async function delLicImg(i){
   const e=employees.find(x=>x.id===viewingId);
@@ -158,12 +174,7 @@ async function delLicImg(i){
   await updateLicenseImages(viewingId,e.license_imgs,e.updated_at);
   renderDT();
 }
-async function previewSkImg(input){
-  const f=input.files[0];if(!f)return;
-  document.getElementById('skImgName').textContent=f.name+'（圧縮中…）';
-  skImgData=await compressImage(f);
-  document.getElementById('skImgName').textContent=f.name;
-}
+function previewSkImg(input){return readAttachment(input,(data,file)=>{skImgData=data;document.getElementById('skImgName').textContent=file.name;});}
 async function saveLicense(id){
   const e=employees.find(x=>x.id===id);
   const patch={
@@ -175,12 +186,9 @@ async function saveLicense(id){
   Object.assign(e,patch);
   await updateEmployeeLicense(id,patch);
   showToast('保存しました');renderDT();
-  setTimeout(()=>{
-    setupDrop('licDetailDrop',(d)=>addLicImgDrop(id,d));
-    setupDrop('rcDetailDrop',(d)=>addRcImgDrop(id,d));
-  },50);
 }
 async function addShikaku(id){
+  if(attachmentsStillLoading())return;
   const e=employees.find(x=>x.id===id);
   const name=document.getElementById('sk_name')?.value.trim();
   if(!name){showToast('資格名を入力してください','error');return;}
@@ -199,12 +207,9 @@ async function delKenko(id,i){
   const e=employees.find(x=>x.id===id);e.kenkou_list.splice(i,1);e.updated_at=new Date().toISOString().slice(0,10);
   await updateEmployeeKenko(id,e.kenkou_list,e.updated_at);renderDT();
 }
-function previewKI(input){
-  const f=input.files[0];if(!f)return;
-  document.getElementById('kimgName').textContent=f.name+'（圧縮中…）';
-  compressImage(f).then(data=>{kenkoImgData=data;document.getElementById('kimgName').textContent=f.name;});
-}
+function previewKI(input){return readAttachment(input,(data,file)=>{kenkoImgData=data;document.getElementById('kimgName').textContent=file.name;});}
 async function addKenko(id){
+  if(attachmentsStillLoading())return;
   const e=employees.find(x=>x.id===id),d=document.getElementById('kd').value;
   if(!d){showToast('受診日を入力してください','error');return;}
   e.kenkou_list.push({date:d,result:document.getElementById('kr').value,img:kenkoImgData});
