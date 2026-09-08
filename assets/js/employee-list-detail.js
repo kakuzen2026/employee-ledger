@@ -204,7 +204,7 @@ function renderDetail(id){
   const e=employees.find(x=>x.id===id);if(!e){currentView='list';render();return;}
   const today=new Date(),exp=e.visa_expiry?new Date(e.visa_expiry):null,dl=exp?Math.round((exp-today)/86400000):null;
   const tabs=['basic','visa','insurance','fuyou','yukyu','kenko','license','memo','dispatch','contract'];
-  const labels=['基本情報','在留・外国人','保険','扶養','有給','健康診断','免許・資格','メモ','派遣契約','雇用契約書'];
+  const labels=['基本情報','在留・外国人','保険','扶養','有休・勤怠','健康診断','免許・資格','メモ','派遣契約','雇用契約書'];
 
   // 前へ・次へ
   const idx=currentFilteredList.findIndex(x=>x.id===id);
@@ -532,10 +532,10 @@ async function renderDT(){
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <span style="font-size:13px;font-weight:500">付与・取得履歴</span>
+        <span style="font-size:13px;font-weight:500">付与・有休・勤怠履歴</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="openGrantModal(${e.id})">＋ 付与を登録</button>
-          <button class="btn btn-primary btn-sm" onclick="openYukyuFromDetail(${e.id})">＋ 有給を登録</button>
+          <button class="btn btn-primary btn-sm" onclick="openYukyuFromDetail(${e.id})">＋ 有休・勤怠を登録</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">
@@ -563,10 +563,11 @@ async function renderDT(){
               const r=item.data;
               return `<div class="list-item">
                 <span class="dt">${r.use_date||'—'}</span>
-                <span class="badge badge-visa">取得</span>
+                <span class="badge badge-visa">勤怠</span>
                 <span class="chip">${r.use_type||'—'}</span>
                 <span class="chip">${r.shubetsu||'—'}</span>
-                <span class="chip">${r.kubun||'—'}</span>
+                <span class="chip">${emp_esc(r.kubun||'未分類')}</span>
+                <span class="chip">${attendancePoints(r)===null?'ポイント未確定':attendancePoints(r)+'pt'}</span>
                 <span style="font-size:12px;color:var(--emp-text2)">入力：${r.input_by||'—'}</span>
                 ${r.biko?`<span style="font-size:12px;color:var(--emp-text2)">備考：${r.biko}</span>`:''}
                 <div style="margin-left:auto;display:flex;gap:4px"><button class="btn btn-sm" onclick="openYukyuEdit(${r.id},true)">編集</button><button class="btn btn-sm btn-danger" onclick="delYR(${r.id})">削除</button></div>

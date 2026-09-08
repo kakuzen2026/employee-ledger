@@ -15,20 +15,21 @@ function renderYukyuList(){
   const activeEmps=employees.filter(e=>e.status==='在籍'&&(!fq||employeeSearchText(e).includes(fq.toLowerCase())));
   document.getElementById('mainContent').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:16px;font-weight:700">有給管理</span>
-      <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="exportYukyuCSV()">CSV出力</button><button class="btn btn-primary btn-sm" onclick="showView('yukyu_add')">＋ 有給登録</button></div>
+      <span style="font-size:16px;font-weight:700">有休・勤怠管理</span>
+      <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="exportYukyuCSV()">CSV出力</button><button class="btn btn-primary btn-sm" onclick="showView('yukyu_add')">＋ 有休・勤怠登録</button></div>
     </div>
 
-    <div class="search-bar">
-      <input id="fyQ" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
+    <div class="search-bar" style="flex-wrap:wrap">
+      <input id="fyQ" style="flex:1 1 200px;min-width:140px" aria-label="氏名・部署・在留資格で検索" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)renderYukyuList();">
       <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
       <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
         <option value="">従業員：全て</option>
         ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
       </select>
-      <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()">
+      <label style="display:flex;align-items:center;gap:6px">履歴の月 <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()"></label>
     </div>
 
+    ${attendanceReportHtml(attendanceFilteredEmployees(fq,fe))}
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">残日数一覧（在籍中）</div>
     <div class="table-wrap" style="margin-bottom:20px"><table>
       <thead><tr><th>氏名</th><th>所属</th><th>残日数</th><th>付与合計</th><th>取得合計</th><th>次回付与日</th><th></th></tr></thead>
@@ -47,16 +48,17 @@ function renderYukyuList(){
       </tbody>
     </table></div>
 
-    <div style="font-size:13px;font-weight:500;margin-bottom:8px">取得履歴</div>
-    ${list.length===0?'<div class="empty">有給記録がありません</div>':`
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">有休・勤怠履歴</div>
+    ${list.length===0?'<div class="empty">有休・勤怠記録がありません</div>':`
     <div class="table-wrap"><table>
-      <thead><tr><th>使用日</th><th>氏名</th><th>使用内容</th><th>種別</th><th>区分</th><th>入力者</th><th>登録日</th><th>備考</th><th></th></tr></thead>
+      <thead><tr><th>使用日</th><th>氏名</th><th>使用内容</th><th>種別</th><th>区分</th><th>ポイント</th><th>入力者</th><th>登録日</th><th>備考</th><th></th></tr></thead>
       <tbody>${list.map(r=>`<tr>
         <td data-label="使用日">${emp_esc(r.use_date||'—')}</td>
         <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</span></td>
         <td data-label="使用内容"><span class="badge badge-visa">${emp_esc(r.use_type||'—')}</span></td>
         <td data-label="種別"><span class="chip">${emp_esc(r.shubetsu||'—')}</span></td>
-        <td data-label="区分"><span class="chip">${emp_esc(r.kubun||'—')}</span></td>
+        <td data-label="区分"><span class="chip">${emp_esc(r.kubun||'未分類')}</span></td>
+        <td data-label="ポイント">${attendancePoints(r)===null?'未分類等':attendancePoints(r)+'pt'}</td>
         <td data-label="入力者">${emp_esc(r.input_by||'—')}</td>
         <td data-label="登録日" style="font-size:12px;color:var(--emp-text3)">${emp_esc(r.touroku_date||'—')}</td>
         <td data-label="備考" style="font-size:12px;color:var(--emp-text2);max-width:140px">${emp_esc(r.biko||'')}</td>
@@ -81,9 +83,9 @@ async function reloadPaidLeaveAfterStale(kind,employeeId=null){
   showToast(PAID_LEAVE_STALE_MESSAGE,'warn');
 }
 async function delYR(id){
-  if(!confirmPermanentDelete('この有給記録'))return;
+  if(!confirmPermanentDelete('この有休・勤怠記録'))return;
   const record=yukyuRecords.find(row=>row.id===Number(id));
-  if(!record){showToast('有給記録が見つかりません','error');return;}
+  if(!record){showToast('有休・勤怠記録が見つかりません','error');return;}
   try{
     await deleteYukyuRecord(id,paidLeaveRevision(record));await loadYukyu();
     if(currentView==='yukyu_list')renderYukyuList();else renderDT();
@@ -184,7 +186,7 @@ function openYukyuFromDetail(empId){
 }
 function openYukyuEdit(id,fromDetail=false){
   const r=yukyuRecords.find(x=>x.id===Number(id));
-  if(!r){showToast('有給記録が見つかりません','error');return;}
+  if(!r){showToast('有休・勤怠記録が見つかりません','error');return;}
   yf={id:r.id,_revision:paidLeaveRevision(r),employee_id:r.employee_id,employee_name:r.employee_name||'',use_date:r.use_date||'',use_type:r.use_type||'',shubetsu:r.shubetsu||'',kubun:r.kubun||'',input_by:r.input_by||'',biko:r.biko||''};
   yfFromDetail=fromDetail;currentView='yukyu_add';setNav('tYukyuAdd');renderYukyuAdd();
 }
@@ -192,7 +194,7 @@ function renderYukyuAdd(){
   document.getElementById('mainContent').innerHTML=`
     <div class="sticky-back">
       <button class="btn btn-sm" onclick="${yfFromDetail?`detailTab='yukyu';currentView='detail';yfFromDetail=false;render()`:"showView('yukyu_list')"}">← 戻る</button>
-      <h2>${yf.id?'有給編集':'有給登録'}</h2>
+      <h2>${yf.id?'有休・勤怠編集':'有休・勤怠登録'}</h2>
     </div>
     <div class="yukyu-form">
       <div class="frow">
@@ -207,13 +209,13 @@ function renderYukyuAdd(){
             <div class="emp-dropdown" id="empDD">${empDDItems('')}</div>
           </div>`}
       </div>
-      <div class="frow"><label>使用日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${yf.use_date||new Date().toISOString().slice(0,10)}" style="max-width:200px" oninput="renderYukyuDuplicateWarning()"></div>
+      <div class="frow"><label>日付 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="yDate" value="${yf.use_date||new Date().toISOString().slice(0,10)}" style="max-width:200px" oninput="yf.use_date=this.value;renderYukyuDuplicateWarning()"></div>
       <div id="yukyuDupWarning">${yukyuDuplicateWarningHtml(yf.use_date||new Date().toISOString().slice(0,10))}</div>
-      <div class="frow"><label>使用内容 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
+      <div class="frow"><label>内容（全日・半休は有休） <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${USE_TYPES.map(t=>`<button class="sel-btn ${yf.use_type===t?'selected':''}" onclick="selYF('use_type','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>種別 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${SHUBETSU.map(t=>`<button class="sel-btn ${yf.shubetsu===t?'selected':''}" onclick="selYF('shubetsu','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>区分 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${KUBUN.map(t=>`<button class="sel-btn ${yf.kubun===t?'selected':''}" onclick="selYF('kubun','${t}',this)">${t}</button>`).join('')}</div></div>
       <div class="frow"><label>入力者 <span style="color:var(--emp-danger)">*</span></label><div class="sel-group">${INPUT_BY.map(t=>`<button class="sel-btn ${yf.input_by===t?'selected':''}" onclick="selYF('input_by','${t}',this)">${t}</button>`).join('')}</div></div>
-      <div class="frow"><label>備考</label><textarea id="yBiko" rows="3" style="max-width:500px">${emp_esc(yf.biko||'')}</textarea></div>
+      <div class="frow"><label>備考</label><textarea id="yBiko" oninput="yf.biko=this.value" rows="3" style="max-width:500px">${emp_esc(yf.biko||'')}</textarea></div>
       <div style="height:80px"></div>
     </div>
     <div class="sticky-footer">
@@ -236,14 +238,16 @@ function showEmpDD(){document.getElementById('empDD')?.classList.add('show');}
 function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');}
 function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
 function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
-function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
-function findYukyuDuplicateRecord(employeeId,useDate,ignoreId=null){
+function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');if(key==='use_type')renderYukyuDuplicateWarning();}
+function findYukyuDuplicateRecord(employeeId,useDate,ignoreId=null,useType=yf.use_type){
   if(!employeeId||!useDate)return null;
   const emp=employees.find(e=>e.id===Number(employeeId));
   const shainNo=(emp?.shain_no||'').toString().trim();
   return yukyuRecords.find(r=>{
     if(ignoreId&&Number(r.id)===Number(ignoreId))return false;
     if(r.use_date!==useDate)return false;
+    const nonLeave=['欠勤','遅刻','早退'];
+    if(nonLeave.includes(useType)||nonLeave.includes(r.use_type)){if(r.use_type!==useType)return false;}
     const recEmp=employees.find(e=>e.id===Number(r.employee_id));
     const recNo=(recEmp?.shain_no||'').toString().trim();
     return shainNo&&recNo?recNo===shainNo:Number(r.employee_id)===Number(employeeId);
@@ -254,7 +258,7 @@ function yukyuDuplicateWarningHtml(useDate){
   if(!dup)return '';
   const emp=employees.find(e=>e.id===Number(dup.employee_id));
   const no=(emp?.shain_no||'社員番号未設定').toString();
-  return `<div class="alert alert-warning" style="margin-bottom:16px">同じ社員番号（${emp_esc(no)}）と使用日（${emp_esc(useDate)}）の有給登録がすでにあります。保存時に登録を止めます。</div>`;
+  return `<div class="alert alert-warning" style="margin-bottom:16px">同じ社員番号（${emp_esc(no)}）と使用日（${emp_esc(useDate)}）の同じ内容の記録がすでにあります。保存時に登録を止めます。</div>`;
 }
 function renderYukyuDuplicateWarning(){
   const el=document.getElementById('yukyuDupWarning');
@@ -265,13 +269,14 @@ async function saveYR(){
   const d=document.getElementById('yDate')?.value;
   if(!d){showToast('使用日を入力してください','error');return;}
   if(findYukyuDuplicateRecord(yf.employee_id,d,yf.id)){
-    alert('同じ社員番号と使用日の有給登録がすでにあります。重複登録はできません。');
+    alert('同じ社員番号・日付・内容の記録がすでにあります。重複登録はできません。');
     renderYukyuDuplicateWarning();
     return;
   }
-  if(!yf.use_type){showToast('使用内容を選択してください','error');return;}
+  if(!['全日','半休（午前）','半休（午後）','欠勤','遅刻','早退'].includes(yf.use_type)){showToast('内容を選択してください','error');return;}
+  if(!attendanceMonth(d)){showToast('正しい日付を入力してください','error');return;}
   if(!yf.shubetsu){showToast('種別を選択してください','error');return;}
-  if(!yf.kubun){showToast('区分を選択してください','error');return;}
+  if(!['計画','突発'].includes(yf.kubun)){showToast('計画または突発を選択してください','error');return;}
   if(!yf.input_by){showToast('入力者を選択してください','error');return;}
   try{
     const payload={employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,biko:document.getElementById('yBiko')?.value||''};
@@ -605,7 +610,7 @@ function exportCSV(){
 function exportYukyuCSV(){
   const h=['ID','従業員ID','氏名','使用日','使用内容','種別','区分','入力者','登録日','備考'];
   const rows=yukyuRecords.map(r=>[r.id,r.employee_id,r.employee_name,r.use_date,r.use_type,r.shubetsu,r.kubun,r.input_by,r.touroku_date,r.biko].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"'));
-  dlCSV([h,...rows],'有給記録');
+  dlCSV([h,...rows],'有休・勤怠記録');
 }
 function dlCSV(data,name){
   const csv='\uFEFF'+data.map(r=>r.join(',')).join('\n');
