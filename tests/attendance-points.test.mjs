@@ -63,3 +63,18 @@ test('従業員読込だけ失敗しても古い一覧の判定・CSVは保留�
   ctx.fetchEmployees=async()=>[];await ctx.retryAttendanceLoad();assert.equal(renders,1);
   assert.match(ctx.attendanceReportHtml([]),/該当する従業員がいません/);
 });
+test('同日申請リンクは別内容も含め、別従業員・別日・編集対象自身を除外する',()=>{
+  vm.runInContext(`employees=[{id:1,shain_no:'A'},{id:2,shain_no:'B'}];yukyuRecords=[{id:10,employee_id:1,use_date:'2026-09-08',use_type:'遅刻',kubun:'計画'},{id:11,employee_id:1,use_date:'2026-09-08',use_type:'早退',kubun:'突発'},{id:12,employee_id:2,use_date:'2026-09-08',use_type:'全日'},{id:13,employee_id:1,use_date:'2026-09-09',use_type:'全日'}];yf={employee_id:1,id:10,use_type:'遅刻'};`,ctx);
+  const html=ctx.yukyuDuplicateWarningHtml('2026-09-08');
+  assert.match(html,/1件/);assert.match(html,/#attendance-record-11/);assert.match(html,/openYukyuEdit\(11,yfFromDetail\)/);
+  assert.doesNotMatch(html,/#attendance-record-(10|12|13)/);assert.doesNotMatch(html,/重複登録はできません/);
+  vm.runInContext(`yf={employee_id:1,use_type:'遅刻'};`,ctx);
+  assert.match(ctx.yukyuDuplicateWarningHtml('2026-09-08'),/重複登録はできません/);
+  assert.equal(ctx.yukyuDuplicateWarningHtml('2026-09-10'),'');
+});
+test('皆勤手当の共通表示・CSV対象から退職者を除外し、他の状態は維持する',()=>{
+  vm.runInContext(`employees=[{id:1,sei:'在籍',mei:'太郎',status:'在籍'},{id:2,sei:'退職',mei:'花子',status:'退職'},{id:3,sei:'休職',mei:'次郎',status:'休職'}];`,ctx);
+  assert.deepEqual(Array.from(ctx.attendanceFilteredEmployees(),e=>e.id),[1,3]);
+  assert.equal(ctx.attendanceFilteredEmployees('',2).length,0);
+  assert.deepEqual(Array.from(ctx.attendanceFilteredEmployees('在籍'),e=>e.id),[1]);
+});
