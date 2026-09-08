@@ -43,7 +43,7 @@ function attendanceReportHtml(employeeList){
       <label>期間 <select id="attendanceQuarter" onchange="changeAttendancePeriod()">${[0,1,2,3].map(q=>`<option value="${q}" ${q===attendanceQuarter?'selected':''}>${q*3+1}〜${q*3+3}月</option>`).join('')}</select></label>
       <button class="btn btn-sm" onclick="exportAttendanceCSV()">集計CSV</button>
     </div>
-    <p style="font-size:12px;color:var(--emp-text2)">登録済みの記録による判定です。期間中は暫定です。区分未分類・内容不明・日付不明がある場合は判定を保留します。記録なしは0ptです。</p>
+    <p style="font-size:12px;color:var(--emp-text2)">退職者は表示していません。登録済みの記録による判定です。期間中は暫定です。区分未分類・内容不明・日付不明がある場合は判定を保留します。記録なしは0ptです。</p>
     <div class="table-wrap"><table><thead><tr><th>氏名</th>${[0,1,2].map(i=>`<th>${start+i+1}月</th>`).join('')}<th>3か月合計</th><th>皆勤手当</th></tr></thead>
     <tbody>${employeeList.map(e=>{
       const summary=attendanceSummary(yukyuRecords,e.id,year),q=summary.quarters[attendanceQuarter];
@@ -60,7 +60,7 @@ function changeAttendancePeriod(){
   attendanceYear=year;attendanceQuarter=quarter;renderYukyuList();
 }
 function attendanceFilteredEmployees(query='',employeeId=''){
-  return employees.filter(e=>(!employeeId||Number(e.id)===Number(employeeId))&&(!query||employeeSearchText(e).includes(query.toLowerCase())));
+  return employees.filter(e=>e.status!=='退職'&&(!employeeId||Number(e.id)===Number(employeeId))&&(!query||employeeSearchText(e).includes(query.toLowerCase())));
 }
 async function retryAttendanceLoad(){
   const results=await Promise.allSettled([loadEmployees(),loadYukyu()]);

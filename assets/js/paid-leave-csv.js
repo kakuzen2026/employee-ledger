@@ -239,26 +239,32 @@ function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');
 function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
 function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
 function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');if(key==='use_type')renderYukyuDuplicateWarning();}
-function findYukyuDuplicateRecord(employeeId,useDate,ignoreId=null,useType=yf.use_type){
-  if(!employeeId||!useDate)return null;
+function findYukyuSameDayRecords(employeeId,useDate,ignoreId=null){
+  if(!employeeId||!useDate)return [];
   const emp=employees.find(e=>e.id===Number(employeeId));
   const shainNo=(emp?.shain_no||'').toString().trim();
-  return yukyuRecords.find(r=>{
+  return yukyuRecords.filter(r=>{
     if(ignoreId&&Number(r.id)===Number(ignoreId))return false;
     if(r.use_date!==useDate)return false;
-    const nonLeave=['欠勤','遅刻','早退'];
-    if(nonLeave.includes(useType)||nonLeave.includes(r.use_type)){if(r.use_type!==useType)return false;}
     const recEmp=employees.find(e=>e.id===Number(r.employee_id));
     const recNo=(recEmp?.shain_no||'').toString().trim();
     return shainNo&&recNo?recNo===shainNo:Number(r.employee_id)===Number(employeeId);
-  })||null;
+  });
+}
+function findYukyuDuplicateRecord(employeeId,useDate,ignoreId=null,useType=yf.use_type){
+  const nonLeave=['欠勤','遅刻','早退'];
+  return findYukyuSameDayRecords(employeeId,useDate,ignoreId).find(r=>
+    nonLeave.includes(useType)||nonLeave.includes(r.use_type)?r.use_type===useType:true
+  )||null;
 }
 function yukyuDuplicateWarningHtml(useDate){
-  const dup=findYukyuDuplicateRecord(yf.employee_id,useDate,yf.id);
-  if(!dup)return '';
-  const emp=employees.find(e=>e.id===Number(dup.employee_id));
-  const no=(emp?.shain_no||'社員番号未設定').toString();
-  return `<div class="alert alert-warning" style="margin-bottom:16px">同じ社員番号（${emp_esc(no)}）と使用日（${emp_esc(useDate)}）の同じ内容の記録がすでにあります。保存時に登録を止めます。</div>`;
+  const records=findYukyuSameDayRecords(yf.employee_id,useDate,yf.id);
+  if(!records.length)return '';
+  const duplicate=findYukyuDuplicateRecord(yf.employee_id,useDate,yf.id);
+  return `<div class="alert alert-warning" style="margin-bottom:16px">
+    <div>同じ従業員・同じ日付の申請が${records.length}件あります。${duplicate?'同じ内容の重複登録はできません。':''}</div>
+    <ul style="margin:8px 0 0;padding-left:20px">${records.map(r=>`<li>${Number.isSafeInteger(Number(r.id))?`<a href="#attendance-record-${Number(r.id)}" onclick="event.preventDefault();openYukyuEdit(${Number(r.id)},yfFromDetail)">${emp_esc(r.use_date)}・${emp_esc(r.use_type||'内容未設定')}・${emp_esc(r.kubun||'未分類')}の申請を開く</a>`:'申請IDを確認してください'}</li>`).join('')}</ul>
+  </div>`;
 }
 function renderYukyuDuplicateWarning(){
   const el=document.getElementById('yukyuDupWarning');
