@@ -408,8 +408,10 @@ test('Paid-leave API forces revision 1 for new rows and forwards expected revisi
 
   const createdRows = inserted.flatMap(call => Array.isArray(call.row) ? call.row : [call.row]);
   assert.deepEqual(createdRows.map(row => row._revision), [1, 1, 1]);
-  assert.deepEqual(updates.map(call => [call.table, call.expectedRevision]), [['yukyu_grants', 3], ['yukyu_records', 4]]);
-  assert.deepEqual(deletes.map(call => [call.table, call.expectedRevision]), [['yukyu_grants', 3], ['yukyu_records', 4]]);
+  assert.deepEqual(updates.map(call => [call.table, call.expectedRevision]), [['yukyu_grants', 3], ['yukyu_records', 4], ['yukyu_grants', 3]]);
+  assert.equal(updates[2].patch.deleted, true);
+  assert.equal(updates[2].patch.days, 0);
+  assert.deepEqual(deletes.map(call => [call.table, call.expectedRevision]), [['yukyu_records', 4]]);
 });
 
 test('Dynamic employee actions use delegated click handlers', async () => {

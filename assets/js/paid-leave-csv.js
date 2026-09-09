@@ -1,11 +1,17 @@
 // Shared record presentation for the all-staff list and employee detail.
-function employeeAttendanceTable(records,showEmployee=false,fromDetail=false){
-  if(!attendanceRecordsReady)return '<div class="empty" role="alert">勤怠記録を読み込めませんでした。<button class="btn" onclick="retryAttendanceLoad()">再読み込み</button></div>';
-  if(!records.length)return '<div class="empty">この条件の勤怠記録はありません。</div>';
-  return `<div class="table-wrap attendance-table"><table><thead><tr><th>日付</th>${showEmployee?'<th>氏名</th>':''}<th>内容</th><th>種別</th><th>区分</th><th>ポイント</th><th>入力者</th><th><span class="sr-only">操作</span></th></tr></thead><tbody>${records.map(r=>`<tr id="attendance-record-${Number(r.id)}" class="${EMP_UI.highlightId===r.id?'record-highlight':''}">
+function employeeAttendanceTable(records,showEmployee=false,fromDetail=false,grants=null){
+  const unified=grants!==null;
+  const warning=(!attendanceRecordsReady?'<div class="empty" role="alert">勤怠記録を読み込めませんでした。<button class="btn" onclick="retryAttendanceLoad()">再読み込み</button></div>':'')+(unified&&!attendanceGrantsReady?'<div class="empty" role="alert">付与記録を読み込めませんでした。<button class="btn" onclick="retryAttendanceLoad()">再読み込み</button></div>':'');
+  const entries=[...(attendanceRecordsReady?records:[]).map(r=>({date:r.use_date||'',record:r})),...(unified&&attendanceGrantsReady?grants:[]).map(g=>({date:g.grant_date||'',grant:g}))].sort((a,b)=>b.date.localeCompare(a.date)||Number(!!b.grant)-Number(!!a.grant));
+  if(!entries.length)return warning||`<div class="empty">この条件の${unified?'付与・勤怠':'勤怠'}記録はありません。</div>`;
+  return warning+`<div class="table-wrap attendance-table"><table><thead><tr><th>日付</th>${showEmployee?'<th>氏名</th>':''}<th>内容</th><th>種別</th><th>区分</th><th>ポイント</th><th>入力者</th><th><span class="sr-only">操作</span></th></tr></thead><tbody>${entries.map(({record:r,grant:g})=>g?`<tr id="leave-grant-${Number(g.id)}">
+    <td data-label="日付">${emp_esc(g.grant_date||'日付未設定')}</td>
+    <td data-label="内容"><strong>有休付与 ${g.days==null||g.days===''?'日数未設定':emp_esc(g.days)+'日'}</strong><div class="record-note">期限：${emp_esc(g.expire_date||'—')}</div></td>
+    <td data-label="種別">付与</td><td data-label="区分">—</td><td data-label="ポイント">—</td><td data-label="入力者">—</td>
+    <td class="no-label"><button class="btn btn-sm" onclick="openGrantModal(${Number(g.employee_id)},${Number(g.id)})">編集</button><button class="text-button danger-text" onclick="delGrant(${Number(g.id)},${Number(g.employee_id)})">削除</button></td></tr>`:`<tr id="attendance-record-${Number(r.id)}" class="${EMP_UI.highlightId===r.id?'record-highlight':''}">
     <td data-label="日付">${emp_esc(r.use_date||'日付未設定')}</td>
     ${showEmployee?`<td data-label="氏名"><button class="emp-name" onclick="viewDetail(${Number(r.employee_id)},'yukyu')">${emp_esc(r.employee_name||'氏名未設定')}</button></td>`:''}
-    <td data-label="内容"><strong>${emp_esc(r.use_type||'未設定')}</strong>${r.biko?`<div class="record-note">${emp_esc(r.biko)}</div>`:''}<div class="record-note">${r.touroku_date?'登録 '+emp_esc(r.touroku_date):''}</div></td>
+    <td data-label="内容"><strong>${unified&&['全日','半休（午前）','半休（午後）'].includes(r.use_type)?'有休取得 ':''}${emp_esc(r.use_type||'未設定')}</strong>${r.biko?`<div class="record-note">${emp_esc(r.biko)}</div>`:''}<div class="record-note">${r.touroku_date?'登録 '+emp_esc(r.touroku_date):''}</div></td>
     <td data-label="種別">${emp_esc(r.shubetsu||'—')}</td><td data-label="区分">${emp_esc(r.kubun||'未分類')}</td>
     <td data-label="ポイント">${attendancePoints(r)===null?'未確定':attendancePoints(r)+'pt'}</td><td data-label="入力者">${emp_esc(r.input_by||'—')}</td>
     <td class="no-label"><button class="btn btn-sm" onclick="openYukyuEdit(${Number(r.id)},${fromDetail})">編集</button><button class="text-button danger-text" onclick="delYR(${Number(r.id)})">削除</button></td></tr>`).join('')}</tbody></table></div>`;
@@ -141,16 +147,19 @@ async function saveGrant(){
 }
 async function delGrant(id,empId){
   if(EMP_UI.saving||!requireGrantData())return;
-  if(!confirmPermanentDelete('この付与記録'))return;
+  if(!confirm('この付与記録を削除しますか？\n一覧と残日数の計算から除外し、この付与日の自動再作成を停止します。'))return;
   const grant=yukyuGrants.find(row=>row.id===Number(id));
   if(!grant){showToast('有給付与が見つかりません','error');return;}
+  let deleted=false;setEmployeeSaving(true);
   try{
     await deleteYukyuGrant(id,paidLeaveRevision(grant));
+    deleted=true;
     await loadGrants();renderDT();
   }catch(error){
-    if(isStaleWrite(error))await reloadPaidLeaveAfterStale('grant',empId);
+    if(deleted){renderDT();showToast('削除は完了しました。最新データを再読み込みしてください。','warn');}
+    else if(isStaleWrite(error))await reloadPaidLeaveAfterStale('grant',empId);
     else showToast('削除に失敗しました：'+error.message,'error');
-  }
+  }finally{setEmployeeSaving(false);}
 }
 
 // ---- 有給登録 ----
