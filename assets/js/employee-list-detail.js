@@ -109,6 +109,11 @@ function setDetailTab(tab){
   if(!beginEmployeeNavigation())return;
   detailTab=tab;render();
 }
+function employeeSwitcherHtml(id,label){
+  const idx=currentFilteredList.findIndex(e=>e.id===id),prev=currentFilteredList[idx-1],next=currentFilteredList[idx+1];
+  const name=e=>emp_esc(`${e.sei} ${e.mei}`);
+  return `<nav class="employee-switcher" aria-label="${emp_attr(label)}"><button class="btn btn-sm" ${prev?`onclick="viewDetail(${prev.id},detailTab)" aria-label="前の従業員：${name(prev)}"`:'disabled'}>前の従業員</button><span>${idx+1}/${currentFilteredList.length}</span><button class="btn btn-sm" ${next?`onclick="viewDetail(${next.id},detailTab)" aria-label="次の従業員：${name(next)}"`:'disabled'}>次の従業員</button></nav>`;
+}
 function editEmp(id){
   if(!canLeaveEmployeeView())return;
   openEmployeeFormContext();editingId=id;currentView='edit';render();
@@ -124,12 +129,11 @@ function renderDetail(id){
     {label:'その他',tabs:[['memo','メモ'],['dispatch','派遣契約']]}];
   const group=groups.find(g=>g.tabs.some(([tab])=>tab===detailTab))||groups[0];
   if(!currentFilteredList.some(x=>x.id===id))currentFilteredList=[e,...currentFilteredList];
-  const idx=currentFilteredList.findIndex(x=>x.id===id),prev=currentFilteredList[idx-1],next=currentFilteredList[idx+1];
   document.getElementById('mainContent').innerHTML=`
     <div class="employee-detail-head">
       <button class="text-button employee-back" onclick="employeeBackToList()">← 一覧に戻る</button>
       <div class="employee-identity-row"><div><div class="employee-identity"><h1>${emp_esc(e.sei)} ${emp_esc(e.mei)}</h1><span class="status-dot ${e.status==='在籍'?'is-active':''}">${emp_esc(e.status||'—')}</span></div><p>${emp_esc(e.shain_no||'社員番号未設定')}<span> · </span>${emp_esc(deptLabelById(e.dept_id)||'所属未設定')}</p></div>
-      <div class="employee-switcher"><button class="btn btn-sm" ${prev?`onclick="viewDetail(${prev.id},detailTab)"`:'disabled'}>前の従業員</button><span>${idx+1}/${currentFilteredList.length}</span><button class="btn btn-sm" ${next?`onclick="viewDetail(${next.id},detailTab)"`:'disabled'}>次の従業員</button></div></div>
+      ${employeeSwitcherHtml(id,'従業員を切り替え')}</div>
       <div class="employee-detail-actions"><span class="employee-updated">最終更新：${emp_esc(e.updated_at||'—')}</span><button class="btn btn-sm" onclick="editEmp(${e.id})">情報を編集</button>
       <details class="employee-tools"><summary class="btn btn-sm">書類・その他の操作</summary><div>
         <button class="btn" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
@@ -413,6 +417,7 @@ async function renderDT(){
     const service=fullMonthsBetween(e.kousoku_start_date||e.nyusha_date,info.nextDate);
     c.innerHTML=`
       <div class="employee-leave-summary"><div><span>有休残数</span><strong>${ready?info.remaining+'日':'未確認'}</strong></div><div><span>記録上の取得合計</span><strong>${ready?info.used+'日':'未確認'}</strong></div><div><span>次回付与日</span><strong class="summary-date">${employeeGrantDataReady()?emp_esc(info.nextDate||'—'):'未確認'}</strong></div></div>
+      <div class="leave-employee-switcher"><span>別の従業員の有休を確認</span>${employeeSwitcherHtml(e.id,'有休・勤怠の従業員を切り替え')}</div>
       <div class="workspace-heading section-heading"><h2>付与・取得・勤怠の履歴</h2><div class="workspace-actions"><button class="btn" ${employeeGrantDataReady()?'':'disabled'} onclick="openGrantModal(${e.id})">＋ 付与を登録</button><button class="btn btn-primary" onclick="openYukyuFromDetail(${e.id})">＋ 有休・勤怠を登録</button></div></div>
       <p class="workspace-help">付与日・取得日を新しい順に表示します。付与済み合計：${attendanceGrantsReady?info.granted+'日':'未確認'}${info.unsetDays?' ／ 日数未設定の付与があります。対象月を空欄にして確認してください。':''}</p>
       <label class="month-filter detail-month">対象月<input type="month" id="detailMonth" value="${emp_attr(EMP_UI.detailMonth)}" onchange="setDetailMonth(this.value)"><span>空欄で全期間</span></label>
