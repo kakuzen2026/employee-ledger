@@ -96,6 +96,9 @@ body.employee-workspace #main #page-jugyoin{background:#fff;}
 #emp-app .employee-identity-row p{margin:8px 0 0;color:var(--emp-text3);font-size:14px;}
 #emp-app .employee-switcher{display:flex;align-items:center;gap:10px;white-space:nowrap;}
 #emp-app .employee-switcher>span{font-size:12px;color:var(--emp-text3);}
+#emp-app .leave-employee-switcher{display:flex;align-items:center;gap:14px;padding:12px 14px;margin:-4px 0 22px;border:1px solid var(--emp-border);border-radius:8px;background:var(--emp-bg);}
+#emp-app .leave-employee-switcher>span{font-size:13px;color:var(--emp-text2);font-weight:550;}
+#emp-app .leave-employee-switcher .employee-switcher{margin-left:auto;}
 #emp-app .employee-detail-actions{display:flex;align-items:center;gap:10px;margin:20px 0 22px;}
 #emp-app .employee-updated{color:var(--emp-text3);font-size:12px;margin-right:auto;}
 #emp-app .employee-tools{position:relative;}
@@ -221,6 +224,8 @@ body.employee-workspace #main #page-jugyoin{background:#fff;}
   #emp-app .employee-identity{gap:12px;flex-wrap:wrap;}
   #emp-app .employee-switcher{justify-content:space-between;}
   #emp-app .employee-switcher .btn{font-size:12px;}
+  #emp-app .leave-employee-switcher{align-items:stretch;flex-direction:column;gap:10px;margin-bottom:18px;}
+  #emp-app .leave-employee-switcher .employee-switcher{margin-left:0;}
   #emp-app .employee-detail-actions{flex-wrap:wrap;margin-top:16px;gap:8px;}
   #emp-app .employee-updated{width:100%;}
   #emp-app .workspace-tabs{gap:0;justify-content:space-between;margin-bottom:20px;}
