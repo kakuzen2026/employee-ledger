@@ -290,8 +290,8 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260908\.3/);
-  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260908\.3/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260909\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260909\.1/);
 });
 
 test('従業員または付与の読込が未確認なら自動付与は書込みを行わない', async () => {
@@ -304,3 +304,45 @@ test('従業員または付与の読込が未確認なら自動付与は書込�
     assert.equal(calls.update.length, 0);
   }
 });
+
+test('削除した自動付与は新しいログインでも再作成せず、翌年分は付与する', async () => {
+  const employee={id:1,status:'在籍',nyusha_date:'2025-01-01'};
+  const initial=loadCore([employee]);
+  wireGrantWrites(initial);
+  await initial.checkAndAutoGrant('2025-09-09');
+  const stored=initial.__employeeTestState.yukyuGrants;
+  assert.equal(stored.length,1);
+  const grant=stored[0];
+  // Exercise the real delete API against persistent synthetic rows.
+  const apiContext={db:{async updateByRevision(table,id,revision,patch){
+    assert.equal(table,'yukyu_grants');assert.equal(id,grant.id);assert.equal(revision,grant._revision);
+    Object.assign(grant,patch,{_revision:revision+1});return {data:[grant],error:null};
+  }}};
+  vm.runInNewContext(await readFile(new URL('../assets/js/employee-api.js',import.meta.url),'utf8'),apiContext);
+  await apiContext.deleteYukyuGrant(grant.id,grant._revision);
+  const reloaded=loadCore([employee],structuredClone(stored));
+  const calls=wireGrantWrites(reloaded);
+  await reloaded.checkAndAutoGrant('2025-09-10');
+  assert.equal(calls.create.length,0);
+  assert.equal(calls.update.length,0);
+  assert.equal(reloaded.calcYukyuInfo(1,'2025-09-10').granted,0);
+  assert.equal(reloaded.calcYukyuInfo(1,'2025-09-10').remaining,0);
+  assert.equal(vm.runInContext('yukyuGrants.length',reloaded),0);
+  await reloaded.checkAndAutoGrant('2026-07-01');
+  assert.deepEqual(calls.create.map(g=>g.grant_date),['2026-07-01']);
+  assert.equal(reloaded.calcYukyuInfo(1,'2026-07-01').granted,11);
+});
+
+test('参照勤続の手動付与削除も同じ年に自動再作成しない', async () => {
+  const context=loadCore([{id:1,status:'在籍',nyusha_date:'2025-01-01',kousoku_start_date:'2024-01-01'}],[
+    {id:100,employee_id:1,grant_date:'2025-02-01',days:0,deleted:true,_revision:2}
+  ]);
+  const calls=wireGrantWrites(context);
+  await context.checkAndAutoGrant('2025-09-09');
+  assert.equal(calls.create.some(g=>g.grant_date.startsWith('2025')),false);
+  assert.equal(calls.update.length,0);
+});
+
+ test('修正対象の4資産を同じ新しいURLで読み込む',()=>{
+ for(const name of ['employee-api','employee-core','employee-list-detail','paid-leave-csv'])assert.ok(htmlSource.includes('assets/js/'+name+'.js?v=20260909.1'));
+ });

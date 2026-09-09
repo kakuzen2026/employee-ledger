@@ -81,7 +81,7 @@ let employees,yukyuRecords,yukyuGrants,departments,visaTypes,companyInfo,certifi
 let currentView,viewingId,editingId,detailTab,listFilter,currentFilteredList;
 let yf,yfFromDetail,deptModalMode,deptModalId,deptModalCallback,kenkoImgData,rcImgData;
 function syncFromST(){
-  employees=EMP_ST.employees;yukyuRecords=EMP_ST.yukyuRecords;yukyuGrants=EMP_ST.yukyuGrants;
+  employees=EMP_ST.employees;yukyuRecords=EMP_ST.yukyuRecords;yukyuGrants=EMP_ST.yukyuGrants.filter(g=>g.deleted!==true);
   departments=EMP_ST.departments;visaTypes=EMP_ST.visaTypes;companyInfo=EMP_ST.companyInfo;
   certificates=EMP_ST.certificates;workPatterns=EMP_ST.workPatterns;employmentContracts=EMP_ST.employmentContracts;
   currentView=EMP_ST.currentView;viewingId=EMP_ST.viewingId;editingId=EMP_ST.editingId;
@@ -183,7 +183,7 @@ async function loadEmployees(){attendanceEmployeesReady=false;EMP_ST.employees=(
 let attendanceRecordsReady=false;
 async function loadYukyu(){attendanceRecordsReady=false;EMP_ST.yukyuRecords=await fetchYukyuRecords();yukyuRecords=EMP_ST.yukyuRecords;attendanceRecordsReady=true;}
 let attendanceGrantsReady=false;
-async function loadGrants(){attendanceGrantsReady=false;EMP_ST.yukyuGrants=await fetchYukyuGrants();yukyuGrants=EMP_ST.yukyuGrants;attendanceGrantsReady=true;}
+async function loadGrants(){attendanceGrantsReady=false;EMP_ST.yukyuGrants=await fetchYukyuGrants();yukyuGrants=EMP_ST.yukyuGrants.filter(g=>g.deleted!==true);attendanceGrantsReady=true;}
 async function loadDepts(){EMP_ST.departments=await fetchDepartments();departments=EMP_ST.departments;}
 async function loadVisaTypes(){EMP_ST.visaTypes=await fetchVisaTypes();visaTypes=EMP_ST.visaTypes;}
 async function loadCompanyInfo(){EMP_ST.companyInfo=await fetchCompanyInfo();companyInfo=EMP_ST.companyInfo;}
@@ -420,9 +420,10 @@ async function checkAndAutoGrant(todayValue){
     const policy=calcYukyuServicePolicy(e);
     if(policy.mode==='ambiguous'||!policy.startDate)continue;
     const dates=calcGrantDates(e.id);
-    const existingGrants=yukyuGrants.filter(g=>g.employee_id===e.id);
+    // Include deletion markers only for duplicate prevention, never for balances or auto updates.
+    const existingGrants=EMP_ST.yukyuGrants.filter(g=>g.employee_id===e.id);
     const existingDates=existingGrants.map(g=>g.grant_date);
-    existingGrants.filter(g=>g.grant_date&&yukyuGrantNeedsDays(g)).forEach(g=>{
+    existingGrants.filter(g=>g.deleted!==true&&g.grant_date&&yukyuGrantNeedsDays(g)).forEach(g=>{
       const days=calcYukyuLegalDays(e.id,g.grant_date);
       const expiry=resolveGrantExpiryForEligibility(g);
       if(days!==null&&expiry.mode!=='ambiguous'&&expiry.date>=todayStr)updates.push({id:g.id,expectedRevision:g._revision??0,patch:{days}});

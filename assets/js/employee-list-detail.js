@@ -408,18 +408,15 @@ async function renderDT(){
     c.innerHTML=renderFuyouEditor(e);
   } else if(detailTab==='yukyu'){
     const recs=yukyuRecords.filter(r=>r.employee_id===e.id&&(!EMP_UI.detailMonth||r.use_date?.startsWith(EMP_UI.detailMonth))).sort((a,b)=>(b.use_date||'').localeCompare(a.use_date||''));
-    const grants=yukyuGrants.filter(g=>g.employee_id===e.id).sort((a,b)=>(b.grant_date||'').localeCompare(a.grant_date||''));
+    const grants=yukyuGrants.filter(g=>g.employee_id===e.id&&(!EMP_UI.detailMonth||g.grant_date?.startsWith(EMP_UI.detailMonth))).sort((a,b)=>(b.grant_date||'').localeCompare(a.grant_date||''));
     const info=calcYukyuInfo(e.id),ready=attendanceRecordsReady&&attendanceGrantsReady;
     const service=fullMonthsBetween(e.kousoku_start_date||e.nyusha_date,info.nextDate);
     c.innerHTML=`
       <div class="employee-leave-summary"><div><span>有休残数</span><strong>${ready?info.remaining+'日':'未確認'}</strong></div><div><span>記録上の取得合計</span><strong>${ready?info.used+'日':'未確認'}</strong></div><div><span>次回付与日</span><strong class="summary-date">${employeeGrantDataReady()?emp_esc(info.nextDate||'—'):'未確認'}</strong></div></div>
-      <div class="workspace-heading section-heading"><h2>勤怠記録</h2><button class="btn btn-primary" onclick="openYukyuFromDetail(${e.id})">＋ 有休・勤怠を登録</button></div>
-      <label class="month-filter detail-month">対象月<input type="month" id="detailMonth" value="${emp_attr(EMP_UI.detailMonth)}" onchange="setDetailMonth(this.value)"></label>
-      ${employeeAttendanceTable(recs,false,true)}
-      <details class="leave-history" ${info.unsetDays?'open':''}><summary>付与履歴・付与を登録</summary>
-        <div class="workspace-heading section-heading"><p>付与済み合計：${attendanceGrantsReady?info.granted+'日':'未確認'}</p><button class="btn" ${employeeGrantDataReady()?'':'disabled'} onclick="openGrantModal(${e.id})">＋ 付与を登録</button></div>
-        ${!attendanceGrantsReady?'<p role="alert">付与記録を読み込めませんでした。</p>':grants.map(g=>`<div class="list-item grant-row"><span>${emp_esc(g.grant_date||'日付未設定')}</span><strong>${g.days==null||g.days===''?'日数未設定':emp_esc(g.days)+'日'}</strong><span>期限：${emp_esc(g.expire_date||'—')}</span><div class="workspace-actions"><button class="btn btn-sm" onclick="openGrantModal(${e.id},${g.id})">編集</button><button class="text-button danger-text" onclick="delGrant(${g.id},${e.id})">削除</button></div></div>`).join('')||'<p class="workspace-help">付与履歴がありません。</p>'}
-      </details>
+      <div class="workspace-heading section-heading"><h2>付与・取得・勤怠の履歴</h2><div class="workspace-actions"><button class="btn" ${employeeGrantDataReady()?'':'disabled'} onclick="openGrantModal(${e.id})">＋ 付与を登録</button><button class="btn btn-primary" onclick="openYukyuFromDetail(${e.id})">＋ 有休・勤怠を登録</button></div></div>
+      <p class="workspace-help">付与日・取得日を新しい順に表示します。付与済み合計：${attendanceGrantsReady?info.granted+'日':'未確認'}${info.unsetDays?' ／ 日数未設定の付与があります。対象月を空欄にして確認してください。':''}</p>
+      <label class="month-filter detail-month">対象月<input type="month" id="detailMonth" value="${emp_attr(EMP_UI.detailMonth)}" onchange="setDetailMonth(this.value)"><span>空欄で全期間</span></label>
+      ${employeeAttendanceTable(recs,false,true,grants)}
       <details class="leave-settings"><summary>付与日・勤続年数の設定</summary><p class="workspace-help">次回付与日時点の勤続年数：${!employeeGrantDataReady()||service===null?'未確認':Math.floor(service/12)+'年'+service%12+'ヶ月'}</p>
       <div style="background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px 14px;margin-bottom:16px">
         <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:10px">以前の勤続年数を参照しますか？</div>

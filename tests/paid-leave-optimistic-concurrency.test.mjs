@@ -60,6 +60,7 @@ function loadPaidLeaveUi({ grants = [], records = [] } = {}) {
       if(context.currentView==='detail')calls.renderDetail++;else calls.renderList++;
     },
     confirmPermanentDelete() { return true; },
+    confirm() { return true; },
     employeeGrantDataReady(){return true;},
     markEmployeeDirty(){},
     calcYukyuInfo() { return { nextDate: '2026-09-01' }; },
@@ -179,4 +180,17 @@ test('Grant save success with failed reload closes the form without inviting ano
   assert.equal(elements.get('grantModal').classList.open,false);
   assert.equal(context.EMP_UI.saving,false);
   assert.match(calls.toast.at(-1).message,/保存は完了/);
+});
+
+test('付与削除の連打を防ぎ、削除成功後の再読込失敗を区別する', async () => {
+  const {context,calls}=loadPaidLeaveUi({grants:[{id:10,employee_id:1,_revision:1}]});
+  let release;const pending=new Promise(resolve=>{release=resolve});let count=0;
+  context.deleteYukyuGrant=async()=>{count++;await pending;};
+  context.loadGrants=async()=>{throw new Error('reload offline');};
+  const first=context.delGrant(10,1);
+  await context.delGrant(10,1);
+  assert.equal(count,1);assert.equal(context.EMP_UI.saving,true);
+  release();await first;
+  assert.equal(context.EMP_UI.saving,false);
+  assert.match(calls.toast[0].message,/削除は完了しました/);
 });
