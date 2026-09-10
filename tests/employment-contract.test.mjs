@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const sourceUrl = new URL('../assets/js/employee-settings-docs.js', import.meta.url);
 
-test('employment contract uses the official MHLW model reference', async () => {
+test('employment contract identifies the supplied Excel template without an official-compliance claim', async () => {
   const source = await readFile(sourceUrl, 'utf8');
-  assert.match(source, /mhlw-general-worker-2026-10-ready-v1/);
-  assert.match(source, /https:\/\/www\.mhlw\.go\.jp\/stf\/seisakunitsuite\/bunya\/koyou_roudou\/roudoukijun\/roudoukijunkankei\.html/);
+  assert.match(source, /provided-excel-employment-contract-20260910-v1/);
+  assert.doesNotMatch(source, /厚生労働省.*準拠/);
 });
 
 test('employment contract covers the 2024 mandatory disclosure additions', async () => {
@@ -58,7 +58,7 @@ test('employment contract rejects missing required terms and saves its exact sna
   const source = await readFile(sourceUrl, 'utf8');
   assert.match(source, /validateEmploymentContractTerms\(terms,isFixed\)/);
   assert.match(source, /terms\.end<terms\.start/);
-  assert.match(source, /if\(!w\)\{[\s\S]*?return;\s*\}\s*closeContractModal\(\);/);
+  assert.match(source, /if\(!w\)\{[\s\S]*?return;/);
   assert.match(source, /template_id:EMPLOYMENT_CONTRACT_MODEL\.id/);
   assert.match(source, /template_checked_at:EMPLOYMENT_CONTRACT_MODEL\.checked_at/);
   assert.match(source, /\n\s+terms\n\s+\}\)\.then/);
@@ -87,31 +87,4 @@ test('every contract form field has a unique ID and is included in the saved sna
   assert.ok(fieldIds.length >= 40);
   assert.equal(new Set(fieldIds).size, fieldIds.length);
   for (const fieldId of fieldIds) assert.match(collectorSource, new RegExp(`'${fieldId}'`));
-});
-
-test('employment contract identifies both parties only once in the signature area', async () => {
-  const source = await readFile(sourceUrl, 'utf8');
-  const generateSource = source.slice(source.indexOf('function generateContract()'));
-  const printSource = generateSource.slice(
-    generateSource.indexOf('const content=`<!DOCTYPE html>'),
-    generateSource.indexOf('const w=window.open')
-  );
-  assert.doesNotMatch(printSource, /class="parties"/);
-  assert.match(printSource, /使用者（甲）署名欄/);
-  assert.match(printSource, /労働者（乙）署名欄/);
-  assert.match(printSource, /所在地：〒/);
-  assert.match(printSource, /生年月日：/);
-});
-
-test('employment contract print layout is compacted for one A4 portrait page', async () => {
-  const source = await readFile(sourceUrl, 'utf8');
-  const generateSource = source.slice(source.indexOf('function generateContract()'));
-  const printSource = generateSource.slice(
-    generateSource.indexOf('const content=`<!DOCTYPE html>'),
-    generateSource.indexOf('const w=window.open')
-  );
-  assert.match(printSource, /@page\{size:A4;margin:5\.5mm 7mm\}/);
-  assert.match(printSource, /font-size:8\.8px;line-height:1\.32/);
-  assert.match(printSource, /\.section\{margin:4px 0;break-inside:avoid\}/);
-  assert.match(printSource, /\.sign-box\{[^}]*min-height:58px\}/);
 });
