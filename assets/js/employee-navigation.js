@@ -73,6 +73,7 @@ function initializeEmployeeNavigation(){
 function markEmployeeDirty(){EMP_UI.dirty=true;}
 function canLeaveEmployeeView(){
   if(EMP_UI.saving){showToast('保存処理中です。完了までお待ちください。','warn');return false;}
+  if(document.getElementById('contractModal')?.classList.contains('open')&&!closeContractModal())return false;
   return !EMP_UI.dirty||confirm('入力した内容がまだ保存されていません。変更を破棄して移動しますか？');
 }
 function beginEmployeeNavigation(){
@@ -125,7 +126,7 @@ function bindEmployeeLabels(root=document.getElementById('mainContent')){
   });
 }
 if(typeof window!=='undefined'&&window.addEventListener){
-  window.addEventListener('beforeunload',event=>{if(EMP_UI.dirty||EMP_UI.saving){event.preventDefault();event.returnValue='';}else if(EMP_UI.initialized)captureEmployeeContext();});
+  window.addEventListener('beforeunload',event=>{if(EMP_UI.dirty||EMP_UI.saving||contractIssuePending||hasUnsavedEmploymentContract()){event.preventDefault();event.returnValue='';}else if(EMP_UI.initialized)captureEmployeeContext();});
   const updateViewport=()=>document.documentElement.style.setProperty('--employee-viewport-height',(window.visualViewport?.height||window.innerHeight)+'px');
   window.visualViewport?.addEventListener('resize',updateViewport);updateViewport();
   window.addEventListener('popstate',event=>{

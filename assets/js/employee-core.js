@@ -168,9 +168,12 @@ document.addEventListener('click',e=>{
   else if(action==='work-pattern-edit'&&validId)openWorkPatternModal(id);
   else if(action==='work-pattern-delete'&&validId)void deleteWorkPattern(id);
   else if(action==='contract-open'&&validId)emp_openContractModal(id);
+  else if(action==='contract-view'&&validId)showSavedEmploymentContract(id);
+  else if(action==='contract-copy'&&validId)duplicateEmploymentContract(id);
   else if(action==='contract-delete'&&validId)void deleteEmploymentContract(id);
   else if(action==='contract-close')closeContractModal();
   else if(action==='contract-generate')generateContract();
+  else if(action==='contract-save')generateContract(false);
 });
 document.addEventListener('change',e=>{
   const trigger=e.target.closest?.('[data-employee-change]');
@@ -475,9 +478,7 @@ function getLatestEmploymentContractMap(){
     const id=c.employee_id;
     if(!id)return;
     const current=map[id];
-    const cDate=c.issued_date||c.created_at||c.contract_end||'';
-    const currentDate=current?(current.issued_date||current.created_at||current.contract_end||''):'';
-    if(!current||cDate>currentDate)map[id]=c;
+    if(!current||compareEmploymentContracts(c,current)<0)map[id]=c;
   });
   return map;
 }

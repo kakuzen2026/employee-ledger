@@ -5,18 +5,20 @@ import {readFile} from 'node:fs/promises';
 
 const source=await readFile(new URL('../assets/js/employee-settings-docs.js',import.meta.url),'utf8');
 const renderer=await readFile(new URL('../assets/js/employment-contract-print.js',import.meta.url),'utf8');
+const historySource=await readFile(new URL('../assets/js/employment-contract-history.js',import.meta.url),'utf8');
 const employee={id:1,sei:'検証用',mei:'一郎',address:'検証用住所',birthday:'1990-01-01'};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function harness({blocked=false,save=async()=>[],reload=async()=>{}}={}){
   const fields={};const messages=[];const printed=[];const saved=[];let closed=false;
   const ctx=vm.createContext({
-    console:{error(){}},Date,employees:[employee],canCreateEmployeeDocument:()=>true,
+    console:{error(){}},Date,employees:[{...employee}],employmentContracts:[],documentContractsReady:true,attendanceEmployeesReady:true,canCreateEmployeeDocument:()=>true,
+    emp_esc:value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     showToast:message=>messages.push(message),
-    document:{getElementById:id=>fields[id]||(fields[id]={value:'',focus(){},classList:{remove(){closed=true;}}})},
-    window:{open:()=>blocked?null:{document:{write:html=>printed.push(html),close(){}},print(){}}},
+    document:{getElementById:id=>fields[id]||(fields[id]={value:'',focus(){},addEventListener(){},classList:{contains:()=>false,remove(){closed=true;}}})},
+    window:{open:()=>blocked?null:{document:{write:html=>printed.push(html),close(){},getElementById:()=>({addEventListener(){}})},print(){}}},
     createEmploymentContract:record=>{saved.push(record);return save(record);},loadEmploymentContracts:reload
   });
-  vm.runInContext(renderer+'\n'+source,ctx);
+  vm.runInContext(renderer+'\n'+source+'\n'+historySource,ctx);
   const defaults=vm.runInContext('({...EMPLOYMENT_CONTRACT_DEFAULTS})',ctx);
   const terms={...defaults,contract_type:'permanent',start:'2026-09-10',place:'検証用 第一工場',place_scope:'変更なし',work_scope:'変更なし',
     work_system:'shift',work_days:'就業カレンダーによる',shift_schedule:'8:30〜17:30（休憩60分）\n22:00〜翌7:00（休憩60分）',work_hours:'1日8時間',
@@ -137,4 +139,116 @@ test('a stale seal read cannot refill a cleared or closed form',async()=>{
     h.ctx[action]();h.reads[0].result='data:image/png;base64,aGVsbG8=';h.reads[0].onload();await reading;
     assert.equal(h.fields.cm_employer_seal.value,'');
   }
+});
+
+test('save without printing retains only the employee identity used on the contract',async()=>{
+  const h=harness({blocked:true});
+  h.ctx.employees[0].my_number='not-needed-on-contract';
+  h.ctx.generateContract(false);await tick();
+  assert.equal(h.printed.length,0);assert.equal(h.saved.length,1);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.saved[0].employee_snapshot)),{
+    sei:employee.sei,mei:employee.mei,address:employee.address,birthday:employee.birthday
+  });
+  h.ctx.employees[0].address='変更後の住所';h.fields.cm_wage.value='9,999円';
+  assert.equal(h.saved[0].employee_snapshot.address,employee.address);
+  assert.equal(h.saved[0].terms.wage,'1,250円');assert.equal(h.saved[0].copied_from_id,null);
+  assert.match(h.saved[0].created_at,/^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('viewing or reprinting saved history uses the saved identity, terms and date without inserting',()=>{
+  const h=harness();
+  h.ctx.employmentContracts=[{id:7,employee_id:1,issued_date:'2025-02-03',employee_snapshot:{sei:'保存時',mei:'氏名',address:'保存時の住所',birthday:'1980-02-03'},terms:{...h.terms,wage:'1,100円'}}];
+  h.ctx.showSavedEmploymentContract(7);
+  assert.equal(h.saved.length,0);assert.equal(h.printed.length,1);
+  for(const value of ['保存時 氏名','保存時の住所','1980-02-03','1,100円','2025年2月3日','印刷・PDF保存'])assert.ok(h.printed[0].includes(value));
+  assert.doesNotMatch(h.printed[0],/検証用住所|1,250円/);
+});
+
+test('legacy terms display only known values and flag missing identity without inventing current values',()=>{
+  const h=harness();
+  h.ctx.employmentContracts=[{id:8,employee_id:1,employee_name:'当時の氏名',issued_date:'2025-01-01',is_fixed:false,issued_by:'当時の会社',terms:{wage:'1,000円'}}];
+  h.ctx.showSavedEmploymentContract(8);
+  assert.match(h.printed[0],/作成時の住所・生年月日/);
+  assert.match(h.printed[0],/当時の氏名/);assert.match(h.printed[0],/当時の会社/);
+  assert.doesNotMatch(h.printed[0],/検証用住所|undefined|1990-01-01|変更なし/);
+  assert.equal(h.saved.length,0);
+});
+
+test('metadata-only or unavailable histories cannot be viewed or copied',()=>{
+  const h=harness();h.ctx.employmentContracts=[{id:1,employee_id:1}];
+  h.ctx.showSavedEmploymentContract(1);h.ctx.duplicateEmploymentContract(1);
+  assert.equal(h.printed.length,0);assert.equal(h.saved.length,0);
+  assert.match(h.ctx.employmentContractHistoryActions(h.ctx.employmentContracts[0]),/本文の保存がない/);
+  h.ctx.documentContractsReady=false;
+  assert.match(h.ctx.employmentContractHistoryCards(1),/読み込めていません/);
+  assert.doesNotMatch(h.ctx.employmentContractHistoryCards(1),/0件|まだ保存されていません/);
+  assert.equal(h.ctx.findSavedEmploymentContract(1),null);
+});
+
+test('fixed-term copy preserves all saved conditions and seal, opens a new period and never mutates its source',()=>{
+  const h=harness();
+  const record={id:4,contract_start:'2026-07-01',contract_end:'2026-12-31',is_fixed:true,terms:{...h.terms,contract_type:'fixed',start:'2026-07-01',end:'2026-12-31',employer_seal:'data:image/png;base64,aGVsbG8='}};
+  const before=JSON.stringify(record),copied=h.ctx.employmentContractCopyTerms(record);
+  assert.equal(copied.start,'2027-01-01');assert.equal(copied.end,'');
+  for(const [key,value] of Object.entries(record.terms))if(!['start','end'].includes(key))assert.equal(copied[key],value,key);
+  copied.wage='1,500円';assert.equal(JSON.stringify(record),before);
+  h.fields.cm_contract_type.value='fixed';h.ctx.document.getElementById('cm_end').value='';h.ctx.generateContract(false);
+  assert.equal(h.saved.length,0);
+});
+
+test('renewal date handles leap years and invalid prior dates without creating an invented period',()=>{
+  const h=harness();
+  for(const [end,start] of [['2028-02-28','2028-02-29'],['2028-02-29','2028-03-01'],['2026-02-29',''],['','']]){
+    const copied=h.ctx.employmentContractCopyTerms({terms:{contract_type:'fixed',end}});
+    assert.equal(copied.start,start);assert.equal(copied.end,'');
+  }
+  const permanent=h.ctx.employmentContractCopyTerms({terms:{...h.terms,contract_type:'permanent',start:'2025-01-01'}});
+  assert.equal(permanent.start,'2025-01-01');
+});
+
+test('legacy copy leaves unsaved conditions blank so current defaults cannot silently become past terms',()=>{
+  const h=harness();
+  const copied=h.ctx.employmentContractCopyTerms({is_fixed:true,issued_by:'過去の雇用者',contract_end:'2026-09-30',terms:{wage:'1,000円'}});
+  assert.equal(copied.start,'2026-10-01');assert.equal(copied.employer_name,'過去の雇用者');
+  assert.equal(copied.work,'');assert.equal(copied.holiday,'');assert.equal(copied.renew,'');
+  assert.ok(h.ctx.validateEmploymentContractTerms(copied,true).length>0);
+});
+
+test('employee history isolates people and orders same-day records by creation time and ID',()=>{
+  const h=harness();h.ctx.employmentContracts=[
+    {id:2,employee_id:1,issued_date:'2026-09-10',created_at:'2026-09-10T01:00:00Z',terms:h.terms},
+    {id:3,employee_id:2,employee_name:'別の従業員',issued_date:'2026-09-11',terms:h.terms},
+    {id:4,employee_id:1,issued_date:'2026-09-10',created_at:'2026-09-10T02:00:00Z',terms:h.terms},
+    {id:5,employee_id:1,issued_date:'2026-09-10',created_at:'2026-09-10T02:00:00Z',terms:h.terms}
+  ];
+  const html=h.ctx.employmentContractHistoryCards(1);
+  assert.match(html,/履歴（3件）/);assert.doesNotMatch(html,/data-contract-id="3"|別の従業員/);
+  assert.ok(html.indexOf('data-contract-id="5"')<html.indexOf('data-contract-id="4"'));
+  assert.ok(html.indexOf('data-contract-id="4"')<html.indexOf('data-contract-id="2"'));
+});
+
+test('late dispatch history cannot overwrite a different employee or a newer render',async()=>{
+  const h=harness();h.ctx.currentView='detail';h.ctx.detailTab='contract';h.ctx.viewingId=1;
+  let resolve;h.ctx.fetchDispatchContractsForEmployee=()=>new Promise(r=>{resolve=r;});
+  let writes=0;const host={set innerHTML(_){writes++;}};
+  const container={innerHTML:'',isConnected:true,querySelector:()=>host};
+  const rendering=h.ctx.renderEmployeeContractHistory({id:1},container);
+  assert.match(container.innerHTML,/雇用契約書の履歴/);
+  h.ctx.viewingId=2;resolve([{contract_no:'previous-person'}]);await rendering;
+  assert.equal(writes,0);
+  h.ctx.viewingId=1;const first=h.ctx.renderEmployeeContractHistory({id:1},container),firstResolve=resolve;
+  const second=h.ctx.renderEmployeeContractHistory({id:1},container),secondResolve=resolve;
+  secondResolve([]);await second;firstResolve([{contract_no:'stale'}]);await first;
+  assert.equal(writes,1);
+});
+
+test('unsaved input and pending save cannot be silently discarded',async()=>{
+  const h=harness();h.fields.contractModal={classList:{contains:()=>true,remove(){}}};
+  vm.runInContext('contractInitialTerms=JSON.stringify(collectEmploymentContractTerms())',h.ctx);
+  h.fields.cm_wage.value='1,500円';h.ctx.confirm=()=>false;
+  assert.equal(h.ctx.closeContractModal(),false);assert.equal(h.fields.cm_wage.value,'1,500円');
+  h.ctx.confirm=()=>true;assert.equal(h.ctx.closeContractModal(),true);
+  let resolve;const pending=harness({save:()=>new Promise(r=>{resolve=r;})});
+  pending.ctx.generateContract(false);assert.equal(pending.ctx.closeContractModal(),false);
+  assert.equal(pending.isClosed(),false);resolve([]);await tick();assert.equal(pending.isClosed(),true);
 });
