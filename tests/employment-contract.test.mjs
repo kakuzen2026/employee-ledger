@@ -33,7 +33,7 @@ test('employment contract type can be switched between fixed-term and permanent'
   assert.match(source, /function toggleContractTermFields\(\)/);
   assert.match(source, /const isFixed=terms\.contract_type==='fixed'/);
   assert.doesNotMatch(
-    source.slice(source.indexOf('function generateContract()')),
+    source.slice(source.indexOf('function generateContract(')),
     /const isFixed=e\.employment_type/
   );
 });
@@ -78,7 +78,7 @@ test('every contract form field has a unique ID and is included in the saved sna
     source.indexOf('function collectEmploymentContractTerms')
   );
   const collectorSource = source.slice(
-    source.indexOf('function collectEmploymentContractTerms'),
+    source.indexOf('const EMPLOYMENT_CONTRACT_TERM_IDS'),
     source.indexOf('function validateEmploymentContractTerms')
   );
   const fieldIds = [...formSource.matchAll(/emp_contract(?:Input|Area|Select)\('([^']+)'/g)]

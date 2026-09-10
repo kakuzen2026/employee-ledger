@@ -232,6 +232,8 @@ let contractIssuePending=false;
 let contractSealGeneration=0;
 let contractSealLoading=false;
 let contractSealError='';
+let contractSourceId=null;
+let contractInitialTerms='';
 
 // Only shared template wording. Personal details, workplaces and wages come from
 // the selected employee or the form, never from the supplied example employees.
@@ -285,13 +287,15 @@ function emp_contractSection(title,body){
   </section>`;
 }
 
-function emp_openContractModal(empId){
+function emp_openContractModal(empId,sourceContract=null){
   if(!canCreateEmployeeDocument())return;
   if(contractIssuePending){showToast('発行履歴を保存しています。完了までお待ちください。','warn');return;}
-  contractEmpId=empId;
   const e=employees.find(x=>x.id===empId);
   if(!e)return;
-  if(!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
+  if(!sourceContract&&!companyInfo.company_name){showToast('設定画面で発行元情報を登録してください','warn');return;}
+  if(document.getElementById('contractModal').classList.contains('open')&&!closeContractModal())return;
+  contractEmpId=empId;contractSourceId=sourceContract?.id??null;
+  document.getElementById('contractModalTitle').textContent=sourceContract?'過去の雇用契約書を複製して作成':'雇用契約書を作成';
   const isFixed=e.employment_type!=='permanent';
   const contractType=isFixed?'fixed':'permanent';
   const dept=departments.find(d=>d.id===Number(e.dept_id));
@@ -301,10 +305,11 @@ function emp_openContractModal(empId){
   const blankChoice=[['','選択してください'],['yes','有'],['no','無'],['rules','就業規則・会社規定による']];
   contractSealGeneration++;contractSealLoading=false;contractSealError='';
   document.getElementById('contractModalBody').innerHTML=`
-    <div style="font-size:12px;line-height:1.7;color:var(--emp-text2);margin-bottom:12px">
+    ${sourceContract?`<p class="workspace-help" role="status"><strong>${emp_esc(`${e.sei||''} ${e.mei||''}`.trim())}</strong>さんの${emp_esc(sourceContract.issued_date||'日付未記録')}の契約条件・電子印を引き継ぎます。元の契約書は変更せず、新しい履歴に保存します。従業員の氏名・住所は現在の登録情報を使います。有期契約では開始日を前回終了日の翌日にしています。終了日と今回の条件を確認してください。</p>`:''}
+    ${sourceContract?'':`<div style="font-size:12px;line-height:1.7;color:var(--emp-text2);margin-bottom:12px">
       ${emp_esc(EMPLOYMENT_CONTRACT_MODEL.label)}。共通の文言を入力済みです。<br>
       <strong>${emp_esc(`${e.sei||''} ${e.mei||''}`.trim())}</strong>さんの就業場所・時給・勤務時間・手当を確認し、共通の条件も必要に応じて変更してください。変更範囲なども本文にまとめて印刷します。
-    </div>
+    </div>`}
     ${emp_contractSection('1. 契約期間',`
       ${emp_contractSelect('cm_contract_type','契約種別',[
         ['fixed','有期契約（期間の定めあり）'],['permanent','無期契約（期間の定めなし）']
@@ -413,13 +418,24 @@ function emp_openContractModal(empId){
   document.getElementById('cm_work_system').addEventListener('change',toggleContractWorkFields);
   document.getElementById('cm_seal_file').addEventListener('change',event=>readEmploymentContractSeal(event.target));
   document.getElementById('cm_seal_clear').addEventListener('click',clearEmploymentContractSeal);
+  if(sourceContract)applyCopiedEmploymentContract(sourceContract);
+  toggleContractTermFields();
   toggleContractWorkFields();
+  contractInitialTerms=JSON.stringify(collectEmploymentContractTerms());
   document.getElementById('contractModal').classList.add('open');
   document.querySelector('#contractModal .modal-box').scrollTop=0;
 }
-function closeContractModal(){
+function hasUnsavedEmploymentContract(){
+  return document.getElementById('contractModal')?.classList.contains('open')&&
+    (contractSealLoading||contractSealError||JSON.stringify(collectEmploymentContractTerms())!==contractInitialTerms);
+}
+function closeContractModal({saved=false}={}){
+  if(!saved&&contractIssuePending){showToast('発行履歴を保存しています。完了までお待ちください。','warn');return false;}
+  if(!saved&&hasUnsavedEmploymentContract()&&!confirm('入力した雇用契約書はまだ保存されていません。変更を破棄して閉じますか？'))return false;
   contractSealGeneration++;contractSealLoading=false;contractSealError='';
   document.getElementById('contractModal').classList.remove('open');
+  contractSourceId=null;contractInitialTerms='';
+  return true;
 }
 
 function clearEmploymentContractSeal({keepFile=false}={}){
@@ -471,9 +487,7 @@ function toggleContractWorkFields(){
   }
 }
 
-function collectEmploymentContractTerms(){
-  const value=id=>document.getElementById(id)?.value?.trim()||'';
-  const ids=[
+const EMPLOYMENT_CONTRACT_TERM_IDS=[
     'cm_contract_type','cm_start','cm_end','cm_renew','cm_renew_criteria','cm_renew_limit','cm_renew_limit_detail',
     'cm_indefinite_conversion','cm_place','cm_place_scope','cm_work','cm_work_scope',
     'cm_work_system','cm_work_days','cm_start_time','cm_end_time','cm_break','cm_work_hours',
@@ -485,8 +499,10 @@ function collectEmploymentContractTerms(){
     'cm_employment_insurance','cm_consultation','cm_treatment_explanation','cm_rules',
     'cm_rules_access','cm_other_terms','cm_shift_schedule','cm_raise_detail','cm_trial_detail',
     'cm_employer_name','cm_employer_representative','cm_employer_postal_code','cm_employer_address','cm_employer_tel','cm_employer_seal'
-  ];
-  const terms=Object.fromEntries(ids.map(id=>[id.replace(/^cm_/,''),value(id)]));
+];
+function collectEmploymentContractTerms(){
+  const value=id=>document.getElementById(id)?.value?.trim()||'';
+  const terms=Object.fromEntries(EMPLOYMENT_CONTRACT_TERM_IDS.map(id=>[id.replace(/^cm_/,''),value(id)]));
   if(terms.contract_type==='permanent'){
     for(const key of ['end','renew','renew_criteria','renew_limit','renew_limit_detail','indefinite_conversion'])terms[key]='';
   }
@@ -522,7 +538,7 @@ function validateEmploymentContractTerms(terms,isFixed){
   return required.filter(([key])=>!terms[key]);
 }
 
-function generateContract(){
+function generateContract(print=true){
   if(!canCreateEmployeeDocument())return;
   if(contractIssuePending){showToast('発行履歴を保存しています。完了までお待ちください。','warn');return;}
   if(contractSealLoading){showToast('電子印の読み込みが完了するまでお待ちください。','warn');return;}
@@ -545,22 +561,26 @@ function generateContract(){
   }
   const today=new Date();
   const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
-  const content=buildEmploymentContractContent(e,terms,todayStr);
+  const issuedDate=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+  const employeeSnapshot=employmentContractEmployeeSnapshot(e);
+  const content=buildEmploymentContractContent(employeeSnapshot,terms,todayStr);
 
-  const w=window.open('','_blank','width=900,height=1100');
-  if(!w){
-    showToast('雇用契約書の表示をブロックしました。ブラウザでポップアップを許可して、もう一度実行してください。','warn');
-    return;
+  if(print){
+    const w=window.open('','_blank','width=900,height=1100');
+    if(!w){
+      showToast('雇用契約書の表示をブロックしました。ブラウザでポップアップを許可して、もう一度実行してください。','warn');
+      return;
+    }
+    w.onload=async()=>{
+      try{
+        await w.document.fonts?.ready;
+        await Promise.all(Array.from(w.document.images).map(image=>image.decode()));
+        w.print();
+      }catch(error){showToast('契約書の画像を表示できませんでした。印刷画面を確認してください。','error');}
+    };
+    w.document.write(content);
+    w.document.close();
   }
-  w.onload=async()=>{
-    try{
-      await w.document.fonts?.ready;
-      await Promise.all(Array.from(w.document.images).map(image=>image.decode()));
-      w.print();
-    }catch(error){showToast('契約書の画像を表示できませんでした。印刷画面を確認してください。','error');}
-  };
-  w.document.write(content);
-  w.document.close();
 
   // 雇用契約書履歴を保存
   contractIssuePending=true;
@@ -568,27 +588,32 @@ function generateContract(){
   createEmploymentContract({
     employee_id:e.id,
     employee_name:e.sei+' '+e.mei,
+    employee_snapshot:employeeSnapshot,
+    copied_from_id:contractSourceId,
     contract_start:terms.start,
     contract_end:terms.end||null,
     is_fixed:isFixed,
     contract_type:terms.contract_type,
     source:'this_app',
-    issued_date:new Date().toISOString().slice(0,10),
+    issued_date:issuedDate,
+    created_at:today.toISOString(),
     issued_by:terms.employer_name,
     template_id:EMPLOYMENT_CONTRACT_MODEL.id,
     template_checked_at:EMPLOYMENT_CONTRACT_MODEL.checked_at,
     terms
   }).then(async()=>{
     // A reload error must not invite a second insert of a successfully saved record.
-    if(contractEmpId===e.id)closeContractModal();
+    if(contractEmpId===e.id)closeContractModal({saved:true});
+    showToast('雇用契約書を履歴に保存しました。','success');
     try{await loadEmploymentContracts();}
     catch(err){
       console.error(err);
       showToast('発行履歴は保存済みですが、一覧の再読み込みに失敗しました。再発行せず、画面を再読み込みしてください。','warn');
     }
+    refreshEmploymentContractViews();
   }).catch(err=>{
     console.error(err);
-    showToast('雇用契約書は表示しましたが、発行履歴の保存に失敗しました。入力内容を残しています。通信を確認して再実行してください。','error');
+    showToast(`${print?'雇用契約書は表示しましたが、':''}発行履歴の保存に失敗しました。入力内容を残しています。通信を確認して再実行してください。`,'error');
   }).finally(()=>{
     contractIssuePending=false;
     document.getElementById('contractModalBody').inert=false;
@@ -614,9 +639,9 @@ async function renderContractList(){
   const empContractMap={};// employee_id -> {source, contract_end, is_active}
 
   // このアプリの契約
-  employmentContracts.forEach(c=>{
+  [...employmentContracts].sort(compareEmploymentContracts).forEach(c=>{
     const id=c.employee_id;
-    if(!empContractMap[id]||c.issued_date>(empContractMap[id].issued_date||''))
+    if(!empContractMap[id])
       empContractMap[id]={source:'this_app',contract_end:c.contract_end,issued_date:c.issued_date,contractId:c.id,is_fixed:c.is_fixed};
   });
 
@@ -642,7 +667,7 @@ async function renderContractList(){
 
   // 絞り込み
   const filters=documentFilters('contract_list'),fe=filters.employee||'',tab=filters.tab==='history'?'history':'attention';
-  let thisList=[...employmentContracts].sort((a,b)=>String(b.issued_date||'').localeCompare(String(a.issued_date||'')));
+  let thisList=[...employmentContracts].sort(compareEmploymentContracts);
   if(fe)thisList=thisList.filter(r=>r.employee_id===Number(fe));
 
   document.getElementById('mainContent').innerHTML=`
@@ -698,7 +723,7 @@ async function renderContractList(){
         <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
-          <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${r.employee_id}">再発行</button>
+          ${employmentContractHistoryActions(r)}
           <details class="row-actions"><summary>その他</summary><button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${r.id}" style="margin-left:4px">削除</button></details>
         </td>
       </tr>`).join('')}

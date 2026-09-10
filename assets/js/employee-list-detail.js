@@ -163,9 +163,9 @@ async function renderAlert(){
   try{dispatchContracts=await fetchDispatchContractEnds();}catch(e){}
   if(currentView!=='alert'||generation!==employeeAlertRender)return;
   const empContractMap={};
-  employmentContracts.forEach(c=>{
+  [...employmentContracts].sort(compareEmploymentContracts).forEach(c=>{
     const id=c.employee_id;
-    if(!empContractMap[id]||c.issued_date>(empContractMap[id].issued_date||''))
+    if(!empContractMap[id])
       empContractMap[id]={source:'this_app',contract_end:c.contract_end};
   });
   dispatchContracts.forEach(ce=>{
@@ -549,43 +549,7 @@ async function renderDT(){
         </div>`;
     });
   } else if(detailTab==='contract'){
-    const empContracts=employmentContracts.filter(c=>c.employee_id===e.id).sort((a,b)=>(b.issued_date||'').localeCompare(a.issued_date||''));
-    const dispContracts=await (async()=>{try{return await fetchDispatchContractsForEmployee(e.id);}catch(_){return[];}})();
-    if(!empContracts.length&&!dispContracts.length){
-      c.innerHTML='<div class="empty">雇用契約書の発行履歴がありません</div>';
-    } else {
-      let html='';
-      if(dispContracts.length){
-        html+='<div class="section-title">派遣管理で作成した雇用契約書兼就業条件明示書</div>';
-        html+='<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
-        dispContracts.forEach(ct=>{
-          html+='<div class="list-item">';
-          html+='<div style="flex:1;">';
-          html+='<div style="font-weight:600;font-size:13px;">'+(ct.contract_no||'—')+'</div>';
-          html+='<div style="font-size:12px;color:var(--emp-text2);">📍 '+(ct.client_name||'—')+' / '+(ct.site_name||'—')+'</div>';
-          html+='<div style="font-size:12px;color:var(--emp-text2);">📅 '+(ct.contract_start||'—')+' 〜 '+(ct.contract_end||'—')+'</div>';
-          html+='</div>';
-          html+='<span class="badge badge-visa">派遣管理</span>';
-          html+='</div>';
-        });
-        html+='</div>';
-      }
-      if(empContracts.length){
-        html+='<div class="section-title">このアプリで作成した雇用契約書</div>';
-        html+='<div style="display:flex;flex-direction:column;gap:8px;">';
-        empContracts.forEach(ct=>{
-          html+='<div class="list-item">';
-          html+='<div style="flex:1;">';
-          html+='<div style="font-weight:600;font-size:13px;">'+(ct.issued_date||'—')+' 発行</div>';
-          html+='<div style="font-size:12px;color:var(--emp-text2);">期間: '+(ct.contract_start||'—')+' 〜 '+(ct.contract_end||'—')+'</div>';
-          html+='</div>';
-          html+=`<button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">再発行</button>`;
-          html+='</div>';
-        });
-        html+='</div>';
-      }
-      c.innerHTML=html;
-    }
+    await renderEmployeeContractHistory(e,c);
   }
 }
 function df(label,val,full){

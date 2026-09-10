@@ -278,13 +278,14 @@
 </div>
 
 <!-- 雇用契約書モーダル -->
-<div class="modal-overlay" id="contractModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
+<div class="modal-overlay" id="contractModal" role="dialog" aria-modal="true" aria-labelledby="contractModalTitle" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;padding:20px;">
   <div class="modal-box" style="background:var(--emp-surface,#fff);border-radius:12px;border:1px solid var(--emp-border2,#ddd);width:100%;max-width:860px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.15);">
-    <h3>雇用契約書を作成</h3>
+    <h3 id="contractModalTitle">雇用契約書を作成</h3>
     <div id="contractModalBody"></div>
-    <div class="actions">
+    <div class="actions" style="flex-wrap:wrap">
       <button type="button" class="btn" data-employee-action="contract-close">キャンセル</button>
-      <button type="button" class="btn btn-primary" data-employee-action="contract-generate">印刷・PDF作成</button>
+      <button type="button" class="btn" data-employee-action="contract-save">履歴に保存</button>
+      <button type="button" class="btn btn-primary" data-employee-action="contract-generate">保存して印刷・PDF作成</button>
     </div>
   </div>
 </div>
@@ -703,12 +704,13 @@
 <script src="assets/js/records-documents.js?v=20260728.2"></script>
 <script src="assets/js/billing-settings.js?v=20260728.2"></script>
 <script src="assets/js/employee-api.js?v=20260909.2"></script>
-<script src="assets/js/employee-core.js?v=20260909.2"></script>
-<script src="assets/js/employee-navigation.js?v=20260908.3"></script>
-<script src="assets/js/employee-list-detail.js?v=20260909.2"></script>
+<script src="assets/js/employee-core.js?v=20260910.3"></script>
+<script src="assets/js/employee-navigation.js?v=20260910.3"></script>
+<script src="assets/js/employee-list-detail.js?v=20260910.3"></script>
 <script src="assets/js/employee-files.js?v=20260908.4"></script>
 <script src="assets/js/employment-contract-print.js?v=20260910.1"></script>
-<script src="assets/js/employee-settings-docs.js?v=20260910.1"></script>
+<script src="assets/js/employee-settings-docs.js?v=20260910.3"></script>
+<script src="assets/js/employment-contract-history.js?v=20260910.3"></script>
 <script src="assets/js/employee-health.js?v=20260908.3"></script>
 <script src="assets/js/attendance-points.js?v=20260908.2"></script>
 <script src="assets/js/paid-leave-csv.js?v=20260909.2"></script>

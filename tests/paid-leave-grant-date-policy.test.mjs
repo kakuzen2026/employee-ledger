@@ -290,8 +290,8 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260909\.2/);
-  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260909\.2/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260910\.3/);
+  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260910\.3/);
 });
 
 test('従業員または付与の読込が未確認なら自動付与は書込みを行わない', async () => {
@@ -343,6 +343,7 @@ test('参照勤続の手動付与削除も同じ年に自動再作成しない',
   assert.equal(calls.update.length,0);
 });
 
- test('修正対象の4資産を同じ新しいURLで読み込む',()=>{
- for(const name of ['employee-api','employee-core','employee-list-detail','paid-leave-csv'])assert.ok(htmlSource.includes('assets/js/'+name+'.js?v=20260909.2'));
- });
+test('有休に関わる4資産を現在の検証済みURLで読み込む',()=>{
+  const versions={'employee-api':'20260909.2','employee-core':'20260910.3','employee-list-detail':'20260910.3','paid-leave-csv':'20260909.2'};
+  for(const [name,version] of Object.entries(versions))assert.ok(htmlSource.includes('assets/js/'+name+'.js?v='+version),name);
+});

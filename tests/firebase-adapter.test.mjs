@@ -479,3 +479,24 @@ test('Every collection used by application buttons supports the basic save lifec
     assert.equal(deleted.error, null, `${table} delete`);
   }
 });
+
+test('employment contract API round-trips identity, conditions and seal for an independent renewal record',async()=>{
+  globalThis.window=globalThis;
+  globalThis.firebase=createFirebaseMock({_counters:{employment_contracts:0}});
+  await import(`../assets/js/firebase-adapter.js?contract-history=${Date.now()}`);
+  const context=vm.createContext({db:globalThis.createFirebaseDb()});
+  vm.runInContext(await readFile(new URL('../assets/js/employee-api.js',import.meta.url),'utf8'),context);
+  const original={employee_id:1,employee_name:'保存時 一郎',employee_snapshot:{sei:'保存時',mei:'一郎',address:'作成時の住所',birthday:'1990-01-01'},issued_date:'2026-09-10',created_at:'2026-09-10T01:00:00Z',terms:{contract_type:'fixed',wage:'1,250円',employer_seal:'data:image/png;base64,aGVsbG8='}};
+  const [saved]=await context.createEmploymentContract(original);
+  const renewal={...original,copied_from_id:saved.id,created_at:'2026-09-10T02:00:00Z',terms:{...original.terms,wage:'1,400円'}};
+  const [copy]=await context.createEmploymentContract(renewal);
+  assert.notEqual(copy.id,saved.id);
+  // A fresh adapter must reload the seal through the existing attachment store.
+  context.db=globalThis.createFirebaseDb();
+  const reloaded=await context.fetchEmploymentContracts();
+  assert.equal(reloaded.length,2);assert.equal(reloaded[0].id,copy.id);
+  assert.deepEqual(reloaded.find(row=>row.id===saved.id).employee_snapshot,original.employee_snapshot);
+  assert.deepEqual(reloaded.find(row=>row.id===saved.id).terms,original.terms);
+  assert.equal(reloaded[0].terms.employer_seal,original.terms.employer_seal);
+  assert.equal(reloaded[0].copied_from_id,saved.id);assert.equal(reloaded[0].terms.wage,'1,400円');
+});
