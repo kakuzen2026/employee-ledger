@@ -120,7 +120,7 @@ function closeGrantModal(force=false){
 async function saveGrant(){
   if(EMP_UI.saving||!requireGrantData())return;
   const d=document.getElementById('gm_date').value;
-  if(!d){showToast('付与日は必須です','error');return;}
+  if(!normalizeDateStr(d)){showToast('有効な付与日を入力してください','error');return;}
   const daysVal=document.getElementById('gm_days').value;
   const days=daysVal!==''?Number(daysVal):null;
   let expire=document.getElementById('gm_expire').value;
@@ -657,10 +657,10 @@ function parseCSVLine(line){return parseCSV(line)[0]||[];}
 // ---- CSV エクスポート ----
 function exportCSV(){
   if(!confirm(`従業員CSVを出力します。\n対象: ${employees.length}件\n住所・電話・メール・保険番号などの個人情報が含まれます。続行しますか？`))return;
-  const h=['ID','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
+  const h=['ID','会社','社員番号','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
   const rows=employees.map(e=>{
     const dept=departments.find(d=>d.id===Number(e.dept_id));
-    return[e.id,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
+    return[e.id,e.company,e.shain_no,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
   });
   dlCSV([h,...rows],'従業員台帳');
 }

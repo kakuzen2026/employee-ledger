@@ -344,6 +344,6 @@ test('参照勤続の手動付与削除も同じ年に自動再作成しない',
 });
 
 test('有休に関わる4資産を現在の検証済みURLで読み込む',()=>{
-  const versions={'employee-api':'20260919.1','employee-core':'20260919.1','employee-list-detail':'20260919.1','paid-leave-csv':'20260919.1'};
+  const versions={'employee-api':'20260919.2','employee-core':'20260919.1','employee-list-detail':'20260919.1','paid-leave-csv':'20260919.2'};
   for(const [name,version] of Object.entries(versions))assert.ok(htmlSource.includes('assets/js/'+name+'.js?v='+version),name);
 });

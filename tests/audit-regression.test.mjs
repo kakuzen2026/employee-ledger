@@ -60,3 +60,15 @@ test('Escape delegates to the existing dirty/saving guard before closing a prote
   keydown({key:'Escape',preventDefault(){}});assert.equal(guarded,1);assert.equal(removed,0);
   c.closeModal('grantModal',true);assert.equal(removed,1);
 });
+test('grant write boundary rejects negative/nonfinite days and invalid or reversed dates',async()=>{
+  const c=context();let writes=0;c.db={from(){writes++;return{insert:async()=>({data:[],error:null})}},updateByRevision(){writes++;return{data:[],error:null}}};
+  for(const patch of [{days:-1},{days:Infinity},{days:NaN},{grant_date:'2026-02-30'},{grant_date:'2026-09-19',expire_date:'2026-09-18'}]){
+    await assert.rejects(c.saveYukyuGrant(null,patch));await assert.rejects(c.createYukyuGrants([patch]));
+  }
+  assert.equal(writes,0);await c.saveYukyuGrant(null,{days:0,grant_date:'2026-09-19',expire_date:'2026-09-19'});assert.equal(writes,1);
+});
+test('employee export supplies the required import columns and preserves quoted multiline names',()=>{
+  const c=context();let csv;c.confirm=()=>true;c.dlCSV=rows=>csv=rows.map(row=>row.join(',')).join('\n');
+  vm.runInContext(`employees=[{id:1,company:'覚善',shain_no:'QA',sei:'A,"B',mei:'C\\nD'}];departments=[]`,c);c.exportCSV();
+  vm.runInContext('employees=[]',c);const rows=c.validatedEmployeeCSV(csv);assert.equal(rows.length,1);assert.equal(rows[0].company,'覚善');assert.equal(rows[0].shain_no,'QA');assert.equal(rows[0].sei,'A,"B');assert.equal(rows[0].mei,'C\nD');
+});
