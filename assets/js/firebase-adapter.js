@@ -27,6 +27,9 @@
   const REVISIONED_TABLES = new Set(['yukyu_records', 'yukyu_grants', 'employees']);
   const STALE_WRITE_MESSAGE = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
   const BLOB_PREFIX = 'firebase-rtdb://blobs/migration-v1/';
+  const ATOMIC_BLOB_PREFIX = 'firebase-firestore://attachments/v1/';
+  const BLOB_CHUNKS = /[\s\S]{1,196608}/gu; // Whole code points, at most 768 KiB of UTF-8 per document.
+  const MAX_NEW_BLOB_BYTES = 8 * 1024 * 1024; // Leave headroom below the 10 MiB commit limit.
 
   function appError(message, cause, code) {
     const error = new Error(message);
@@ -225,6 +228,7 @@
       this.firestore = firebase.firestore(this.app);
       this.realtime = firebase.database(this.app);
       this.blobCache = new Map();
+      this.attachmentReferences = new Map();
       this.authReady = new Promise((resolve) => {
         let unsubscribe = () => {};
         unsubscribe = this.authClient.onAuthStateChanged((user) => {
@@ -353,18 +357,21 @@
     // One Firestore commit: replacement failure must leave every original row intact.
     async atomicWrite(operations) {
       if (!Array.isArray(operations) || !operations.length || operations.length > 450) throw appError('一度に保存できる件数を超えています（上限450件）。');
+      const blobs = new Map();
       const writes = await Promise.all(operations.map(async ({table,id,data,remove}) => {
         if (!TABLES.has(table) || id == null || !String(id) || String(id).includes('/')) throw appError('保存対象が不正です。');
         if (!remove && !isPlainObject(data)) throw appError('登録内容が不正です。');
         return { reference: this.firestore.collection(table).doc(String(id)), remove,
-          data: remove ? null : {...data,id} };
+          data: remove ? null : await this.prepareForStorage({...data,id}, blobs) };
       }));
       const batch = this.firestore.batch();
       for (const write of writes) {
         if (write.remove) batch.delete(write.reference);
         else batch.set(write.reference, write.data, {merge:true});
       }
+      this.writeBlobs(batch, blobs);
       await batch.commit();
+      this.rememberBlobs(blobs);
     }
 
     async insertEmployees(rows) {
@@ -390,20 +397,30 @@
       const id = input.id == null
         ? (UUID_ID_TABLES.has(table) ? createUuid() : await this.nextId(table))
         : input.id;
-      const stored = await this.prepareForStorage({ ...input, id });
+      const blobs = new Map();
+      const stored = await this.prepareForStorage({ ...input, id }, blobs);
       const documentId = String(id);
       const reference = this.firestore.collection(table).doc(documentId);
-      const existing = await reference.get();
-      if (existing.exists) throw appError('同じIDのレコードが既に存在します。');
-      await reference.set(stored);
+      await this.firestore.runTransaction(async transaction => {
+        const existing = await transaction.get(reference);
+        if (existing.exists) throw appError('同じIDのレコードが既に存在します。');
+        transaction.set(reference, stored);
+        this.writeBlobs(transaction, blobs);
+      });
+      this.rememberBlobs(blobs);
       return { ...stored, __documentId: documentId };
     }
 
     async updateRow(table, current, patch) {
       if (!isPlainObject(patch)) throw appError('更新内容が不正です。');
-      const stored = await this.prepareForStorage(patch);
+      const blobs = new Map();
+      const stored = await this.prepareForStorage(patch, blobs);
       const documentId = current.__documentId || String(current.id);
-      await this.firestore.collection(table).doc(documentId).set(stored, { merge: true });
+      const batch = this.firestore.batch();
+      batch.set(this.firestore.collection(table).doc(documentId), stored, { merge: true });
+      this.writeBlobs(batch, blobs);
+      await batch.commit();
+      this.rememberBlobs(blobs);
       return { ...current, ...stored, __documentId: documentId };
     }
 
@@ -420,10 +437,11 @@
       if (!isPlainObject(patch)) throw appError('更新内容が不正です。');
       const expected = revisionOf(expectedRevision);
       const { _revision, ...changes } = patch;
-      const storedChanges = await this.prepareForStorage(changes);
+      const blobs = new Map();
+      const storedChanges = await this.prepareForStorage(changes, blobs);
       const documentId = String(id);
       const reference = this.firestore.collection(table).doc(documentId);
-      return this.firestore.runTransaction(async (transaction) => {
+      const updated = await this.firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(reference);
         if (!snapshot.exists) throw staleWriteError();
         const current = snapshot.data() || {};
@@ -433,8 +451,11 @@
         if (!Number.isSafeInteger(nextRevision)) throw staleWriteError();
         const stored = { ...storedChanges, _revision: nextRevision };
         transaction.update(reference, stored);
+        this.writeBlobs(transaction, blobs);
         return { ...current, ...stored, id: current.id == null ? id : current.id, __documentId: documentId };
       });
+      this.rememberBlobs(blobs);
+      return updated;
     }
 
     async deleteRow(table, row) {
@@ -463,30 +484,70 @@
       });
     }
 
-    async prepareForStorage(value) {
-      if (Array.isArray(value)) return Promise.all(value.map((item) => this.prepareForStorage(item)));
+    // Preparation is side-effect free. New attachment chunks join the row's commit.
+    async prepareForStorage(value, blobs) {
+      if (Array.isArray(value)) return Promise.all(value.map((item) => this.prepareForStorage(item, blobs)));
       if (!isPlainObject(value)) {
         if (!isDataUrl(value)) return value;
-        return this.storeBlob(value);
+        if (this.attachmentReferences.has(value)) return this.attachmentReferences.get(value);
+        const hash = await sha256(value);
+        const chunks = value.match(BLOB_CHUNKS);
+        const reference = ATOMIC_BLOB_PREFIX + hash + '/' + chunks.length;
+        blobs.set(hash, { data: value, reference, chunks });
+        return reference;
       }
       const output = {};
       for (const [key, item] of Object.entries(value)) {
-        if (item !== undefined) output[key] = await this.prepareForStorage(item);
+        if (item !== undefined) output[key] = await this.prepareForStorage(item, blobs);
       }
       return output;
     }
 
-    async storeBlob(dataUrl) {
-      const blobId = await sha256(dataUrl);
-      const blobRef = this.realtime.ref(`blobs/migration-v1/${blobId}`);
-      const existing = await blobRef.once('value');
-      if (!existing.exists()) await blobRef.set({ data: dataUrl, created_at: new Date().toISOString() });
-      return BLOB_PREFIX + blobId;
+    writeBlobs(writer, blobs) {
+      let bytes = 0;
+      for (const { data } of blobs.values()) bytes += new TextEncoder().encode(data).length;
+      if (bytes > MAX_NEW_BLOB_BYTES) throw appError('新しい添付の合計が大きすぎます。1ファイルずつ保存してください。');
+      for (const [hash, { chunks }] of blobs) {
+        chunks.forEach((data, index) => {
+          writer.set(this.firestore.collection('_attachment_chunks').doc(`${hash}-${index}`), { data });
+        });
+      }
+    }
+
+    rememberBlobs(blobs) {
+      for (const { data, reference } of blobs.values()) this.attachmentReferences.set(data, reference);
+    }
+
+    async loadAtomicBlob(reference) {
+      const match = reference.slice(ATOMIC_BLOB_PREFIX.length).match(/^([a-f0-9]{64})\/([1-9][0-9]?)$/);
+      if (!match || Number(match[2]) > 64) throw appError('添付参照が不正です。');
+      if (!this.blobCache.has(reference)) {
+        const pending = Promise.all(Array.from({ length: Number(match[2]) }, (_, index) =>
+          this.firestore.collection('_attachment_chunks').doc(`${match[1]}-${index}`).get()
+        )).then(async snapshots => {
+          const chunks = snapshots.map(snapshot => {
+            const data = snapshot.data()?.data;
+            if (!snapshot.exists || typeof data !== 'string') throw appError('添付ファイルが見つかりません。');
+            return data;
+          });
+          const data = chunks.join('');
+          if (await sha256(data) !== match[1]) throw appError('添付ファイルの整合性を確認できません。');
+          this.attachmentReferences.set(data, reference);
+          return data;
+        }).catch(error => { this.blobCache.delete(reference); throw error; });
+        this.blobCache.set(reference, pending);
+      }
+      return this.blobCache.get(reference);
     }
 
     async rehydrateAttachments(value) {
       if (Array.isArray(value)) return Promise.all(value.map((item) => this.rehydrateAttachments(item)));
-      if (typeof value === 'string' && value.startsWith(BLOB_PREFIX)) return this.loadBlob(value.slice(BLOB_PREFIX.length));
+      if (typeof value === 'string' && value.startsWith(ATOMIC_BLOB_PREFIX)) return this.loadAtomicBlob(value);
+      if (typeof value === 'string' && value.startsWith(BLOB_PREFIX)) {
+        const data = await this.loadBlob(value.slice(BLOB_PREFIX.length));
+        this.attachmentReferences.set(data, value);
+        return data;
+      }
       if (!isPlainObject(value)) return value;
       const output = {};
       for (const [key, item] of Object.entries(value)) output[key] = await this.rehydrateAttachments(item);

@@ -546,3 +546,121 @@ test('employee CSV commit and ID allocation are atomic; collision never overwrit
   assert.equal((await db.from('employees').select('*')).data.length,3);
   await assert.rejects(db.insertEmployees([]));
 });
+
+
+test('attachment writes commit with their row; failures leave no chunks or RTDB blobs', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ employees: [{ id: 1, _revision: 2, name: 'original' }] });
+  await import(`../assets/js/firebase-adapter.js?attachment-failure=${Date.now()}`);
+  const db = createFirebaseDb();
+  const file = 'data:application/pdf;base64,' + 'YQ=='.repeat(100);
+  const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(file))).toString('hex');
+  firebase.firestore().failCommit = true;
+  assert.ok((await db.from('employees').insert({ id: 2, img: file })).error);
+  assert.ok((await db.from('employees').update({ img: file }).eq('id', 1)).error);
+  assert.ok((await db.updateByRevision('employees', 1, 2, { img: file })).error);
+  await assert.rejects(db.atomicWrite([{ table: 'employees', id: 1, data: { img: file } }]), /synthetic/);
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length, 0);
+  assert.equal((await db.realtime.ref(`blobs/migration-v1/${hash}`).once('value')).exists(), false);
+  assert.equal((await db.from('employees').select('*').single()).data.img, undefined);
+  assert.equal(db.attachmentReferences.has(file), false);
+  firebase.firestore().failCommit = false;
+  assert.equal((await db.updateByRevision('employees', 1, 2, { img: file })).error, null);
+  assert.equal((await createFirebaseDb().from('employees').select('*').single()).data.img, file);
+});
+
+test('stale and duplicate writes never create attachments or remove shared content', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ employees: [{ id: 1, _revision: 1 }] });
+  await import(`../assets/js/firebase-adapter.js?attachment-stale=${Date.now()}`);
+  const db = createFirebaseDb(), file = 'data:image/png;base64,c2hhcmVk', rejected = 'data:image/png;base64,ZmFpbA==';
+  assert.equal((await db.updateByRevision('employees', 1, 1, { img: file })).error, null);
+  const count = (await db.firestore.collection('_attachment_chunks').get()).docs.length;
+  assert.equal((await db.updateByRevision('employees', 1, 1, { img: rejected })).error.code, 'STALE_WRITE');
+  assert.ok((await db.from('employees').insert({ id: 1, img: rejected })).error);
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length, count);
+  assert.equal((await db.from('employees').insert({ id: 2, img: file })).error, null);
+  firebase.firestore().failCommit = true;
+  assert.ok((await createFirebaseDb().from('employees').insert({ id: 3, img: file })).error);
+  firebase.firestore().failCommit = false;
+  const rows = await createFirebaseDb().from('employees').select('*');
+  assert.deepEqual(rows.data.map(row => row.img), [file, file]);
+});
+
+test('5 MiB attachments round-trip in chunks; unchanged and legacy attachments are not rewritten', async () => {
+  globalThis.window = globalThis;
+  const legacyId = 'b'.repeat(64), legacy = 'data:image/png;base64,b2xk';
+  globalThis.firebase = createFirebaseMock({
+    _blobs: { [legacyId]: { data: legacy } },
+    employees: [{ id: 1, _revision: 0, img: `firebase-rtdb://blobs/migration-v1/${legacyId}` }]
+  });
+  await import(`../assets/js/firebase-adapter.js?attachment-size=${Date.now()}`);
+  const db = createFirebaseDb();
+  const previous = (await db.from('employees').select('*').single()).data;
+  const file = 'data:application/pdf;base64,' + Buffer.alloc(5 * 1024 * 1024, 97).toString('base64');
+  assert.equal((await db.updateByRevision('employees', 1, 0, { images: [previous.img, file, file] })).error, null);
+  const raw = (await db.firestore.collection('employees').doc('1').get()).data();
+  assert.equal(raw.images[0], `firebase-rtdb://blobs/migration-v1/${legacyId}`);
+  assert.equal(raw.images[1], raw.images[2]);
+  const chunks = (await db.firestore.collection('_attachment_chunks').get()).docs;
+  assert.ok(chunks.length > 1);
+  assert.ok(chunks.every(doc => new TextEncoder().encode(doc.data().data).length < 1024 * 1024));
+  const fresh = createFirebaseDb();
+  const reloaded = (await fresh.from('employees').select('*').single()).data;
+  assert.deepEqual(reloaded.images, [legacy, file, file]);
+  // Existing attachments exceed the new-upload budget together but must still save.
+  assert.equal((await fresh.updateByRevision('employees', 1, 1, { images: reloaded.images, name: 'edited' })).error, null);
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length, chunks.length);
+});
+
+test('oversized new attachments fail atomically and missing/corrupt chunks fail closed, then retry', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ employees: [{ id: 1, _revision: 0 }] });
+  await import(`../assets/js/firebase-adapter.js?attachment-corrupt=${Date.now()}`);
+  const db = createFirebaseDb();
+  const oversized = 'data:application/pdf;base64,' + 'A'.repeat(8 * 1024 * 1024);
+  const rejected = await db.updateByRevision('employees', 1, 0, { img: oversized });
+  assert.match(rejected.error.message, /1ファイルずつ/);
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length, 0);
+  const file = 'data:image/png;base64,eA==';
+  assert.equal((await db.updateByRevision('employees', 1, 0, { img: file })).error, null);
+  const raw = (await db.firestore.collection('employees').doc('1').get()).data();
+  const hash = raw.img.split('/').at(-2);
+  const chunk = db.firestore.collection('_attachment_chunks').doc(`${hash}-0`);
+  await chunk.delete();
+  const fresh = createFirebaseDb();
+  assert.ok((await fresh.from('employees').select('*').single()).error);
+  await chunk.set({ data: 'corrupt' });
+  assert.ok((await fresh.from('employees').select('*').single()).error);
+  await chunk.set({ data: file });
+  assert.equal((await fresh.from('employees').select('*').single()).data.img, file);
+  assert.equal((await db.firestore.collection('employees').doc('1').get()).data()._revision, 1);
+});
+
+test('concurrent attachment updates retain only the winner and retry without partial writes', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({ employees: [{ id: 1, _revision: 0 }] }, null, createTwoPartyBarrier());
+  await import(`../assets/js/firebase-adapter.js?attachment-race=${Date.now()}`);
+  const db = createFirebaseDb();
+  const results = await Promise.all(['YQ==', 'Yg=='].map(data =>
+    db.updateByRevision('employees', 1, 0, { img: 'data:image/png;base64,' + data })
+  ));
+  assert.equal(results.filter(result => !result.error).length, 1);
+  assert.equal(results.filter(result => result.error?.code === 'STALE_WRITE').length, 1);
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length, 1);
+  assert.equal((await createFirebaseDb().from('employees').select('*').single()).error, null);
+});
+
+
+test('attachment chunk boundaries preserve supplementary Unicode code points', async () => {
+  globalThis.window = globalThis;
+  globalThis.firebase = createFirebaseMock({});
+  await import(`../assets/js/firebase-adapter.js?attachment-unicode=${Date.now()}`);
+  const db = createFirebaseDb(), prefix = 'data:text/plain,';
+  const file = prefix + 'a'.repeat(196607 - prefix.length) + '😀日本語';
+  assert.equal((await db.from('employees').insert({ id: 1, img: file })).error, null);
+  const chunks = (await db.firestore.collection('_attachment_chunks').get()).docs.map(doc => doc.data().data);
+  assert.equal(chunks.length, 2);
+  assert.ok(chunks.every(chunk => new TextDecoder().decode(new TextEncoder().encode(chunk)) === chunk));
+  assert.equal((await createFirebaseDb().from('employees').select('*').single()).data.img, file);
+});
