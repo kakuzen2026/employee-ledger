@@ -370,6 +370,8 @@ function calcYukyuInfo(empId,todayValue){
   if(!e)return{granted:0,used:0,remaining:0,nextDate:null,nextDays:null,unsetDays:false};
 
   const allGrants=yukyuGrants.filter(g=>g.employee_id===empId);
+  const invalidGrant=allGrants.some(g=>!normalizeDateStr(g.grant_date)||(g.expire_date&&!normalizeDateStr(g.expire_date))||(!yukyuGrantNeedsDays(g)&&(!Number.isFinite(Number(g.days))||Number(g.days)<0)));
+  if(invalidGrant)return{granted:null,used:null,remaining:null,nextDate:null,nextDays:null,unsetDays:true,invalidGrant:true};
   // 日数設定済み・付与日が今日以前を古い順にソート（FIFO消化のため）
   const grants=allGrants
     .filter(g=>g.days!==null&&g.days!==undefined&&g.days!==''&&g.grant_date<=todayStr)
@@ -540,9 +542,9 @@ function openDeptModal(mode,id=null,cb=null){
     document.getElementById('dm_s1').value='';
     document.getElementById('dm_s2').value='';
   }
-  document.getElementById('deptModal').classList.add('open');
+  openModal('deptModal');
 }
-function closeDeptModal(){document.getElementById('deptModal').classList.remove('open');}
+function closeDeptModal(){closeModal('deptModal',true);}
 async function saveDeptModal(){
   const s1=document.getElementById('dm_s1').value.trim();
   const s2=document.getElementById('dm_s2').value.trim();

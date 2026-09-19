@@ -33,7 +33,7 @@ function renderYukyuList(){
     </div>
     ${tab==='allowance'?attendanceReportHtml(attendanceFilteredEmployees(fq,fe)):tab==='balance'?`
       <p class="workspace-help">在籍中の従業員を表示しています。詳細から付与の登録・編集ができます。</p>
-      ${!attendanceGrantsReady||!attendanceRecordsReady?'<div class="empty" role="alert">有休データを読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':`<div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th><th>有休残数</th><th>付与済み合計</th><th>記録上の取得合計</th><th>次回付与日</th><th></th></tr></thead><tbody>${activeEmps.map(e=>{const info=calcYukyuInfo(e.id);return `<tr><td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td><td data-label="有休残数"><strong>${info.remaining}日</strong></td><td data-label="付与済み合計">${info.granted}日</td><td data-label="記録上の取得合計">${info.used}日</td><td data-label="次回付与日">${emp_esc(info.nextDate||'—')}</td><td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id},'yukyu')">付与・詳細</button></td></tr>`;}).join('')||'<tr><td colspan="7">該当する従業員がいません。</td></tr>'}</tbody></table></div>`}`:employeeAttendanceTable(list,true)}`;
+      ${!attendanceGrantsReady||!attendanceRecordsReady?'<div class="empty" role="alert">有休データを読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':`<div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th><th>有休残数</th><th>付与済み合計</th><th>記録上の取得合計</th><th>次回付与日</th><th></th></tr></thead><tbody>${activeEmps.map(e=>{const info=calcYukyuInfo(e.id);return `<tr><td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td><td data-label="有休残数"><strong>${info.invalidGrant?'未確認':info.remaining+'日'}</strong></td><td data-label="付与済み合計">${info.invalidGrant?'未確認':info.granted+'日'}</td><td data-label="記録上の取得合計">${info.invalidGrant?'未確認':info.used+'日'}</td><td data-label="次回付与日">${info.invalidGrant?'未確認':emp_esc(info.nextDate||'—')}</td><td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id},'yukyu')">付与・詳細</button></td></tr>`;}).join('')||'<tr><td colspan="7">該当する従業員がいません。</td></tr>'}</tbody></table></div>`}`:employeeAttendanceTable(list,true)}`;
 }
 const PAID_LEAVE_STALE_MESSAGE='別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
 function paidLeaveRevision(row){return row?._revision==null?0:row._revision;}
@@ -79,9 +79,7 @@ function toggleKousoku(id,useKousoku,btn){
 async function saveKousokuDate(id,clear=false){
   const d=clear?'':document.getElementById('kousokuInput')?.value||'';
   const e=employees.find(x=>x.id===id);
-  e.kousoku_start_date=d;
-  e.updated_at=new Date().toISOString().slice(0,10);
-  await updateKousokuStartDate(id,d,e.updated_at);
+  await updateKousokuStartDate(id,d,new Date().toISOString().slice(0,10));
   if(!clear)showToast('保存しました');
   renderDT();
 }
@@ -113,16 +111,16 @@ function openGrantModal(empId,editGrantId=null){
   const dateInput=document.getElementById('gm_date');
   const daysInput=document.getElementById('gm_days');
   dateInput.oninput=()=>{daysInput.value=calcYukyuLegalDays(grantEmpId,dateInput.value)??'';markEmployeeDirty();};
-  document.getElementById('grantModal').classList.add('open');
+  openModal('grantModal');
 }
 function closeGrantModal(force=false){
   if(!force&&!canLeaveEmployeeView())return;
-  document.getElementById('grantModal').classList.remove('open');grantEmpId=null;grantEditId=null;grantEditRevision=null;EMP_UI.dirty=false;
+  closeModal('grantModal',true);grantEmpId=null;grantEditId=null;grantEditRevision=null;EMP_UI.dirty=false;
 }
 async function saveGrant(){
   if(EMP_UI.saving||!requireGrantData())return;
   const d=document.getElementById('gm_date').value;
-  if(!d){showToast('付与日は必須です','error');return;}
+  if(!normalizeDateStr(d)){showToast('有効な付与日を入力してください','error');return;}
   const daysVal=document.getElementById('gm_days').value;
   const days=daysVal!==''?Number(daysVal):null;
   let expire=document.getElementById('gm_expire').value;
@@ -142,7 +140,14 @@ async function saveGrant(){
   }catch(e){
     if(saved){closeGrantModal(true);renderDT();showToast('付与の保存は完了しました。最新データを再読み込みしてください。','warn');}
     else if(isStaleWrite(e))await reloadPaidLeaveAfterStale('grant');
-    else showToast('保存に失敗しました：'+e.message,'error');
+    else{
+      showToast('保存に失敗しました：'+e.message,'error');
+      if(e.code==='STALE_WRITE'&&!document.getElementById('employee-stale')){
+        const notice=document.createElement('div');notice.id='employee-stale';notice.setAttribute('role','alert');
+        notice.innerHTML='<p>別の画面で更新されています。入力内容を控えてから、最新情報を読み込んでください。</p><button class="btn" onclick="reloadEmployeeEdit()">最新情報を読み込む</button>';
+        document.querySelector('#mainContent .form-wrap').prepend(notice);
+      }
+    }
   }finally{setEmployeeSaving(false);}
 }
 async function delGrant(id,empId){
@@ -287,13 +292,22 @@ async function saveYR(){
   }catch(e){
     if(saved){returnFromEmployeeForm();showToast('保存は完了しました。一覧の再読み込みに失敗したため、再読み込みしてください。','warn');}
     else if(isStaleWrite(e))await reloadPaidLeaveAfterStale('record');
-    else showToast('保存に失敗しました：'+e.message,'error');
+    else{
+      showToast('保存に失敗しました：'+e.message,'error');
+      if(e.code==='STALE_WRITE'&&!document.getElementById('employee-stale')){
+        const notice=document.createElement('div');notice.id='employee-stale';notice.setAttribute('role','alert');
+        notice.innerHTML='<p>別の画面で更新されています。入力内容を控えてから、最新情報を読み込んでください。</p><button class="btn" onclick="reloadEmployeeEdit()">最新情報を読み込む</button>';
+        document.querySelector('#mainContent .form-wrap').prepend(notice);
+      }
+    }
   }finally{setEmployeeSaving(false);}
 }
 
 // ---- 従業員フォーム ----
+let employeeFormRevision;
 function renderForm(id){
   const isEdit=id!==null,e=isEdit?employees.find(x=>x.id===id):{};
+  employeeFormRevision=e._revision;
   rcImgData=e.residence_card||'';
   licFormImgData='';
   skFormImgData=(e.shikaku_list||[]).slice(0,3).map(s=>s.img||'');
@@ -318,7 +332,7 @@ function renderForm(id){
     <div class="field-grid" style="margin-top:10px">
       <div class="field">
         <label>生年月日</label>
-        <input type="date" id="f_birthday" value="${e.birthday||''}" oninput="calcAge()">
+        <input type="date" id="f_birthday" value="${emp_esc(e.birthday||'')}" oninput="calcAge()">
       </div>
       <div class="field">
         <label>年齢</label>
@@ -329,7 +343,7 @@ function renderForm(id){
         <select id="f_nationality" onchange="document.getElementById('f_nationality_other').style.display=this.value==='その他'?'block':'none'">
           ${['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].map(x=>`<option value="${x}" ${(e.nationality||'')==x?'selected':(!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality||'')&&x==='その他')?'selected':''}>${x||'選択してください'}</option>`).join('')}
         </select>
-        <input type="text" id="f_nationality_other" placeholder="国籍を入力" value="${!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality||'')?e.nationality||'':''}" style="margin-top:6px;display:${(e.nationality&&!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality))||e.nationality==='その他'?'block':'none'}">
+        <input type="text" id="f_nationality_other" placeholder="国籍を入力" value="${!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality||'')?emp_attr(e.nationality||''):''}" style="margin-top:6px;display:${(e.nationality&&!['','日本','ブラジル','ベトナム','中国','フィリピン','インドネシア','ミャンマー','タイ','ペルー','ネパール','韓国','その他'].includes(e.nationality))||e.nationality==='その他'?'block':'none'}">
       </div>
     </div>
     ${fi('address','住所',e.address,'text',false,true)}
@@ -342,7 +356,7 @@ function renderForm(id){
           <button type="button" class="sel-btn ${e.company==='セレクト'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='セレクト'">セレクト</button>
           <button type="button" class="sel-btn ${e.company==='覚善'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='覚善'">覚善</button>
         </div>
-        <input type="hidden" id="f_company" value="${e.company||''}">
+        <input type="hidden" id="f_company" value="${emp_esc(e.company||'')}">
       </div>
       <div class="field" style="grid-column:1/-1">
         <label>部署（所属1 / 所属2）</label>
@@ -370,7 +384,7 @@ function renderForm(id){
       ${fi('nyusha_date','入社日',e.nyusha_date,'date')}
       <div class="field">
         <label>退職日</label>
-        <input type="date" id="f_taishoku_date" value="${e.taishoku_date||''}" oninput="onTaishokuChange()">
+        <input type="date" id="f_taishoku_date" value="${emp_esc(e.taishoku_date||'')}" oninput="onTaishokuChange()">
       </div>
       <div class="field">
         <label>在籍状況</label>
@@ -383,14 +397,14 @@ function renderForm(id){
     <div class="field-grid" style="margin-top:10px">${fi('kyuyo','月給（円）',e.kyuyo,'number')}${fi('jikyu','時給（円）',e.jikyu,'number')}</div>
     <div class="section-title">在留・外国人情報</div>
     <div class="field-grid">
-      <div class="field"><label>在留資格</label><select id="f_visa"><option value="">（なし）</option>${visaTypes.map(v=>`<option ${e.visa===v.name?'selected':''}>${v.name}</option>`).join('')}</select></div>
+      <div class="field"><label>在留資格</label><select id="f_visa"><option value="">（なし）</option>${visaTypes.map(v=>`<option ${e.visa===v.name?'selected':''}>${emp_esc(v.name)}</option>`).join('')}</select></div>
       ${fi('visa_expiry','在留期限',e.visa_expiry,'date')}${fi('visa_no','在留カード番号',e.visa_no)}
     </div>
     <div class="field" style="margin-top:10px">
       <label>在留カード写真</label>
       <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="rcDropArea" style="display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer">
         <input type="file" accept="image/*,application/pdf" id="f_rc" style="display:none" onchange="previewRC(this)">${fileDropHint("image/*,application/pdf")}
-        <span id="rcPreview">${e.residence_card?`<img src="${e.residence_card}" style="max-height:120px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして在留カードを追加'}</span>
+        <span id="rcPreview">${e.residence_card?`<img src="${emp_attr(safeAttachmentUrl(e.residence_card))}" style="max-height:120px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして在留カードを追加'}</span>
       </label>
     </div>
     <div class="section-title">雇用保険</div>
@@ -405,7 +419,7 @@ function renderForm(id){
       <label>免許証写真</label>
       <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="licDropArea" style="display:flex;align-items:center;justify-content:center;min-height:70px;cursor:pointer">
         <input type="file" accept="image/*,application/pdf" id="f_lic_img" style="display:none" onchange="previewLicForm(this)">${fileDropHint("image/*,application/pdf")}
-        <span id="licFormPreview">${e.license_img?`<img src="${e.license_img}" style="max-height:100px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして免許証を追加'}</span>
+        <span id="licFormPreview">${e.license_img?`<img src="${emp_attr(safeAttachmentUrl(e.license_img))}" style="max-height:100px;border-radius:var(--emp-radius)">`:'クリックまたはドロップして免許証を追加'}</span>
       </label>
     </div>
     <div class="section-title">その他資格（最大3件）</div>
@@ -414,12 +428,12 @@ function renderForm(id){
       return`<div style="background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px;margin-bottom:8px">
         <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:8px">資格 ${i+1}</div>
         <div class="field-grid">
-          <div class="field"><label>資格名</label><input type="text" id="f_sk${i}_name" value="${sk.name||''}"></div>
+          <div class="field"><label>資格名</label><input type="text" id="f_sk${i}_name" value="${emp_attr(sk.name||'')}"></div>
           <div class="field">
             <label>写真・PDF</label>
             <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを添付" id="skDrop${i}" style="display:flex;align-items:center;justify-content:center;min-height:50px;cursor:pointer">
               <input type="file" accept="image/*,application/pdf" id="f_sk${i}_img" style="display:none" onchange="previewSkForm(this,${i})">${fileDropHint("image/*,application/pdf")}
-              <span id="skFormPreview${i}">${sk.img?`<img src="${sk.img}" style="max-height:60px;border-radius:4px">`:'クリックまたはドロップ'}</span>
+              <span id="skFormPreview${i}">${sk.img?`<img src="${emp_attr(safeAttachmentUrl(sk.img))}" style="max-height:60px;border-radius:4px">`:'クリックまたはドロップ'}</span>
             </label>
           </div>
         </div>
@@ -533,7 +547,7 @@ async function saveForm(isEdit,id){
         return name?{name,img,date:existingSk[i]?.date||'',expiry:existingSk[i]?.expiry||''}:null;
       }).filter(Boolean);
       emp.shikaku_list=[...formSk,...existingSk.slice(3)];
-      await updateEmployee(id,emp);
+      await updateEmployee(id,emp,employeeFormRevision);
     } else {
       emp.yukyu_list=[];emp.kenkou_list=[];
       emp.shikaku_list=[0,1,2].map(i=>{
@@ -546,8 +560,21 @@ async function saveForm(isEdit,id){
     await loadEmployees();returnFromEmployeeForm();showToast('従業員情報を保存しました');
   }catch(e){
     if(saved){returnFromEmployeeForm();showToast('保存は完了しました。最新の従業員情報を再読み込みしてください。','warn');}
-    else showToast('保存に失敗しました：'+e.message,'error');
+    else{
+      showToast('保存に失敗しました：'+e.message,'error');
+      if(e.code==='STALE_WRITE'&&!document.getElementById('employee-stale')){
+        const notice=document.createElement('div');notice.id='employee-stale';notice.setAttribute('role','alert');
+        notice.innerHTML='<p>別の画面で更新されています。入力内容を控えてから、最新情報を読み込んでください。</p><button class="btn" onclick="reloadEmployeeEdit()">最新情報を読み込む</button>';
+        document.querySelector('#mainContent .form-wrap').prepend(notice);
+      }
+    }
   }finally{setEmployeeSaving(false);}
+}
+
+async function reloadEmployeeEdit(){
+  if(!canLeaveEmployeeView())return;
+  try{await loadEmployees();EMP_UI.dirty=false;render();}
+  catch{showToast('最新情報を読み込めませんでした。入力内容は保持しています。','error');}
 }
 
 // ---- CSV インポート ----
@@ -558,20 +585,39 @@ function downloadSampleCSV(){
   dlCSV(sample.map(r=>r.map(v=>'"'+v.replace(/"/g,'""')+'"')),'従業員台帳_サンプル');
 }
 
+let employeeImportPending=false;
 async function importCSV(input){
+  if(employeeImportPending)return;
   const file=input.files[0];if(!file)return;
-  const text=await file.text();
-  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-  if(lines.length<2){showToast('データがありません','warn');return;}
-  const headers=parseCSVLine(lines[0]);
-  const idx=col=>headers.indexOf(col);
-  const rows=lines.slice(1).map(l=>parseCSVLine(l));
-  if(!confirm(`${rows.length}件のデータをインポートします。よろしいですか？`))return;
-  let ok=0,err=0;
-  for(const r of rows){
-    const g=col=>{const i=idx(col);return i>=0?(r[i]||''):'';};
-    if(!g('姓')&&!g('名'))continue;
-    const emp={
+  if(!attendanceEmployeesReady){showToast('従業員一覧を読み込んでから取り込んでください。','error');return;}
+  if(file.size>5*1024*1024){showToast('CSVは5MB以下にしてください。','error');return;}
+  employeeImportPending=true;
+  try{
+    const records=validatedEmployeeCSV(await file.text());
+    if(!confirm(`${records.length}件のデータをインポートします。よろしいですか？`))return;
+    await db.insertEmployees(records);
+    input.value='';
+    try{await loadEmployees();render();showToast(`インポート完了：${records.length}件`);}
+    catch{showToast('インポートは完了しました。一覧を再読み込みしてください。再取込は不要です。','warn');}
+  }catch(error){showToast('インポートできませんでした：'+error.message,'error');}
+  finally{employeeImportPending=false;}
+}
+function validatedEmployeeCSV(text){
+  const [headers,...rows]=parseCSV(text);
+  if(!headers||!rows.length)throw new Error('データがありません');
+  if(new Set(headers).size!==headers.length||['姓','名','会社'].some(h=>!headers.includes(h)))throw new Error('見出しに「姓」「名」「会社」が必要です。サンプルCSVを確認してください。');
+  if(rows.length>450)throw new Error('CSVは450件以下に分けてください');
+  const numbers=new Set((employees||[]).map(e=>String(e.shain_no||'').trim()).filter(Boolean));
+  return rows.map((r,n)=>{
+    const g=col=>{const i=headers.indexOf(col);return i>=0?(r[i]||''):'';};
+    const invalid=msg=>{throw new Error(`${n+2}行目：${msg}`);};
+    if(r.length!==headers.length)invalid('列数が見出しと一致しません');
+    if(!g('姓').trim()||!g('名').trim())invalid('姓・名は必須です');
+    if(!['セレクト','覚善'].includes(g('会社')))invalid('会社を確認してください');
+    if(g('在籍状況')&&!['在籍','退職','休職'].includes(g('在籍状況')))invalid('在籍状況を確認してください');
+    for(const h of headers.filter(h=>/(年月日|入社日|加入日|喪失日|取得日|有効期限|在留期限)$/.test(h))){if(g(h)&&!normalizeDateStr(g(h)))invalid(h+'の日付が不正です');}
+    const number=g('社員番号').trim();if(number&&numbers.has(number))invalid('社員番号が重複しています');if(number)numbers.add(number);
+    return {
       shain_no:g('社員番号'),company:g('会社'),
       sei:g('姓'),mei:g('名'),seikana:g('姓カナ'),meikana:g('名カナ'),
       birthday:g('生年月日'),gender:g('性別'),address:g('住所'),tel:g('電話'),email:g('メール'),
@@ -585,30 +631,36 @@ async function importCSV(input){
       memo:g('メモ'),yukyu_list:[],kenkou_list:[],shikaku_list:[],
       updated_at:new Date().toISOString().slice(0,10)
     };
-    try{await createEmployee(emp);ok++;}catch(e){err++;console.error(e);}
-  }
-  input.value='';
-  await loadEmployees();render();
-  showToast(`インポート完了！　成功：${ok}件${err?' / エラー：'+err+'件':''}`,ok&&!err?'success':'warn');
+  });
 }
-function parseCSVLine(line){
-  const result=[];let cur='',inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
-    else if(c===','&&!inQ){result.push(cur.trim());cur='';}
-    else cur+=c;
+function parseCSV(text){
+  const rows=[];let row=[],value='',quoted=false,closed=false;
+  text=String(text).replace(/^\uFEFF/,'');
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(quoted){
+      if(c==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}
+      else value+=c;
+    }else if(c==='"'){
+      if(value||closed)throw new Error('CSVの引用符が不正です');quoted=true;
+    }else if(c===','||c==='\n'||c==='\r'){
+      row.push(value);value='';closed=false;
+      if(c!==','){if(row.some(v=>v!==''))rows.push(row);row=[];if(c==='\r'&&text[i+1]==='\n')i++;}
+    }else{if(closed)throw new Error('CSVの引用符の後に余分な文字があります');value+=c;}
   }
-  result.push(cur.trim());return result;
+  if(quoted)throw new Error('CSVの引用符が閉じていません');
+  row.push(value);if(row.some(v=>v!==''))rows.push(row);
+  return rows;
 }
+function parseCSVLine(line){return parseCSV(line)[0]||[];}
 
 // ---- CSV エクスポート ----
 function exportCSV(){
   if(!confirm(`従業員CSVを出力します。\n対象: ${employees.length}件\n住所・電話・メール・保険番号などの個人情報が含まれます。続行しますか？`))return;
-  const h=['ID','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
+  const h=['ID','会社','社員番号','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
   const rows=employees.map(e=>{
     const dept=departments.find(d=>d.id===Number(e.dept_id));
-    return[e.id,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
+    return[e.id,e.company,e.shain_no,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
   });
   dlCSV([h,...rows],'従業員台帳');
 }

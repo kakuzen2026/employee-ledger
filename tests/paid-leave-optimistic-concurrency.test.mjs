@@ -42,6 +42,9 @@ function loadPaidLeaveUi({ grants = [], records = [] } = {}) {
   const calls = { toast: [], grantReload: 0, recordReload: 0, renderDetail: 0, renderList: 0 };
   const context = {
     console,
+    normalizeDateStr(value){return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:null;},
+    openModal(id){elements.get(id).classList.add("open");},
+    closeModal(id){elements.get(id).classList.remove("open");},
     document: { getElementById(id) { return elements.get(id) || null; } },
     employees: [{ id: 1, status: '在籍', sei: 'テスト', mei: '従業員', shain_no: '1' }],
     yukyuGrants: grants,

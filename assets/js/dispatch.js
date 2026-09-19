@@ -197,7 +197,7 @@ async function openSiteModal(site){
   if(site?.id){const {data}=await db.from('work_patterns').select('*').eq('site_id',site.id).order('created_at');wpList=(data||[]).map(p=>({...p}));}
   renderWP();
   const {data:clients}=await db.from('clients').select('id,name').order('name');
-  document.getElementById('s-client-id').innerHTML=(clients||[]).map(c=>`<option value="${c.id}" ${c.id===site?.client_id?'selected':''}>${c.name}</option>`).join('');
+  document.getElementById('s-client-id').innerHTML=(clients||[]).map(c=>`<option value="${c.id}" ${c.id===site?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal('modal-site');
 }
 
@@ -207,15 +207,26 @@ function renderWP(){
   emp.style.display='none';
   list.innerHTML=wpList.map((p,i)=>`
     <div class="wp-row">
-      <div><div class="col-label">パターン名</div><input type="text" value="${p.pattern_name||''}" placeholder="例:通常・早番" onchange="wpList[${i}].pattern_name=this.value"></div>
+      <div><div class="col-label">パターン名</div><input type="text" value="${esc(p.pattern_name||'')}" placeholder="例:通常・早番" onchange="wpList[${i}].pattern_name=this.value"></div>
       <div><div class="col-label">開始時刻</div><input type="time" value="${p.start_time?p.start_time.substring(0,5):''}" onchange="wpList[${i}].start_time=this.value"></div>
       <div><div class="col-label">終了時刻</div><input type="time" value="${p.end_time?p.end_time.substring(0,5):''}" onchange="wpList[${i}].end_time=this.value"></div>
-      <div><div class="col-label">休憩（分）</div><input type="number" value="${p.break_minutes??60}" min="0" step="5" onchange="wpList[${i}].break_minutes=parseInt(this.value)||0"></div>
+      <div><div class="col-label">休憩（分）</div><input type="number" value="${esc(p.break_minutes??60)}" min="0" step="5" onchange="wpList[${i}].break_minutes=parseInt(this.value)||0"></div>
       <button class="wp-del" onclick="wpList.splice(${i},1);renderWP()">🗑</button>
     </div>`).join('');
 }
 function addWP(){wpList.push({pattern_name:'',start_time:'',end_time:'',break_minutes:60});renderWP();}
 
+async function replacementOperations(table,field,value,rows){
+  const existing=await firebaseRows(db.from(table).select('id').eq(field,value));
+  return [...existing.map(row=>({table,id:row.id,remove:true})),
+    ...rows.map(row=>({table,id:crypto.randomUUID(),data:{...row,[field]:value}}))];
+}
+async function contractOperations(id,record,staff){
+  const site=await firebaseRows(db.from('sites').select('name,clients(name)').eq('id',record.site_id).single());
+  const links=await replacementOperations('contract_employees','contract_id',id,staff.map(e=>({employee_id:e.employee_id??e.id,employment_type:e.employment_type||'fixed',is_active:true})));
+  const mirror=await replacementOperations('dispatch_contracts','dispatch_app_contract_id',id,staff.map(e=>({employee_id:e.employee_id??e.id,contract_no:record.contract_no,contract_start:record.contract_start,contract_end:record.contract_end,site_name:site.name||'',client_name:site.clients?.name||''})));
+  return [{table:'contracts',id,data:record},...links,...mirror];
+}
 async function saveSite(){
   const id=document.getElementById('s-id').value;
   const p={
@@ -262,16 +273,12 @@ async function saveSite(){
     updated_at:new Date().toISOString(),
   };
   if(!p.name||!p.client_id){toast('必須項目を入力してください','error');return;}
-  let sid=id;
-  if(id){const {error}=await db.from('sites').update(p).eq('id',id);if(error){toast('保存に失敗しました：'+error.message,'error');return;}}
-  else{const {data,error}=await db.from('sites').insert(p).select('id').single();if(error){toast('保存に失敗しました：'+error.message,'error');return;}sid=data.id;}
-  const {error:wpDeleteError}=await db.from('work_patterns').delete().eq('site_id',sid);
-  if(wpDeleteError){toast('就業パターンの更新に失敗しました：'+wpDeleteError.message,'error');return;}
+  const sid=id||crypto.randomUUID();
   const valid=wpList.filter(x=>x.pattern_name&&x.start_time&&x.end_time);
-  if(valid.length){
-    const {error:wpInsertError}=await db.from('work_patterns').insert(valid.map(x=>({site_id:sid,pattern_name:x.pattern_name,start_time:x.start_time,end_time:x.end_time,break_minutes:x.break_minutes??60})));
-    if(wpInsertError){toast('就業パターンの保存に失敗しました：'+wpInsertError.message,'error');return;}
-  }
+  try{
+    const children=await replacementOperations('work_patterns','site_id',sid,valid.map(x=>({pattern_name:x.pattern_name,start_time:x.start_time,end_time:x.end_time,break_minutes:x.break_minutes??60})));
+    await db.atomicWrite([{table:'sites',id:sid,data:p},...children]);
+  }catch(error){toast('現場を保存できませんでした：'+error.message,'error');return;}
   toast(id?'現場を更新しました':'現場を登録しました','success');
   closeModal('modal-site');loadSites(true);
 }
@@ -356,16 +363,20 @@ async function openCtDetail(cid){
 
 async function endContract(id){
   if(!confirm('この契約を終了しますか？\n元に戻せません。'))return;
-  await db.from('contracts').update({status:'ended',updated_at:new Date().toISOString()}).eq('id',id);
-  await db.from('contract_employees').update({is_active:false}).eq('contract_id',id);
+  try{
+    const staff=await firebaseRows(db.from('contract_employees').select('id').eq('contract_id',id));
+    await db.atomicWrite([{table:'contracts',id,data:{status:'ended',updated_at:new Date().toISOString()}},...staff.map(row=>({table:'contract_employees',id:row.id,data:{is_active:false}}))]);
+  }catch(error){toast('契約を終了できませんでした：'+error.message,'error');return;}
   toast('契約を終了しました','success');loadContracts(true);
 }
 
 async function deleteContract(id){
   if(!confirm('この契約を完全に削除します。\nスタッフの紐づけも全て削除され、復元できません。\n通常は「契約を終了」を使ってください。\n完全削除を続行しますか？'))return;
-  await db.from('contract_employees').delete().eq('contract_id',id);
-  const {error}=await db.from('contracts').delete().eq('id',id);
-  if(error){toast('削除に失敗しました','error');return;}
+  try{
+    const staff=await replacementOperations('contract_employees','contract_id',id,[]);
+    const mirror=await replacementOperations('dispatch_contracts','dispatch_app_contract_id',id,[]);
+    await db.atomicWrite([{table:'contracts',id,remove:true},...staff,...mirror]);
+  }catch(error){toast('削除に失敗しました：'+error.message,'error');return;}
   toast('契約を削除しました','success');loadContracts(true);
 }
 
@@ -384,8 +395,8 @@ async function searchCEmp(q){
       const name=`${esc(e.sei)} ${esc(e.mei)}`;const kana=`${esc(e.seikana||'')} ${esc(e.meikana||'')}`.trim();
       const etLabel=e.employment_type==='permanent'?'無期':'有期';
       const etColor=e.employment_type==='permanent'?'var(--success)':'var(--accent2)';
-      const safeName=`${e.sei} ${e.mei}`.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return`<div class="emp-option" onclick="addSelEmp(${e.id},'${safeName}','${e.employment_type||'fixed'}')">
+      const args=[Number(e.id),`${e.sei} ${e.mei}`,e.employment_type==='permanent'?'permanent':'fixed'];
+      return`<div class="emp-option" onclick="${esc('addSelEmp('+args.map(v=>JSON.stringify(v)).join(',')+')')}">
         <div><div style="font-weight:500;">${name}</div>${kana?`<div style="font-size:11px;color:var(--text3);">${kana}</div>`:''}</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:${etColor};font-weight:600;">${etLabel}</span>
@@ -489,17 +500,9 @@ async function saveContract(){
     status:'active',updated_at:new Date().toISOString(),
   };
   if(!p.contract_start||!p.contract_end){toast('契約期間を入力してください','error');return;}
-  let cid=id;
-  if(id){const {error}=await db.from('contracts').update(p).eq('id',id);if(error){toast('保存に失敗しました：'+error.message,'error');return;}}
-  else{const {data,error}=await db.from('contracts').insert(p).select('id').single();if(error){toast('保存に失敗しました：'+error.message,'error');return;}cid=data.id;}
-  const {error:ceDeleteError}=await db.from('contract_employees').delete().eq('contract_id',cid);
-  if(ceDeleteError){toast('スタッフ紐づけの更新に失敗しました：'+ceDeleteError.message,'error');return;}
-  if(selEmps.length){
-    const {error:ceInsertError}=await db.from('contract_employees').insert(selEmps.map(e=>({contract_id:cid,employee_id:e.id,employment_type:e.employment_type,is_active:true})));
-    if(ceInsertError){toast('スタッフ紐づけの保存に失敗しました：'+ceInsertError.message,'error');return;}
-  }
-
-  await syncDispatchContracts(cid, p.contract_start, p.contract_end, p.contract_no);
+  const cid=id||crypto.randomUUID();
+  try{await db.atomicWrite(await contractOperations(cid,p,selEmps));}
+  catch(error){toast('契約を保存できませんでした：'+error.message,'error');return;}
 
   toast('契約を保存しました','success');closeModal('modal-contract');loadContracts(true);
 }
@@ -516,7 +519,7 @@ async function openRenewalModal(cid){
   document.getElementById('rn-info').innerHTML=`<strong>現場：</strong>${esc(c.sites?.name||'—')}<br><span style="color:var(--text3);font-size:12px;">配属：${(c.contract_employees||[]).map(e=>esc(enames[e.employee_id]||`ID:${e.employee_id}`)).join('、')}</span>`;
   const fixed=(c.contract_employees||[]).filter(e=>e.employment_type==='fixed');
   document.getElementById('rn-emp-opts').innerHTML=fixed.length
-    ?fixed.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked id="rn-${e.employee_id}">${enames[e.employee_id]||`ID:${e.employee_id}`}（有期）の雇用契約書を更新する</label>`).join('')
+    ?fixed.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked id="rn-${e.employee_id}">${esc(enames[e.employee_id]||`ID:${e.employee_id}`)}（有期）の雇用契約書を更新する</label>`).join('')
     :'<div style="font-size:12px;color:var(--text3);">無期契約スタッフのみのため雇用契約書の更新は不要です</div>';
   openModal('modal-renewal');
 }
@@ -525,45 +528,20 @@ async function execRenewal(){
   const cid=document.getElementById('rn-contract-id').value;
   const ns=document.getElementById('rn-start').value;const ne=document.getElementById('rn-end').value;
   if(!ns||!ne){toast('新しい契約期間を入力してください','error');return;}
-  const {data:orig}=await db.from('contracts').select('*,contract_employees(*)').eq('id',cid).single();
-  await db.from('contracts').update({status:'ended',updated_at:new Date().toISOString()}).eq('id',cid);
-  await db.from('contract_employees').update({is_active:false}).eq('contract_id',cid);
-  const newNo=await generateContractNo();
-  const {data:nc}=await db.from('contracts').insert({
-    site_id:orig.site_id,contract_no:newNo,contract_start:ns,contract_end:ne,
-    contract_type:orig.contract_type,renewal_count:(orig.renewal_count||0)+1,
-    parent_contract_id:cid,job_detail:orig.job_detail,authority_detail:orig.authority_detail,
-    overtime_rule:orig.overtime_rule,work_days:orig.work_days,haken_ryokin:orig.haken_ryokin,
-    ryokin_tani:orig.ryokin_tani,notes:orig.notes,status:'active',updated_at:new Date().toISOString(),
-  }).select('id').single();
-  await db.from('contract_employees').insert((orig.contract_employees||[]).map(e=>({contract_id:nc.id,employee_id:e.employee_id,employment_type:e.employment_type,is_active:true})));
-
-  // 従業員管理台帳のdispatch_contractsに同期
-  await syncDispatchContracts(nc.id, ns, ne, newNo);
+  try{
+    const orig=await firebaseRows(db.from('contracts').select('*,contract_employees(*)').eq('id',cid).single());
+    const newNo=await generateContractNo(),newId=crypto.randomUUID();
+    const record={site_id:orig.site_id,contract_no:newNo,contract_start:ns,contract_end:ne,
+      contract_type:orig.contract_type||'',renewal_count:(orig.renewal_count||0)+1,
+      parent_contract_id:cid,job_detail:orig.job_detail||'',authority_detail:orig.authority_detail||'',
+      overtime_rule:orig.overtime_rule||'',work_days:orig.work_days||'',haken_ryokin:orig.haken_ryokin||'',
+      ryokin_tani:orig.ryokin_tani||'',notes:orig.notes||'',status:'active',updated_at:new Date().toISOString()};
+    const operations=await contractOperations(newId,record,orig.contract_employees||[]);
+    operations.push({table:'contracts',id:cid,data:{status:'ended',updated_at:new Date().toISOString()}});
+    for(const staff of orig.contract_employees||[])operations.push({table:'contract_employees',id:staff.id,data:{is_active:false}});
+    await db.atomicWrite(operations);
+  }catch(error){toast('契約を更新できませんでした：'+error.message,'error');return;}
 
   toast('契約を更新しました','success');closeModal('modal-renewal');loadContracts(true);
   if(ST.page==='dashboard') loadDashboard();
-}
-
-// ===== SYNC TO 従業員管理台帳 =====
-async function syncDispatchContracts(contractId, startDate, endDate, contractNo){
-  try {
-    const {data:c}=await db.from('contracts')
-      .select('*,sites(name,clients(name)),contract_employees(*)')
-      .eq('id',contractId).single();
-    if(!c)return;
-    const siteName=c.sites?.name||'';
-    const clientName=c.sites?.clients?.name||'';
-    await db.from('dispatch_contracts').delete().eq('dispatch_app_contract_id',contractId);
-    const records=(c.contract_employees||[]).map(ce=>({
-      employee_id:ce.employee_id,
-      contract_no:contractNo,
-      contract_start:startDate,
-      contract_end:endDate,
-      site_name:siteName,
-      client_name:clientName,
-      dispatch_app_contract_id:contractId,
-    }));
-    if(records.length) await db.from('dispatch_contracts').insert(records);
-  } catch(e){ console.warn('従業員管理台帳への同期失敗:', e); }
 }

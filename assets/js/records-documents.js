@@ -13,7 +13,7 @@ async function loadRecords(){
   const empMap = {};
   emps.forEach(e=>empMap[e.id]=`${e.sei} ${e.mei}`);
   const ctMap = {};
-  cts.forEach(c=>ctMap[c.id]=`${c.contract_no||'—'} ${c.sites?.clients?.name||''} / ${c.sites?.name||''}`);
+  cts.forEach(c=>ctMap[c.id]=`${c.contract_no||'—'} ${esc(c.sites?.clients?.name||'')} / ${esc(c.sites?.name||'')}`);
 
   const typeLabel = {complaint:'苦情処理', training:'教育訓練', stability:'雇用安定措置'};
   const typeColor = {complaint:'var(--danger)', training:'var(--accent)', stability:'var(--success)'};
@@ -32,7 +32,7 @@ async function loadRecords(){
       </select>
       <select class="form-select" style="width:200px;" id="rec-filter-emp" onchange="loadRecords()">
         <option value="">すべての従業員</option>
-        ${emps.map(e=>`<option value="${e.id}">${e.sei} ${e.mei}</option>`).join('')}
+        ${emps.map(e=>`<option value="${e.id}">${esc(e.sei)} ${esc(e.mei)}</option>`).join('')}
       </select>
     </div>
     <div id="rec-list">
@@ -44,7 +44,7 @@ async function loadRecords(){
               <span style="background:${typeColor[r.type]||'var(--accent)'};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${typeLabel[r.type]||r.type}</span>
               <span style="font-weight:600;font-size:13px;">${esc(empMap[r.employee_id]||`ID:${r.employee_id}`)}</span>
               ${r.contract_id?`<span style="font-size:11px;color:var(--text3);">📄 ${esc(ctMap[r.contract_id]||r.contract_id)}</span>`:''}
-              ${r.rec_date?`<span style="font-size:11px;color:var(--text3);">${r.rec_date.substring(0,10)}</span>`:''}
+              ${r.rec_date?`<span style="font-size:11px;color:var(--text3);">${esc(r.rec_date.substring(0,10))}</span>`:''}
             </div>
             <button class="btn btn-secondary btn-sm" onclick="deleteEmployeeRecord('${r.id}')">削除</button>
           </div>
@@ -88,6 +88,7 @@ function renderRecTypeFields(){
       <div class="form-group"><label class="form-label">④その他</label><textarea class="form-textarea" id="rec-etc" rows="2"></textarea></div>`;
   }
   document.getElementById('rec-type-fields').innerHTML = html;
+  bindEmployeeLabels(document.getElementById('rec-type-fields'));
 }
 
 async function openRecordModal(record=null){
@@ -95,10 +96,10 @@ async function openRecordModal(record=null){
   document.getElementById('rec-modal-title').textContent = record ? '📋 記録を編集' : '📋 記録を追加';
   // 従業員リスト
   const {data:emps}=await db.from('employees').select('id,sei,mei').order('sei');
-  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('');
+  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${esc(e.sei)} ${esc(e.mei)}</option>`).join('');
   // 契約リスト
   const {data:cts}=await db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no');
-  document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${c.id}" ${record?.contract_id===c.id?'selected':''}>${c.contract_no||'—'} ${c.sites?.clients?.name||''} / ${c.sites?.name||''}</option>`).join('');
+  document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${c.id}" ${record?.contract_id===c.id?'selected':''}>${esc(c.contract_no||'—')} ${esc(c.sites?.clients?.name||'')} / ${esc(c.sites?.name||'')}</option>`).join('');
   // 種別セット
   if(record) document.getElementById('rec-type').value=record.type;
   renderRecTypeFields();
@@ -187,8 +188,8 @@ async function openDocsModal(cid){
   currentDocContract._recData=recData;
   document.getElementById('docs-title').textContent=`📄 書類を生成：${c.contract_no||c.sites?.name||''}`;
   document.getElementById('docs-contract-info').innerHTML=`
-    <strong>${c.contract_no||'—'}</strong>　${c.sites?.clients?.name||'—'} / ${c.sites?.name||'—'}
-    <span style="margin-left:12px;color:var(--text3);">${c.contract_start} 〜 ${c.contract_end}</span>
+    <strong>${esc(c.contract_no||'—')}</strong>　${esc(c.sites?.clients?.name||'—')} / ${esc(c.sites?.name||'—')}
+    <span style="margin-left:12px;color:var(--text3);">${esc(c.contract_start)} 〜 ${esc(c.contract_end)}</span>
     <span class="badge badge-blue" style="margin-left:8px;">${(c.contract_employees||[]).length}名</span>`;
   document.getElementById('docs-site-btns').innerHTML=`
     <button class="doc-btn" onclick="genDoc('kobetsu')"><span class="doc-icon">📋</span><div class="doc-info"><div class="doc-title">個別契約書</div><div class="doc-sub">派遣法26条・現場単位</div></div></button>
@@ -197,7 +198,7 @@ async function openDocsModal(cid){
   const empBtnsHtml=(c.contract_employees||[]).map(ce=>{
     const emp=empData[ce.employee_id];const name=emp?`${emp.sei} ${emp.mei}`:`ID:${ce.employee_id}`;
     const isFixed=ce.employment_type==='fixed';
-    return`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2);">👤 ${name}（${isFixed?'有期':'無期'}）</div>
+    return`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2);">👤 ${esc(name)}（${isFixed?'有期':'無期'}）</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('koyo_joken','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📑</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">雇用契約書兼就業条件明示書</div></div></button>
         <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('chicho','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📨</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">派遣先通知書</div></div></button>
