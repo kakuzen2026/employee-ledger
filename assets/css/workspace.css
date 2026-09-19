@@ -20,7 +20,8 @@ body.theme-light{background:#fff;color:var(--text);}
   color:var(--emp-text);background:#fff;font-family:inherit;font-size:14px;line-height:1.6;
 }
 body.employee-workspace #mobile-nav{display:none!important;}
-body.employee-workspace #main .content{padding:0;}
+body.employee-workspace #main .content{padding:0;min-width:0;}
+#emp-app-inner>main{min-width:0;max-width:100%;}
 body.employee-workspace #main #page-jugyoin{background:#fff;}
 #emp-app-inner>header{
   position:fixed;inset:0 auto 0 0;width:224px;height:100dvh;min-height:0;z-index:100;

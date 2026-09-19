@@ -14,6 +14,8 @@ function harness({blocked=false,save=async()=>[],reload=async()=>{}}={}){
     console:{error(){}},Date,employees:[{...employee}],employmentContracts:[],documentContractsReady:true,attendanceEmployeesReady:true,canCreateEmployeeDocument:()=>true,
     emp_esc:value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     showToast:message=>messages.push(message),
+    closeModal(){closed=true;},
+    openModal(){closed=false;},
     document:{getElementById:id=>fields[id]||(fields[id]={value:'',focus(){},addEventListener(){},classList:{contains:()=>false,remove(){closed=true;}}})},
     window:{open:()=>blocked?null:{document:{write:html=>printed.push(html),close(){},getElementById:()=>({addEventListener(){}})},print(){}}},
     createEmploymentContract:record=>{saved.push(record);return save(record);},loadEmploymentContracts:reload

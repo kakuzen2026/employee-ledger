@@ -24,7 +24,7 @@
     'doc_templates', 'work_patterns', 'contract_employees', 'employee_records',
     'dispatch_contracts'
   ]);
-  const REVISIONED_TABLES = new Set(['yukyu_records', 'yukyu_grants']);
+  const REVISIONED_TABLES = new Set(['yukyu_records', 'yukyu_grants', 'employees']);
   const STALE_WRITE_MESSAGE = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
   const BLOB_PREFIX = 'firebase-rtdb://blobs/migration-v1/';
 
@@ -347,6 +347,41 @@
         const next = value + 1;
         transaction.update(counter, { [table]: next });
         return next;
+      });
+    }
+
+    // One Firestore commit: replacement failure must leave every original row intact.
+    async atomicWrite(operations) {
+      if (!Array.isArray(operations) || !operations.length || operations.length > 450) throw appError('一度に保存できる件数を超えています（上限450件）。');
+      const writes = await Promise.all(operations.map(async ({table,id,data,remove}) => {
+        if (!TABLES.has(table) || id == null || !String(id) || String(id).includes('/')) throw appError('保存対象が不正です。');
+        if (!remove && !isPlainObject(data)) throw appError('登録内容が不正です。');
+        return { reference: this.firestore.collection(table).doc(String(id)), remove,
+          data: remove ? null : {...data,id} };
+      }));
+      const batch = this.firestore.batch();
+      for (const write of writes) {
+        if (write.remove) batch.delete(write.reference);
+        else batch.set(write.reference, write.data, {merge:true});
+      }
+      await batch.commit();
+    }
+
+    async insertEmployees(rows) {
+      if (!Array.isArray(rows) || !rows.length || rows.length > 450) throw appError('CSVは1〜450件ずつ取り込んでください。');
+      const prepared = rows;
+      const counter = this.firestore.collection('_meta').doc('counters');
+      return this.firestore.runTransaction(async transaction => {
+        const snapshot = await transaction.get(counter);
+        const start = snapshot.data()?.employees;
+        if (!snapshot.exists || !Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(start + rows.length)) throw appError('従業員IDの採番情報を確認してください。');
+        const records = prepared.map((row,i)=>({...row,id:start+i+1,_revision:1}));
+        const refs = records.map(row=>this.firestore.collection('employees').doc(String(row.id)));
+        const existing = await Promise.all(refs.map(ref=>transaction.get(ref)));
+        if (existing.some(doc=>doc.exists)) throw appError('従業員IDが重複しています。管理者に連絡してください。');
+        transaction.update(counter,{employees:start+rows.length});
+        records.forEach((row,i)=>transaction.set(refs[i],row));
+        return records;
       });
     }
 

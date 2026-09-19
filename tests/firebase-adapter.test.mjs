@@ -68,6 +68,14 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
         doc(id) { return refFor(table, id); }
       };
     },
+    batch() {
+      const writes=[];
+      return {
+        set(reference,data,options){writes.push(()=>reference.set(data,options));},
+        delete(reference){writes.push(()=>reference.delete());},
+        async commit(){if(firestore.failCommit)throw new Error('synthetic commit failure');for(const write of writes)await write();}
+      };
+    },
     async runTransaction(work) {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const reads = new Map();
@@ -79,6 +87,7 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
             if (attempt === 0 && onTransactionRead) await onTransactionRead(reference);
             return snapshot;
           },
+          set(reference, patch) { writes.push({type:'set',reference,patch}); },
           update(reference, patch) {
             writes.push({ type: 'update', reference, patch });
           },
@@ -87,6 +96,7 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
           }
         });
         if ([...reads].some(([key, version]) => (versions.get(key) || 0) !== version)) continue;
+        if(firestore.failCommit)throw new Error('synthetic commit failure');
         for (const write of writes) {
           if (write.type === 'delete') await write.reference.delete();
           else if (write.reference._counter) Object.entries(write.patch).forEach(([key, value]) => counter.set(key, value));
@@ -426,18 +436,18 @@ test('Dynamic employee actions use delegated click handlers', async () => {
   assert.match(core, /closest\?\.\('\[data-employee-action\]'\)/);
   assert.match(core, /closest\?\.\('\[data-employee-change\]'\)/);
   assert.match(core, /employeeChange==='contract-type'/);
-  assert.match(core, /getElementById\('deptModal'\)\.classList\.add\('open'\)/);
+  assert.match(core, /openModal\('deptModal'\)/);
   assert.doesNotMatch(core, /getElementById\('deptModal'\)\.style\.display/);
   assert.match(settings, /data-employee-action="department-add"/);
   assert.match(settings, /change:'contract-type'/);
   assert.doesNotMatch(settings, /onclick="openDeptModal/);
   for (const modalId of ['wpModal', 'contractModal', 'visaModal']) {
-    assert.match(settings, new RegExp(`getElementById\\('${modalId}'\\)\\.classList\\.add\\('open'\\)`));
+    assert.match(settings, new RegExp(`openModal\\('${modalId}'\\)`));
   }
   assert.match(detail, /data-employee-action="contract-open"/);
   assert.doesNotMatch(detail, /onclick="emp_openContractModal/);
   assert.match(paidLeave, /data-select-target="f_dept_id"/);
-  assert.match(paidLeave, /getElementById\('grantModal'\)\.classList\.add\('open'\)/);
+  assert.match(paidLeave, /openModal\('grantModal'\)/);
   assert.match(html, /data-employee-action="department-save"/);
   assert.match(html, /data-employee-action="contract-generate"/);
   assert.match(html, /assets\/js\/employee-core\.js\?v=\d{8}\.\d+/);
@@ -499,4 +509,40 @@ test('employment contract API round-trips identity, conditions and seal for an i
   assert.deepEqual(reloaded.find(row=>row.id===saved.id).terms,original.terms);
   assert.equal(reloaded[0].terms.employer_seal,original.terms.employer_seal);
   assert.equal(reloaded[0].copied_from_id,saved.id);assert.equal(reloaded[0].terms.wage,'1,400円');
+});
+
+test('employee edits reject stale revisions without overwriting the other editor',async()=>{
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({employees:[{id:1,tel:'old',address:'old'}]});
+  await import(`../assets/js/firebase-adapter.js?employee-revision=${Date.now()}`);
+  const db=createFirebaseDb();
+  assert.equal((await db.updateByRevision('employees',1,undefined,{tel:'new'})).error,null);
+  const stale=await db.updateByRevision('employees',1,undefined,{tel:'old',address:'new'});
+  assert.equal(stale.error.code,'STALE_WRITE');
+  const row=(await db.from('employees').select('*').single()).data;
+  assert.equal(row.tel,'new');assert.equal(row.address,'old');assert.equal(row._revision,1);
+});
+
+test('atomic replacement fails without partial deletion, then commits parent and children together',async()=>{
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({sites:[{id:'s',name:'old'}],work_patterns:[{id:'p',site_id:'s',pattern_name:'old'}]});
+  await import(`../assets/js/firebase-adapter.js?atomic=${Date.now()}`);
+  const db=createFirebaseDb();const writes=[{table:'sites',id:'s',data:{name:'new'}},{table:'work_patterns',id:'p',remove:true},{table:'work_patterns',id:'q',data:{site_id:'s',pattern_name:'new'}}];
+  firebase.firestore().failCommit=true;await assert.rejects(db.atomicWrite(writes),/synthetic/);
+  assert.equal((await db.from('sites').select('*').single()).data.name,'old');
+  assert.equal((await db.from('work_patterns').select('*').single()).data.id,'p');
+  firebase.firestore().failCommit=false;await db.atomicWrite(writes);
+  assert.equal((await db.from('sites').select('*').single()).data.name,'new');
+  assert.equal((await db.from('work_patterns').select('*').single()).data.id,'q');
+  await assert.rejects(db.atomicWrite(Array(451).fill(writes[0])),/450/);
+});
+
+test('employee CSV commit and ID allocation are atomic; collision never overwrites',async()=>{
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({_counters:{employees:1},employees:[{id:1,sei:'Existing'}]});
+  await import(`../assets/js/firebase-adapter.js?import-atomic=${Date.now()}`);
+  const db=createFirebaseDb(),rows=[{sei:'Test',mei:'One'},{sei:'Test',mei:'Two'}];
+  firebase.firestore().failCommit=true;await assert.rejects(db.insertEmployees(rows),/synthetic/);
+  assert.equal((await db.from('employees').select('*')).data.length,1);
+  firebase.firestore().failCommit=false;const created=await db.insertEmployees(rows);
+  assert.deepEqual(created.map(e=>e.id),[2,3]);
+  assert.equal((await db.from('employees').select('*')).data.length,3);
+  await assert.rejects(db.insertEmployees([]));
 });

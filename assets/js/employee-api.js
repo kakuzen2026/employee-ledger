@@ -1,5 +1,5 @@
 // ---- Firebase data access ----
-const EMPLOYEE_SELECT='id,shain_no,my_number,sei,mei,seikana,meikana,birthday,gender,nationality,address,tel,email,company,dept_id,position,koyou,employment_type,nyusha_date,taishoku_date,status,kyuyo,jikyu,visa,visa_expiry,visa_no,koyo_hoken_no,koyo_nyusha,koyo_soshitsu,shakai_hoken_no,shakai_nyusha,shakai_soshitsu,license_no,license_date,license_expiry,bank_name,bank_branch,bank_account_no,bank_account_name,memo,yukyu_list,kenkou_list,shikaku_list,residence_card_imgs,license_imgs,contract_other_system,kousoku_start_date,updated_at';
+const EMPLOYEE_SELECT='_revision,id,shain_no,my_number,sei,mei,seikana,meikana,birthday,gender,nationality,address,tel,email,company,dept_id,position,koyou,employment_type,nyusha_date,taishoku_date,status,kyuyo,jikyu,visa,visa_expiry,visa_no,koyo_hoken_no,koyo_nyusha,koyo_soshitsu,shakai_hoken_no,shakai_nyusha,shakai_soshitsu,license_no,license_date,license_expiry,bank_name,bank_branch,bank_account_no,bank_account_name,memo,yukyu_list,kenkou_list,shikaku_list,residence_card_imgs,license_imgs,contract_other_system,kousoku_start_date,updated_at';
 
 async function firebaseRows(query){
   const {data,error}=await query;
@@ -33,7 +33,17 @@ async function fetchDispatchContractEmployeeSummaries(){
 }
 
 async function createEmployee(data){return firebaseRows(db.from('employees').insert(data));}
-async function updateEmployee(id,patch){return firebaseRows(db.from('employees').update(patch).eq('id',id));}
+async function updateEmployee(id,patch,expectedRevision=employees.find(e=>e.id===id)?._revision){
+  if(!employees.some(e=>e.id===id))throw new Error('従業員の最新情報を読み込んでください。');
+  try{
+    const rows=await firebaseRows(db.updateByRevision('employees',id,expectedRevision,patch));
+    const local=employees.find(e=>e.id===id);if(local)Object.assign(local,patch,{_revision:rows[0]._revision});
+    return rows;
+  }catch(error){
+    if(error.code==='STALE_WRITE')error.message='別の端末またはタブで更新されています。最新情報を読み込んでから再度操作してください。';
+    showToast(error.message,'error');throw error;
+  }
+}
 async function retireEmployee(id,date){return updateEmployee(id,{status:'退職',taishoku_date:date,updated_at:date});}
 async function updateEmployeeMemo(id,memo,updatedAt){return updateEmployee(id,{memo,updated_at:updatedAt});}
 async function updateResidenceCardImages(id,imgs,updatedAt){return updateEmployee(id,{residence_card_imgs:imgs,updated_at:updatedAt});}

@@ -120,7 +120,7 @@ function setEmployeeSaving(saving){
   document.querySelectorAll('#documentEditor button,#documentEditor input,#documentEditor select,#grantModal button,#grantModal input,#attendanceDrawer button,#attendanceDrawer input,#attendanceDrawer textarea,#mainContent .sticky-footer button,#mainContent .form-wrap input,#mainContent .form-wrap select,#mainContent .form-wrap textarea').forEach(el=>{el.disabled=saving;});
 }
 function bindEmployeeLabels(root=document.getElementById('mainContent')){
-  root?.querySelectorAll('.field,.frow').forEach((field,i)=>{
+  root?.querySelectorAll('.field,.frow,.form-group').forEach((field,i)=>{
     const label=field.querySelector('label'),input=field.querySelector('input:not([type="hidden"]),select,textarea');
     if(label&&input&&!label.contains(input)){if(!input.id)input.id='employee-field-'+i;label.htmlFor=input.id;}
   });

@@ -7,11 +7,11 @@ function renderSettings(){
       <div class="settings-card" style="margin-bottom:20px">
         <h3>発行元情報（証明書用）</h3>
         <div class="field-grid" style="margin-bottom:12px">
-          <div class="field"><label>会社名</label><input type="text" id="ci_company" value="${companyInfo.company_name||''}" placeholder="株式会社〇〇"></div>
-          <div class="field"><label>郵便番号</label><input type="text" id="ci_postal" value="${companyInfo.postal_code||''}" placeholder="000-0000"></div>
-          <div class="field" style="grid-column:1/-1"><label>住所</label><input type="text" id="ci_address" value="${companyInfo.address||''}" placeholder="愛知県〇〇市..."></div>
-          <div class="field"><label>電話番号</label><input type="text" id="ci_tel" value="${companyInfo.tel||''}" placeholder="0000-00-0000"></div>
-          <div class="field"><label>代表者名</label><input type="text" id="ci_rep" value="${companyInfo.representative||''}" placeholder="代表取締役 〇〇 〇〇"></div>
+          <div class="field"><label>会社名</label><input type="text" id="ci_company" value="${emp_esc(companyInfo.company_name||'')}" placeholder="株式会社〇〇"></div>
+          <div class="field"><label>郵便番号</label><input type="text" id="ci_postal" value="${emp_esc(companyInfo.postal_code||'')}" placeholder="000-0000"></div>
+          <div class="field" style="grid-column:1/-1"><label>住所</label><input type="text" id="ci_address" value="${emp_esc(companyInfo.address||'')}" placeholder="愛知県〇〇市..."></div>
+          <div class="field"><label>電話番号</label><input type="text" id="ci_tel" value="${emp_esc(companyInfo.tel||'')}" placeholder="0000-00-0000"></div>
+          <div class="field"><label>代表者名</label><input type="text" id="ci_rep" value="${emp_esc(companyInfo.representative||'')}" placeholder="代表取締役 〇〇 〇〇"></div>
         </div>
         <div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" data-employee-action="company-save">保存</button></div>
       </div>
@@ -32,8 +32,8 @@ function renderSettings(){
               ondrop="deptDrop(event,${d.id})"
               ondragend="deptDragEnd(event)">
               <span style="color:var(--emp-text3);font-size:16px;margin-right:4px">☰</span>
-              <div class="d1">${d.shozoku1}</div>
-              <div class="d2">${d.shozoku2||'<span style="color:var(--emp-text3)">所属2なし</span>'}</div>
+              <div class="d1">${emp_esc(d.shozoku1)}</div>
+              <div class="d2">${emp_esc(d.shozoku2)||'<span style="color:var(--emp-text3)">所属2なし</span>'}</div>
               <button type="button" class="btn btn-sm" data-employee-action="department-edit" data-id="${d.id}">編集</button>
               <button type="button" class="btn btn-sm btn-danger" data-employee-action="department-delete" data-id="${d.id}">削除</button>
             </div>`).join('')}
@@ -47,7 +47,7 @@ function renderSettings(){
         ${visaTypes.length===0?'<div class="empty" style="padding:20px 0">在留資格が登録されていません</div>':
           visaTypes.map(v=>`
             <div class="dept-row">
-              <div class="d1" style="flex:2">${v.name}</div>
+              <div class="d1" style="flex:2">${emp_esc(v.name)}</div>
               <button type="button" class="btn btn-sm" data-employee-action="visa-edit" data-id="${v.id}">編集</button>
               <button type="button" class="btn btn-sm btn-danger" data-employee-action="visa-delete" data-id="${v.id}">削除</button>
             </div>`).join('')}
@@ -60,10 +60,10 @@ function renderSettings(){
         ${workPatterns.length===0?'<div class="empty" style="padding:20px 0">勤務パターンが登録されていません</div>':
           workPatterns.map(p=>`
             <div class="dept-row" style="flex-wrap:wrap">
-              <div style="font-weight:500;font-size:13px;flex:1;min-width:120px">${p.name}</div>
+              <div style="font-weight:500;font-size:13px;flex:1;min-width:120px">${emp_esc(p.name)}</div>
               <div style="font-size:12px;color:var(--emp-text2);flex:2;min-width:0;word-break:break-all">
-                ${p.start_time||''}〜${p.end_time||''} 休憩${p.break_minutes||60}分
-                週${p.work_days_per_week||''}日 休日：${p.holidays||''}
+                ${emp_esc(p.start_time||'')}〜${emp_esc(p.end_time||'')} 休憩${emp_esc(p.break_minutes||60)}分
+                週${emp_esc(p.work_days_per_week||'')}日 休日：${emp_esc(p.holidays||'')}
               </div>
               <button type="button" class="btn btn-sm" data-employee-action="work-pattern-edit" data-id="${p.id}">編集</button>
               <button type="button" class="btn btn-sm btn-danger" data-employee-action="work-pattern-delete" data-id="${p.id}">削除</button>
@@ -95,9 +95,9 @@ function openWorkPatternModal(id=null){
     document.getElementById('wp_holidays').value='';
     document.getElementById('wp_note').value='';
   }
-  document.getElementById('wpModal').classList.add('open');
+  openModal('wpModal');
 }
-function closeWpModal(){document.getElementById('wpModal').classList.remove('open');}
+function closeWpModal(){closeModal('wpModal',true);}
 async function saveWpModal(){
   const name=document.getElementById('wp_name').value.trim();
   if(!name){showToast('パターン名は必須です','error');return;}
@@ -422,7 +422,7 @@ function emp_openContractModal(empId,sourceContract=null){
   toggleContractTermFields();
   toggleContractWorkFields();
   contractInitialTerms=JSON.stringify(collectEmploymentContractTerms());
-  document.getElementById('contractModal').classList.add('open');
+  openModal('contractModal');
   document.querySelector('#contractModal .modal-box').scrollTop=0;
 }
 function hasUnsavedEmploymentContract(){
@@ -433,7 +433,7 @@ function closeContractModal({saved=false}={}){
   if(!saved&&contractIssuePending){showToast('発行履歴を保存しています。完了までお待ちください。','warn');return false;}
   if(!saved&&hasUnsavedEmploymentContract()&&!confirm('入力した雇用契約書はまだ保存されていません。変更を破棄して閉じますか？'))return false;
   contractSealGeneration++;contractSealLoading=false;contractSealError='';
-  document.getElementById('contractModal').classList.remove('open');
+  closeModal('contractModal',true);
   contractSourceId=null;contractInitialTerms='';
   return true;
 }
@@ -837,9 +837,9 @@ function openVisaModal(mode,id=null,name=''){
   visaModalMode=mode;visaModalId=id;
   document.getElementById('visaModalTitle').textContent=mode==='add'?'在留資格を追加':'在留資格を編集';
   document.getElementById('vm_name').value=name;
-  document.getElementById('visaModal').classList.add('open');
+  openModal('visaModal');
 }
-function closeVisaModal(){document.getElementById('visaModal').classList.remove('open');}
+function closeVisaModal(){closeModal('visaModal',true);}
 async function saveVisaModal(){
   const name=document.getElementById('vm_name').value.trim();
   if(!name){showToast('在留資格名を入力してください','error');return;}
