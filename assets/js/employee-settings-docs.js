@@ -147,7 +147,7 @@ function generateCertificate(empId,type){
 
   const today=new Date();
   const todayStr=`${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
-  const todayISO=today.toISOString().slice(0,10);
+  const todayISO=localDateStr(today);
   const dept=departments.find(d=>d.id===Number(e.dept_id));
   const isZaishoku=type==='zaishoku';
   const title=isZaishoku?'在職証明書':'退職証明書';
@@ -624,7 +624,7 @@ function generateContract(print=true){
 async function renderContractList(){
   const generation=++renderContractList.generation;
   const today=new Date();
-  const todayStr=today.toISOString().slice(0,10);
+  const todayStr=localDateStr(today);
 
   // 派遣管理アプリの雇用契約書を取得
   let dispatchContracts=[],dispatchReady=true;
@@ -661,7 +661,7 @@ async function renderContractList(){
     const ct=empContractMap[e.id];
     if(!ct)return dispatchReady; // 読み込みに失敗した場合は契約書なしと断定しない
     if(!ct.contract_end)return false; // 無期または終了日なし
-    const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
+    const days=calendarDaysUntil(ct.contract_end,today);
     return days<=15; // 期限切れ or 15日以内
   });
 
@@ -686,7 +686,7 @@ async function renderContractList(){
         <tbody>${alertEmps.map(e=>{
           const ct=empContractMap[e.id];
           const dept=departments.find(d=>d.id===Number(e.dept_id));
-          const days=ct?.contract_end?Math.ceil((new Date(ct.contract_end)-today)/86400000):null;
+          const days=ct?.contract_end?calendarDaysUntil(ct.contract_end,today):null;
           const statusLabel=!ct
             ?`<span class="badge badge-danger">契約書なし</span>`
             :days<0?`<span class="badge badge-danger">期限切れ（${Math.abs(days)}日）</span>`

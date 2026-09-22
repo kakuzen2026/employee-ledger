@@ -184,3 +184,11 @@ function navigate(page){
   }
   else if(page==='settings') loadSettings();
 }
+
+function reportReadFailure(error,targetId,retry){
+  if(!error)return false;
+  toast('読み込みに失敗しました。保存済みの内容の再登録は不要です。','error');
+  const target=targetId&&document.getElementById(targetId);
+  if(target)target.innerHTML='<div role="alert">読み込みに失敗しました。<button class="btn btn-secondary" onclick="'+esc(retry)+'">再読み込み</button></div>';
+  return true;
+}

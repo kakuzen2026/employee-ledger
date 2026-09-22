@@ -39,7 +39,8 @@ function loadCore(employees = [], yukyuGrants = [], yukyuRecords = []) {
 
 function wireGrantWrites(context) {
   const calls = { create: [], update: [], remove: [] };
-  context.createYukyuGrants = async rows => {
+  context.createYukyuGrants = async (rows, updates=[]) => {
+    for(const u of updates)await context.saveYukyuGrant(u.id,u.patch,u.expectedRevision);
     calls.create.push(...rows);
     context.__employeeTestState.yukyuGrants.push(...rows.map((row, index) => ({ ...row, id: row.id ?? 1000 + index })));
     context.__syncEmployeeTestState();
@@ -74,7 +75,8 @@ function createTwoPartyBarrier() {
 
 function wireSharedGrantWrites(context, sharedGrants, waitForPeer) {
   const calls = { create: [], update: [] };
-  context.createYukyuGrants = async rows => {
+  context.createYukyuGrants = async (rows, updates=[]) => {
+    for(const u of updates)await context.saveYukyuGrant(u.id,u.patch,u.expectedRevision);
     calls.create.push(...rows);
     await waitForPeer();
     for (const row of rows) sharedGrants.set(row.id, { ...row });
@@ -243,7 +245,7 @@ test('自動days補完がstaleなら手動変更を上書きせず最新grantを
   ]);
   let reloads = 0;
   context.console={...console,error(){}};
-  context.createYukyuGrants = async () => [];
+  context.createYukyuGrants = async (rows,updates) => { for(const u of updates)await context.saveYukyuGrant(u.id,u.patch,u.expectedRevision); };
   context.saveYukyuGrant = async (id, patch, expectedRevision) => {
     assert.equal(id, 21);
     assert.deepEqual(Object.keys(patch), ['days']);
@@ -290,8 +292,8 @@ test('月末付与日は対象月末に丸め、以後は最初の付与日を�
   assert.equal(context.grantExpireDate('2025-10-15'), '2027-10-14');
   assert.match(detailSource, /付与日：毎年1月1日/);
   assert.match(detailSource, /付与日：入社6か月後、その後は毎年同月同日/);
-  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260919\.1/);
-  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260919\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-core\.js\?v=20260922\.1/);
+  assert.match(htmlSource, /assets\/js\/employee-list-detail\.js\?v=20260922\.1/);
 });
 
 test('従業員または付与の読込が未確認なら自動付与は書込みを行わない', async () => {
@@ -344,6 +346,6 @@ test('参照勤続の手動付与削除も同じ年に自動再作成しない',
 });
 
 test('有休に関わる4資産を現在の検証済みURLで読み込む',()=>{
-  const versions={'employee-api':'20260919.2','employee-core':'20260919.1','employee-list-detail':'20260919.1','paid-leave-csv':'20260919.2'};
+  const versions={'employee-api':'20260922.1','employee-core':'20260922.1','employee-list-detail':'20260922.1','paid-leave-csv':'20260922.1'};
   for(const [name,version] of Object.entries(versions))assert.ok(htmlSource.includes('assets/js/'+name+'.js?v='+version),name);
 });

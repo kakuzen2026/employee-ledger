@@ -59,7 +59,13 @@ function validateYukyuGrant(data){
   for(const field of ['grant_date','expire_date'])if(Object.hasOwn(data,field)&&!normalizeDateStr(data[field]))throw new Error('付与日・有効期限の日付を確認してください');
   if(data.grant_date&&data.expire_date&&data.expire_date<data.grant_date)throw new Error('有効期限は付与日以降にしてください');
 }
-async function createYukyuGrants(batch){batch.forEach(validateYukyuGrant);return firebaseRows(db.from('yukyu_grants').insert(batch.map(newYukyuRow)));}
+async function createYukyuGrants(batch,updates=[]){
+  batch.forEach(validateYukyuGrant);updates.forEach(u=>validateYukyuGrant(u.patch));
+  await db.atomicWrite([
+    ...batch.map(row=>({table:'yukyu_grants',id:row.id,data:newYukyuRow(row),createOnly:true})),
+    ...updates.map(u=>({table:'yukyu_grants',id:u.id,data:u.patch,expectedRevision:u.expectedRevision}))
+  ]);
+}
 async function saveYukyuGrant(id,data,expectedRevision){validateYukyuGrant(data);return id==null?firebaseRows(db.from('yukyu_grants').insert(newYukyuRow(data))):firebaseRows(db.updateByRevision('yukyu_grants',id,expectedRevision,data));}
 // Keep the date as a deletion marker so automatic grants cannot recreate it.
 async function deleteYukyuGrant(id,expectedRevision){return firebaseRows(db.updateByRevision('yukyu_grants',id,expectedRevision,{deleted:true,days:0}));}

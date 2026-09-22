@@ -5,6 +5,8 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../assets/js/paid-leave-csv.js', import.meta.url), 'utf8');
 const pointsSource = await readFile(new URL('../assets/js/attendance-points.js', import.meta.url), 'utf8');
+const dateContext=vm.createContext({localStorage:{getItem:()=>null},document:{addEventListener(){}}});
+vm.runInContext(await readFile(new URL('../assets/js/employee-core.js',import.meta.url),'utf8'),dateContext);
 const staleMessage = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
 
 function staleError() {
@@ -42,6 +44,7 @@ function loadPaidLeaveUi({ grants = [], records = [] } = {}) {
   const calls = { toast: [], grantReload: 0, recordReload: 0, renderDetail: 0, renderList: 0 };
   const context = {
     console,
+    grantExpireDate:dateContext.grantExpireDate,
     normalizeDateStr(value){return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:null;},
     openModal(id){elements.get(id).classList.add("open");},
     closeModal(id){elements.get(id).classList.remove("open");},

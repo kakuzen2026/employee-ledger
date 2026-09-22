@@ -355,15 +355,56 @@
     }
 
     // One Firestore commit: replacement failure must leave every original row intact.
-    async atomicWrite(operations) {
+    async atomicWrite(operations, {contractId,contractPrefix} = {}) {
       if (!Array.isArray(operations) || !operations.length || operations.length > 450) throw appError('一度に保存できる件数を超えています（上限450件）。');
       const blobs = new Map();
-      const writes = await Promise.all(operations.map(async ({table,id,data,remove}) => {
+      const writes = await Promise.all(operations.map(async ({table,id,data,remove,createOnly,expectedRevision}) => {
         if (!TABLES.has(table) || id == null || !String(id) || String(id).includes('/')) throw appError('保存対象が不正です。');
         if (!remove && !isPlainObject(data)) throw appError('登録内容が不正です。');
-        return { reference: this.firestore.collection(table).doc(String(id)), remove,
+        return { table,id,createOnly,expectedRevision,reference: this.firestore.collection(table).doc(String(id)), remove,
           data: remove ? null : await this.prepareForStorage({...data,id}, blobs) };
       }));
+      if(contractId || writes.some(write=>write.createOnly || write.expectedRevision!==undefined)){
+        let counter, maximum=0;
+        if(contractId){
+          if(!/^KZ-\d{6}-$/.test(contractPrefix)||!writes.some(w=>w.table==='contracts'&&w.id===contractId))throw appError('契約番号の採番対象が不正です。');
+          const existing=await this.firestore.collection('contracts').get();
+          for(const doc of existing.docs){
+            const no=doc.data().contract_no||'';
+            if(no.startsWith(contractPrefix)&&/^\d+$/.test(no.slice(contractPrefix.length)))maximum=Math.max(maximum,Number(no.slice(contractPrefix.length)));
+          }
+          counter=this.firestore.collection('_meta').doc('contract-sequence-'+contractPrefix.slice(3,9));
+        }
+        await this.firestore.runTransaction(async transaction=>{
+          const sequence=counter?await transaction.get(counter):null;
+          const snapshots=await Promise.all(writes.map(write=>transaction.get(write.reference)));
+          let contractNo;
+          if(counter){
+            const current=sequence.exists?sequence.data().value:0;
+            if(!Number.isSafeInteger(current)||current<0||!Number.isSafeInteger(maximum))throw appError('契約番号の採番情報が不正です。');
+            const next=Math.max(current,maximum)+1;
+            if(!Number.isSafeInteger(next))throw appError('契約番号の採番上限です。');
+            contractNo=contractPrefix+String(next).padStart(3,'0');
+            transaction.set(counter,{value:next});
+          }
+          writes.forEach((write,index)=>{
+            const snapshot=snapshots[index];
+            if((write.createOnly || (write.table==='contracts'&&write.id===contractId))&&snapshot.exists)throw appError('同じIDのレコードが既に存在します。再読み込みしてください。');
+            let data=write.data;
+            if(write.expectedRevision!==undefined){
+              const expected=revisionOf(write.expectedRevision);
+              if(!snapshot.exists||revisionOf(snapshot.data()._revision)!==expected||!Number.isSafeInteger(expected+1))throw staleWriteError();
+              data={...data,_revision:expected+1};
+            }
+            if(contractNo&&((write.table==='contracts'&&write.id===contractId)||(write.table==='dispatch_contracts'&&data?.dispatch_app_contract_id===contractId)))data={...data,contract_no:contractNo};
+            if(write.remove)transaction.delete(write.reference);
+            else transaction.set(write.reference,data,{merge:true});
+          });
+          this.writeBlobs(transaction,blobs);
+        });
+        this.rememberBlobs(blobs);
+        return;
+      }
       const batch = this.firestore.batch();
       for (const write of writes) {
         if (write.remove) batch.delete(write.reference);

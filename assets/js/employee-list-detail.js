@@ -178,39 +178,39 @@ async function renderAlert(){
     const ct=empContractMap[e.id];
     if(!ct)return true;
     if(!ct.contract_end)return false;
-    return Math.ceil((new Date(ct.contract_end)-today)/86400000)<=15;
+    return calendarDaysUntil(ct.contract_end,today)<=15;
   });
 
   const alertList=employees.filter(e=>{
-    const visaDl=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
-    const licDl=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    const visaDl=e.visa_expiry?calendarDaysUntil(e.visa_expiry,today):null;
+    const licDl=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     return(visaDl!==null&&visaDl<90)||(licDl!==null&&licDl<90);
   }).sort((a,b)=>{
     const aDl=Math.min(
-      a.visa_expiry?Math.round((new Date(a.visa_expiry)-today)/86400000):9999,
-      a.license_expiry?Math.round((new Date(a.license_expiry)-today)/86400000):9999
+      a.visa_expiry?calendarDaysUntil(a.visa_expiry,today):9999,
+      a.license_expiry?calendarDaysUntil(a.license_expiry,today):9999
     );
     const bDl=Math.min(
-      b.visa_expiry?Math.round((new Date(b.visa_expiry)-today)/86400000):9999,
-      b.license_expiry?Math.round((new Date(b.license_expiry)-today)/86400000):9999
+      b.visa_expiry?calendarDaysUntil(b.visa_expiry,today):9999,
+      b.license_expiry?calendarDaysUntil(b.license_expiry,today):9999
     );
     return aDl-bDl;
   });
   const expired=alertList.filter(e=>{
-    const vd=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
-    const ld=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    const vd=e.visa_expiry?calendarDaysUntil(e.visa_expiry,today):null;
+    const ld=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     return(vd!==null&&vd<0)||(ld!==null&&ld<0);
   });
   const warning=alertList.filter(e=>{
-    const vd=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
-    const ld=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    const vd=e.visa_expiry?calendarDaysUntil(e.visa_expiry,today):null;
+    const ld=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     return !((vd!==null&&vd<0)||(ld!==null&&ld<0));
   });
 
   const alertRow=(e)=>{
     const dept=departments.find(d=>d.id===Number(e.dept_id));
-    const vd=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
-    const ld=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    const vd=e.visa_expiry?calendarDaysUntil(e.visa_expiry,today):null;
+    const ld=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     const isExpired=(vd!==null&&vd<0)||(ld!==null&&ld<0);
     const rowBg=isExpired?'background:#fdf0f0':'background:#fdf3e7';
     const visaLabel=e.visa_expiry?(vd<0?`<span class="badge badge-danger">在留 期限切れ</span>`:`<span class="badge badge-warn">在留 残${vd}日</span>`):'';
@@ -242,7 +242,7 @@ async function renderAlert(){
         <tbody>${contractAlerts.map(e=>{
           const ct=empContractMap[e.id];
           const dept=departments.find(d=>d.id===Number(e.dept_id));
-          const days=ct?.contract_end?Math.ceil((new Date(ct.contract_end)-today)/86400000):null;
+          const days=ct?.contract_end?calendarDaysUntil(ct.contract_end,today):null;
           const statusLabel=!ct
             ?`<span class="badge badge-danger">契約書なし</span>`
             :days<0?`<span class="badge badge-danger">期限切れ（${Math.abs(days)}日）</span>`
@@ -305,7 +305,7 @@ async function loadDispatchAlerts(){
     const today=new Date();
     const contracts=await fetchDispatchContractsByEnd();
     const alertContracts=contracts.filter(ct=>{
-      const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
+      const days=calendarDaysUntil(ct.contract_end,today);
       return days<=60;
     });
     if(!alertContracts.length){
@@ -321,7 +321,7 @@ async function loadDispatchAlerts(){
         <tbody>${alertContracts.map(ct=>{
           const emp=empMap[ct.employee_id];
           const name=emp?`${emp_esc(emp.sei)} ${emp_esc(emp.mei)}`:`ID:${ct.employee_id}`;
-          const days=Math.ceil((new Date(ct.contract_end)-today)/86400000);
+          const days=calendarDaysUntil(ct.contract_end,today);
           const rowBg=days<0?'background:var(--danger-light);':days<=14?'background:var(--warn-light);':'';
           const dayLabel=days<0?`<span style="color:var(--emp-danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
             :`<span style="color:var(--emp-warn);font-weight:600;">${days}日</span>`;
@@ -351,7 +351,7 @@ async function retireEmp(id){
   const e=employees.find(x=>x.id===id);
   if(!e)return;
   if(!confirm(`${e.sei} ${e.mei} さんを退職扱いにします。\n台帳データは削除せず残します。よろしいですか？`))return;
-  await retireEmployee(id,new Date().toISOString().slice(0,10));
+  await retireEmployee(id,localDateStr());
   await loadEmployees();render();
 }
 
@@ -458,8 +458,7 @@ async function renderDT(){
   } else if(detailTab==='license'){
     const slist=e.shikaku_list||[];
     const today=new Date();
-    const licExp=e.license_expiry?new Date(e.license_expiry):null;
-    const licDl=licExp?Math.round((licExp-today)/86400000):null;
+    const licDl=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     const licImgs=e.license_imgs||[];
     c.innerHTML=`
       <div class="section-title">運転免許証</div>
@@ -488,8 +487,7 @@ async function renderDT(){
       <div class="section-title" style="margin-top:24px">その他資格</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         ${slist.length===0?'<div class="empty" style="padding:16px 0">資格が登録されていません</div>':slist.map((x,i)=>{
-          const sExp=x.expiry?new Date(x.expiry):null;
-          const sDl=sExp?Math.round((sExp-today)/86400000):null;
+          const sDl=x.expiry?calendarDaysUntil(x.expiry,today):null;
           return`<div class="list-item">
             <span style="font-weight:500;min-width:120px">${emp_esc(x.name||'—')}</span>
             <span class="dt">取得：${emp_esc(x.date||'—')}</span>
@@ -522,7 +520,7 @@ async function renderDT(){
           ${contracts.map(ct=>{
             const start=new Date(ct.contract_start);
             const end=new Date(ct.contract_end);
-            const days=Math.ceil((end-today)/86400000);
+            const days=calendarDaysUntil(ct.contract_end,today);
             let statusBadge='',rowBg='';
             if(days<0){
               statusBadge=`<span class="badge badge-danger">期限切れ</span>`;
@@ -622,15 +620,15 @@ async function saveFuyou(id){
   const rows=collectFuyouRows();
   const memo=memoWithFuyouMeta(e.memo,rows);
   try{
-    await updateEmployeeMemo(id,memo,new Date().toISOString().slice(0,10));
-    e.memo=memo;e.updated_at=new Date().toISOString().slice(0,10);
+    await updateEmployeeMemo(id,memo,localDateStr());
+    e.memo=memo;e.updated_at=localDateStr();
     showToast('扶養情報を保存しました');
     renderDT();
   }catch(err){showToast('扶養情報の保存に失敗しました：'+err.message,'error');}
 }
 async function saveMemo(id){
   const e=employees.find(x=>x.id===id);
-  const memo=memoWithFuyouMeta(document.getElementById('memoText').value,getFuyouList(e)),updated=new Date().toISOString().slice(0,10);
+  const memo=memoWithFuyouMeta(document.getElementById('memoText').value,getFuyouList(e)),updated=localDateStr();
   try{await updateEmployeeMemo(id,memo,updated);e.memo=memo;e.updated_at=updated;EMP_UI.dirty=false;showToast('保存しました');}
   catch(error){showToast('保存に失敗しました：'+error.message,'error');}
 }

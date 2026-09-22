@@ -392,6 +392,7 @@ test('Paid-leave API forces revision 1 for new rows and forwards expected revisi
   const deletes = [];
   const context = {
     db: {
+      async atomicWrite(operations) { for(const op of operations){ assert.equal(op.createOnly,true); inserted.push({table:op.table,row:op.data}); } },
       from(table) {
         return { insert(row) { inserted.push({ table, row }); return Promise.resolve({ data: Array.isArray(row) ? row : [row], error: null }); } };
       },
@@ -663,4 +664,48 @@ test('attachment chunk boundaries preserve supplementary Unicode code points', a
   assert.equal(chunks.length, 2);
   assert.ok(chunks.every(chunk => new TextDecoder().decode(new TextEncoder().encode(chunk)) === chunk));
   assert.equal((await createFirebaseDb().from('employees').select('*').single()).data.img, file);
+});
+
+test('automatic grants commit together and stale/deleted rows preserve every original',async()=>{
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({yukyu_grants:[{id:1,days:null,_revision:2},{id:3,deleted:true,days:0,_revision:2}]});
+  await import(`../assets/js/firebase-adapter.js?auto-atomic=${Date.now()}`);
+  const db=createFirebaseDb();
+  const writes=[{table:'yukyu_grants',id:2,data:{days:10,_revision:1},createOnly:true},{table:'yukyu_grants',id:1,data:{days:11},expectedRevision:2}];
+  firebase.firestore().failCommit=true;await assert.rejects(db.atomicWrite(writes),/synthetic/);
+  assert.equal((await db.from('yukyu_grants').select('*')).data.length,2);
+  firebase.firestore().failCommit=false;
+  await assert.rejects(db.atomicWrite([...writes,{table:'yukyu_grants',id:3,data:{days:20},createOnly:true}]),/既に存在/);
+  await assert.rejects(db.atomicWrite([writes[0],{...writes[1],expectedRevision:1}]),/別の|更新|stale/i);
+  assert.equal((await db.from('yukyu_grants').select('*').eq('id',1).single()).data.days,null);
+  await db.atomicWrite(writes);
+  assert.equal((await db.from('yukyu_grants').select('*').eq('id',1).single()).data._revision,3);
+  assert.equal((await db.from('yukyu_grants').select('*').eq('id',3).single()).data.deleted,true);
+});
+
+test('parallel contracts allocate distinct numbers above numeric legacy maximum and rollback allocation on failure',async()=>{
+  const barrier=createTwoPartyBarrier();
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({contracts:[{id:'old',contract_no:'KZ-202609-1000'},{id:'older',contract_no:'KZ-202609-999'}]},null,ref=>ref._key==='_meta/contract-sequence-202609'?barrier():undefined);
+  await import(`../assets/js/firebase-adapter.js?contract-atomic=${Date.now()}`);
+  const db=createFirebaseDb();
+  const writes=id=>[{table:'contracts',id,data:{contract_no:''}},{table:'dispatch_contracts',id:'mirror-'+id,data:{dispatch_app_contract_id:id,contract_no:''}}];
+  await Promise.all(['a','b'].map(id=>db.atomicWrite(writes(id),{contractId:id,contractPrefix:'KZ-202609-'})));
+  const rows=(await db.from('contracts').select('*')).data.filter(x=>['a','b'].includes(x.id));
+  assert.deepEqual(rows.map(x=>x.contract_no).sort(),['KZ-202609-1001','KZ-202609-1002']);
+  for(const row of rows)assert.equal((await db.from('dispatch_contracts').select('*').eq('dispatch_app_contract_id',row.id).single()).data.contract_no,row.contract_no);
+  firebase.firestore().failCommit=true;await assert.rejects(db.atomicWrite(writes('c'),{contractId:'c',contractPrefix:'KZ-202609-'}),/synthetic/);
+  assert.equal((await db.from('contracts').select('*').eq('id','c')).data.length,0);
+  firebase.firestore().failCommit=false;await db.atomicWrite(writes('c'),{contractId:'c',contractPrefix:'KZ-202609-'});
+  assert.equal((await db.from('contracts').select('*').eq('id','c').single()).data.contract_no,'KZ-202609-1003');
+});
+
+test('a stale concurrent contract edit cannot append a second set of staff links',async()=>{
+  const barrier=createTwoPartyBarrier();
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({contracts:[{id:'c',_revision:1}],contract_employees:[{id:'old',contract_id:'c'}]},null,ref=>ref._key==='contracts/c'?barrier():undefined);
+  await import(`../assets/js/firebase-adapter.js?contract-edit=${Date.now()}`);
+  const db=createFirebaseDb(),operations=id=>[{table:'contracts',id:'c',data:{notes:id},expectedRevision:1},{table:'contract_employees',id:'old',remove:true},{table:'contract_employees',id,data:{contract_id:'c'}}];
+  const results=await Promise.allSettled(['a','b'].map(id=>db.atomicWrite(operations(id))));
+  assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
+  assert.equal(results.find(x=>x.status==='rejected').reason.code,'STALE_WRITE');
+  const rows=(await db.from('contract_employees').select('*')).data;assert.equal(rows.length,1);
+  const contract=(await db.from('contracts').select('*').single()).data;assert.equal(contract._revision,2);assert.equal(rows[0].id,contract.notes);
 });

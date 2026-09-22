@@ -5,7 +5,7 @@ function initBillingMonths(){
 }
 async function loadBilling(){
   const m=document.getElementById('billing-month-filter').value;
-  const {data}=await db.from('billing').select('*,clients(name)').gte('billing_month',m+'-01').lte('billing_month',m+'-31').order('created_at');
+  const readResult1=await db.from('billing').select('*,clients(name)').gte('billing_month',m+'-01').lte('billing_month',m+'-31').order('created_at');if(reportReadFailure(readResult1.error,"billing-table","loadBilling()"))return;const data=readResult1.data;
   ST.billing=data||[];
   const el=document.getElementById('billing-table');
   if(!ST.billing.length){el.innerHTML='<div class="empty-state"><div class="icon">💴</div><p>この月の請求がありません</p></div>';return;}
@@ -30,17 +30,20 @@ async function openBillingModalById(id){
 }
 async function openBillingModal(b){
   document.getElementById('mb-title').textContent=b?'請求を編集':'請求を記録';
-  document.getElementById('b-id').value=b?.id||'';document.getElementById('b-amount').value=b?.amount||'';
+  document.getElementById('b-id').value=b?.id||'';document.getElementById('b-amount').value=b?.amount??'';
   document.getElementById('b-billed').value=b?.is_billed?'true':'false';document.getElementById('b-notes').value=b?.notes||'';
   if(b?.billing_month) document.getElementById('b-month').value=b.billing_month.substring(0,7);
   else{const n=new Date();document.getElementById('b-month').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
-  const {data:cl}=await db.from('clients').select('id,name').order('name');
+  const readResult2=await db.from('clients').select('id,name').order('name');if(reportReadFailure(readResult2.error))return;const cl=readResult2.data;
   document.getElementById('b-client-id').innerHTML=(cl||[]).map(c=>`<option value="${c.id}" ${c.id===b?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal('modal-billing');
 }
 async function saveBilling(){
   const id=document.getElementById('b-id').value;const m=document.getElementById('b-month').value;
-  const p={client_id:document.getElementById('b-client-id').value,billing_month:m+'-01',amount:parseInt(document.getElementById('b-amount').value)||0,is_billed:document.getElementById('b-billed').value==='true',notes:document.getElementById('b-notes').value,updated_at:new Date().toISOString()};
+  const rawAmount=document.getElementById('b-amount').value.trim();
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(m)){toast('対象月を入力してください','error');return;}
+  if(!/^-?\d+$/.test(rawAmount)||!Number.isSafeInteger(Number(rawAmount))){toast('金額を整数で入力してください','error');return;}
+  const p={client_id:document.getElementById('b-client-id').value,billing_month:m+'-01',amount:Number(rawAmount),is_billed:document.getElementById('b-billed').value==='true',notes:document.getElementById('b-notes').value,updated_at:new Date().toISOString()};
   if(!p.client_id||!p.billing_month){toast('必須項目を入力してください','error');return;}
   const {error}=id?await db.from('billing').update(p).eq('id',id):await db.from('billing').insert(p);
   if(error){toast('保存に失敗しました：'+error.message,'error');return;}
@@ -56,7 +59,7 @@ async function deleteBilling(id){
 
 // ===== SETTINGS =====
 async function loadSettings(){
-  const {data}=await db.from('settings').select('*').limit(1).maybeSingle();
+  const readResult3=await db.from('settings').select('*').limit(1).maybeSingle();if(reportReadFailure(readResult3.error))return;const data=readResult3.data;
   if(data){
     const m={'s-company-name':'company_name','s-ceo':'ceo_name','s-ceo-title':'ceo_title','s-address':'company_address','s-license':'license_number','s-office-number':'office_number',
       's-pay-cutoff':'pay_cutoff','s-pay-date':'pay_date','s-haken-mgr-dept':'haken_mgr_dept','s-haken-mgr-title':'haken_mgr_title','s-haken-mgr-name':'haken_mgr_name','s-haken-mgr-tel':'haken_mgr_tel',
@@ -73,7 +76,7 @@ async function saveSettings(){
     complaint_dept:document.getElementById('s-complaint-dept').value,complaint_title:document.getElementById('s-complaint-title').value,
     complaint_name:document.getElementById('s-complaint-name').value,complaint_tel:document.getElementById('s-complaint-tel').value,
     updated_at:new Date().toISOString()};
-  const {data:ex}=await db.from('settings').select('id').limit(1).maybeSingle();
+  const readResult4=await db.from('settings').select('id').limit(1).maybeSingle();if(reportReadFailure(readResult4.error))return;const ex=readResult4.data;
   const {error}=ex?await db.from('settings').update(p).eq('id',ex.id):await db.from('settings').insert(p);
   if(error)toast('保存に失敗しました：'+error.message,'error');else toast('自社情報を保存しました','success');
 }

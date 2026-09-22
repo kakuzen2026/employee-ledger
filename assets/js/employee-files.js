@@ -139,7 +139,7 @@ async function addRcImg(empId,input){
   if(!e)return;
   if((e.residence_card_imgs||[]).length>=4){showToast('最大4枚です','warn');return;}
   return readAttachment(input,async(data)=>{
-    const images=[...(e.residence_card_imgs||[]),data],updated=new Date().toISOString().slice(0,10);
+    const images=[...(e.residence_card_imgs||[]),data],updated=localDateStr();
     await updateResidenceCardImages(empId,images,updated);
     e.residence_card_imgs=images;e.updated_at=updated;
     if(input.isConnected)renderDT();
@@ -147,7 +147,7 @@ async function addRcImg(empId,input){
 }
 async function delRcImg(i){
   const e=employees.find(x=>x.id===viewingId);
-  await updateResidenceCardImages(viewingId,(e.residence_card_imgs||[]).filter((_,n)=>n!==i),new Date().toISOString().slice(0,10));
+  await updateResidenceCardImages(viewingId,(e.residence_card_imgs||[]).filter((_,n)=>n!==i),localDateStr());
   renderDT();
 }
 
@@ -157,7 +157,7 @@ async function addLicImg(empId,input){
   if(!e)return;
   if((e.license_imgs||[]).length>=4){showToast('最大4枚です','warn');return;}
   return readAttachment(input,async(data)=>{
-    const images=[...(e.license_imgs||[]),data],updated=new Date().toISOString().slice(0,10);
+    const images=[...(e.license_imgs||[]),data],updated=localDateStr();
     await updateLicenseImages(empId,images,updated);
     e.license_imgs=images;e.updated_at=updated;
     if(input.isConnected)renderDT();
@@ -165,7 +165,7 @@ async function addLicImg(empId,input){
 }
 async function delLicImg(i){
   const e=employees.find(x=>x.id===viewingId);
-  await updateLicenseImages(viewingId,(e.license_imgs||[]).filter((_,n)=>n!==i),new Date().toISOString().slice(0,10));
+  await updateLicenseImages(viewingId,(e.license_imgs||[]).filter((_,n)=>n!==i),localDateStr());
   renderDT();
 }
 function previewSkImg(input){return readAttachment(input,(data,file)=>{skImgData=data;document.getElementById('skImgName').textContent=file.name;});}
@@ -175,7 +175,7 @@ async function saveLicense(id){
     license_no:document.getElementById('lic_no')?.value||'',
     license_date:document.getElementById('lic_date')?.value||'',
     license_expiry:document.getElementById('lic_expiry')?.value||'',
-    updated_at:new Date().toISOString().slice(0,10)
+    updated_at:localDateStr()
   };
   await updateEmployeeLicense(id,patch);
   showToast('保存しました');renderDT();
@@ -186,16 +186,16 @@ async function addShikaku(id){
   const name=document.getElementById('sk_name')?.value.trim();
   if(!name){showToast('資格名を入力してください','error');return;}
   const list=[...(e.shikaku_list||[]),{name,date:document.getElementById('sk_date')?.value||'',expiry:document.getElementById('sk_expiry')?.value||'',img:skImgData}];
-  await updateEmployeeShikaku(id,list,new Date().toISOString().slice(0,10));skImgData='';renderDT();
+  await updateEmployeeShikaku(id,list,localDateStr());skImgData='';renderDT();
 }
 async function delShikaku(id,i){
   const e=employees.find(x=>x.id===id);
-  await updateEmployeeShikaku(id,e.shikaku_list.filter((_,n)=>n!==i),new Date().toISOString().slice(0,10));renderDT();
+  await updateEmployeeShikaku(id,e.shikaku_list.filter((_,n)=>n!==i),localDateStr());renderDT();
 }
 
 async function delKenko(id,i){
   const e=employees.find(x=>x.id===id);
-  await updateEmployeeKenko(id,e.kenkou_list.filter((_,n)=>n!==i),new Date().toISOString().slice(0,10));renderDT();
+  await updateEmployeeKenko(id,e.kenkou_list.filter((_,n)=>n!==i),localDateStr());renderDT();
 }
 function previewKI(input){return readAttachment(input,(data,file)=>{kenkoImgData=data;document.getElementById('kimgName').textContent=file.name;});}
 async function addKenko(id){
@@ -203,6 +203,6 @@ async function addKenko(id){
   const e=employees.find(x=>x.id===id),d=document.getElementById('kd').value;
   if(!d){showToast('受診日を入力してください','error');return;}
   const list=[...(e.kenkou_list||[]),{date:d,result:document.getElementById('kr').value,img:kenkoImgData}];
-  await updateEmployeeKenko(id,list,new Date().toISOString().slice(0,10));kenkoImgData='';renderDT();
+  await updateEmployeeKenko(id,list,localDateStr());kenkoImgData='';renderDT();
 }
 

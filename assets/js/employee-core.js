@@ -239,6 +239,10 @@ function localDateStr(date=new Date()){
   const pad=n=>String(n).padStart(2,'0');
   return`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
 }
+function calendarDaysUntil(value,today=new Date()){
+  const end=parseLocalDateParts(value),start=parseLocalDateParts(resolveTodayStr(today));
+  return end&&start?(Date.UTC(end.year,end.month-1,end.day)-Date.UTC(start.year,start.month-1,start.day))/86400000:NaN;
+}
 function normalizeDateStr(value){
   const p=parseLocalDateParts(value);
   return p?`${String(p.year).padStart(4,'0')}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`:null;
@@ -449,9 +453,8 @@ async function checkAndAutoGrant(todayValue){
   let succeeded=true;
   if(batch.length||updates.length){
     try{
-      if(batch.length)await createYukyuGrants(batch);
-      for(const u of updates)await saveYukyuGrant(u.id,u.patch,u.expectedRevision);
-    }catch(err){succeeded=false;console.error('自動付与エラー',err);}
+      await createYukyuGrants(batch,updates);
+    }catch(err){succeeded=false;console.error('自動付与エラー',err);if(typeof toast==='function')toast('有休の自動付与を保存できませんでした。再読み込みしてください。','error');}
     await loadGrants();
   }
   return succeeded;
@@ -494,8 +497,8 @@ function getLedgerFocusMetrics(today=new Date()){
   const yukyuUnset=[];
   const contractNeed=[];
   activeEmps.forEach(e=>{
-    const visaDays=e.visa_expiry?Math.round((new Date(e.visa_expiry)-today)/86400000):null;
-    const licenseDays=e.license_expiry?Math.round((new Date(e.license_expiry)-today)/86400000):null;
+    const visaDays=e.visa_expiry?calendarDaysUntil(e.visa_expiry,today):null;
+    const licenseDays=e.license_expiry?calendarDaysUntil(e.license_expiry,today):null;
     if(visaDays!==null&&visaDays<0)visaExpired.push(e);
     else if(visaDays!==null&&visaDays<90)visaSoon.push(e);
     if(licenseDays!==null&&licenseDays<0)licenseExpired.push(e);
@@ -503,7 +506,7 @@ function getLedgerFocusMetrics(today=new Date()){
     if(calcYukyuInfo(e.id).unsetDays)yukyuUnset.push(e);
     if(!e.contract_other_system){
       const ct=contractMap[e.id];
-      const contractDays=ct?.contract_end?Math.ceil((new Date(ct.contract_end)-today)/86400000):null;
+      const contractDays=ct?.contract_end?calendarDaysUntil(ct.contract_end,today):null;
       if(!ct||contractDays<=15)contractNeed.push(e);
     }
   });

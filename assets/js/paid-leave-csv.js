@@ -79,7 +79,7 @@ function toggleKousoku(id,useKousoku,btn){
 async function saveKousokuDate(id,clear=false){
   const d=clear?'':document.getElementById('kousokuInput')?.value||'';
   const e=employees.find(x=>x.id===id);
-  await updateKousokuStartDate(id,d,new Date().toISOString().slice(0,10));
+  await updateKousokuStartDate(id,d,localDateStr());
   if(!clear)showToast('保存しました');
   renderDT();
 }
@@ -103,7 +103,7 @@ function openGrantModal(empId,editGrantId=null){
     document.getElementById('gm_expire').value=g?.expire_date||'';
   } else {
     const info=calcYukyuInfo(empId);
-    const d=info.nextDate||new Date().toISOString().slice(0,10);
+    const d=info.nextDate||localDateStr();
     document.getElementById('gm_date').value=d;
     document.getElementById('gm_days').value=calcYukyuLegalDays(empId,d)??'';
     document.getElementById('gm_expire').value='';
@@ -124,10 +124,7 @@ async function saveGrant(){
   const daysVal=document.getElementById('gm_days').value;
   const days=daysVal!==''?Number(daysVal):null;
   let expire=document.getElementById('gm_expire').value;
-  if(!expire){
-    const ed=new Date(d);ed.setFullYear(ed.getFullYear()+2);ed.setDate(ed.getDate()-1);
-    expire=ed.toISOString().slice(0,10);
-  }
+  if(!expire)expire=grantExpireDate(d);
   let saved=false;setEmployeeSaving(true);
   try{
     if(grantEditId){
@@ -286,7 +283,7 @@ async function saveYR(){
   setEmployeeSaving(true);
   try{
     const payload={employee_id:yf.employee_id,employee_name:yf.employee_name,use_date:d,use_type:yf.use_type,shubetsu:yf.shubetsu,kubun:yf.kubun,input_by:yf.input_by,biko:document.getElementById('yBiko')?.value||''};
-    const result=yf.id?await updateYukyuRecord(yf.id,payload,yf._revision):await createYukyuRecord({...payload,touroku_date:new Date().toISOString().slice(0,10)});
+    const result=yf.id?await updateYukyuRecord(yf.id,payload,yf._revision):await createYukyuRecord({...payload,touroku_date:localDateStr()});
     saved=true;EMP_UI.dirty=false;EMP_UI.highlightId=yf.id||result?.[0]?.id||null;
     await loadYukyu();returnFromEmployeeForm();showToast('保存しました');
   }catch(e){
@@ -531,7 +528,7 @@ async function saveForm(isEdit,id){
     license_no:g('license_no'),license_date:g('license_date'),license_expiry:g('license_expiry'),
     license_img:licFormImgData||(isEdit?employees.find(e=>e.id===id)?.license_img||'':''),
     bank_name:g('bank_name'),bank_branch:g('bank_branch'),bank_account_no:g('bank_account_no'),bank_account_name:g('bank_account_name'),
-    memo:memoWithFuyouMeta(g('memo'),getFuyouList(existingEmp)),updated_at:new Date().toISOString().slice(0,10)
+    memo:memoWithFuyouMeta(g('memo'),getFuyouList(existingEmp)),updated_at:localDateStr()
   };
   let saved=false;setEmployeeSaving(true);
   try{
@@ -629,7 +626,7 @@ function validatedEmployeeCSV(text){
       license_no:g('免許証番号'),license_date:g('免許取得日'),license_expiry:g('免許有効期限'),
       bank_name:g('銀行名'),bank_branch:g('支店名'),bank_account_no:g('口座番号'),bank_account_name:g('口座名義'),
       memo:g('メモ'),yukyu_list:[],kenkou_list:[],shikaku_list:[],
-      updated_at:new Date().toISOString().slice(0,10)
+      updated_at:localDateStr()
     };
   });
 }
@@ -671,6 +668,6 @@ function exportYukyuCSV(){
 }
 function dlCSV(data,name){
   const csv='\uFEFF'+data.map(r=>r.join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=name+'_'+localDateStr()+'.csv';a.click();
 }
 // ===== END EMPLOYEE MANAGEMENT =====

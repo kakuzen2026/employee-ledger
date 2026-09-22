@@ -6,6 +6,7 @@ async function loadRecords(){
     db.from('employees').select('id,sei,mei').order('sei'),
     db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no')
   ]);
+  if([recRes,empRes,ctRes].some(result=>reportReadFailure(result.error,"mainContent-records","loadRecords()")))return;
   const records = recRes.data||[];
   const emps = empRes.data||[];
   const cts = ctRes.data||[];
@@ -95,10 +96,10 @@ async function openRecordModal(record=null){
   document.getElementById('rec-id').value = record?.id||'';
   document.getElementById('rec-modal-title').textContent = record ? '📋 記録を編集' : '📋 記録を追加';
   // 従業員リスト
-  const {data:emps}=await db.from('employees').select('id,sei,mei').order('sei');
+  const readResult1=await db.from('employees').select('id,sei,mei').order('sei');if(reportReadFailure(readResult1.error))return;const emps=readResult1.data;
   document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${esc(e.sei)} ${esc(e.mei)}</option>`).join('');
   // 契約リスト
-  const {data:cts}=await db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no');
+  const readResult2=await db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no');if(reportReadFailure(readResult2.error))return;const cts=readResult2.data;
   document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${c.id}" ${record?.contract_id===c.id?'selected':''}>${esc(c.contract_no||'—')} ${esc(c.sites?.clients?.name||'')} / ${esc(c.sites?.name||'')}</option>`).join('');
   // 種別セット
   if(record) document.getElementById('rec-type').value=record.type;
@@ -164,21 +165,21 @@ async function deleteEmployeeRecord(id){
 }
 
 async function openDocsModal(cid){
-  const {data:c}=await db.from('contracts').select('*,sites(*,clients(*),work_patterns(*)),contract_employees(*)').eq('id',cid).single();
+  const readResult3=await db.from('contracts').select('*,sites(*,clients(*),work_patterns(*)),contract_employees(*)').eq('id',cid).single();if(reportReadFailure(readResult3.error))return;const c=readResult3.data;
   if(!c)return;
   // work_patternsが取得できていない場合は別途取得
   if(c.sites?.id && (!c.sites.work_patterns || c.sites.work_patterns.length===0)){
-    const {data:wp}=await db.from('work_patterns').select('*').eq('site_id',c.sites.id).order('created_at');
+    const readResult4=await db.from('work_patterns').select('*').eq('site_id',c.sites.id).order('created_at');if(reportReadFailure(readResult4.error))return;const wp=readResult4.data;
     c.sites.work_patterns=wp||[];
   }
   currentDocContract=c;
   const empIds=(c.contract_employees||[]).map(e=>e.employee_id);
   let empData={};
-  if(empIds.length){const {data:emps}=await db.from('employees').select('*').in('id',empIds);(emps||[]).forEach(e=>empData[e.id]=e);}
+  if(empIds.length){const readResult5=await db.from('employees').select('*').in('id',empIds);if(reportReadFailure(readResult5.error))return;const emps=readResult5.data;(emps||[]).forEach(e=>empData[e.id]=e);}
   // 従業員ごとの記録を取得
   let recData={};
   if(empIds.length){
-    const {data:recs}=await db.from('employee_records').select('*').in('employee_id',empIds).order('rec_date',{ascending:false});
+    const readResult6=await db.from('employee_records').select('*').in('employee_id',empIds).order('rec_date',{ascending:false});if(reportReadFailure(readResult6.error))return;const recs=readResult6.data;
     (recs||[]).forEach(r=>{
       if(!recData[r.employee_id])recData[r.employee_id]=[];
       recData[r.employee_id].push(r);
@@ -210,7 +211,7 @@ async function openDocsModal(cid){
 
 // ===== DOCUMENT GENERATION =====
 async function getSettingsData(){
-  const {data}=await db.from('settings').select('*').limit(1).maybeSingle();
+  const readResult7=await db.from('settings').select('*').limit(1).maybeSingle();if(reportReadFailure(readResult7.error))return;const data=readResult7.data;
   return data||{};
 }
 

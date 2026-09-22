@@ -72,3 +72,60 @@ test('employee export supplies the required import columns and preserves quoted 
   vm.runInContext(`employees=[{id:1,company:'覚善',shain_no:'QA',sei:'A,"B',mei:'C\\nD'}];departments=[]`,c);c.exportCSV();
   vm.runInContext('employees=[]',c);const rows=c.validatedEmployeeCSV(csv);assert.equal(rows.length,1);assert.equal(rows[0].company,'覚善');assert.equal(rows[0].shain_no,'QA');assert.equal(rows[0].sei,'A,"B');assert.equal(rows[0].mei,'C\nD');
 });
+
+test('billing accepts exact safe integers, requires month, and preserves cache on read failure',async()=>{
+  const c=context(),nodes=new Map(),messages=[],saved=[];
+  c.document.querySelectorAll=()=>[];c.document.getElementById=id=>{if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'previous'});return nodes.get(id);};
+  vm.runInContext(readFileSync(new URL('../assets/js/billing-settings.js',import.meta.url),'utf8'),c);
+  c.toast=m=>messages.push(m);c.closeModal=()=>{};c.ST={billing:[{id:'previous'}]};c.reportReadFailure=e=>{if(e)messages.push('read failed');return Boolean(e);};
+  const realLoad=c.loadBilling;c.loadBilling=async()=>{};
+  c.document.getElementById('b-client-id').value='client';c.document.getElementById('b-month').value='2026-09';
+  c.db={from(){return{insert:async p=>{saved.push(p);return{error:null};}}}};
+  for(const input of ['','1e3','1.5','100oops','9007199254740992']){c.document.getElementById('b-amount').value=input;await c.saveBilling();}
+  assert.equal(saved.length,0);
+  for(const input of ['0','1000','-100']){c.document.getElementById('b-amount').value=input;await c.saveBilling();}
+  assert.deepEqual(saved.map(x=>x.amount),[0,1000,-100]);
+  c.document.getElementById('b-month').value='';await c.saveBilling();assert.equal(saved.length,3);
+  const query={select(){return this},gte(){return this},lte(){return this},order:async()=>({data:null,error:Error('offline')})};c.db={from:()=>query};
+  await realLoad();assert.equal(c.ST.billing[0].id,'previous');assert.equal(c.document.getElementById('billing-table').innerHTML,'previous');assert.equal(messages.at(-1),'read failed');
+});
+
+test('date-only expiry and retirement use local calendar dates around midnight and DST',async()=>{
+  const prior=process.env.TZ;
+  try{
+    process.env.TZ='Asia/Tokyo';const c=context(),now=new Date('2026-09-22T00:30:00+09:00');
+    assert.equal(c.localDateStr(now),'2026-09-22');assert.equal(c.calendarDaysUntil('2026-09-21',now),-1);assert.equal(c.calendarDaysUntil('2026-09-22',now),0);
+    assert.ok(Number.isNaN(c.calendarDaysUntil('2026-02-30',now)));
+    process.env.TZ='America/New_York';assert.equal(c.calendarDaysUntil('2026-03-09',new Date(2026,2,7,23,30)),2);
+  }finally{if(prior===undefined)delete process.env.TZ;else process.env.TZ=prior;}
+});
+
+test('both contract forms reject reversed periods before database access',async()=>{
+  const c=context(),values={'ct-id':'','ct-site-id':'s','ct-start':'2026-10-02','ct-end':'2026-10-01','rn-start':'2026-10-02','rn-end':'2026-10-01'},messages=[];
+  c.document.getElementById=id=>({value:values[id]||''});c.ST={sites:[]};c.selEmps=[{id:1}];c.toast=m=>messages.push(m);let writes=0;c.db={from(){writes++;throw Error('unexpected read')},atomicWrite(){writes++}};
+  await c.saveContract();await c.execRenewal();assert.equal(writes,0);assert.equal(messages.length,2);assert.ok(messages.every(m=>m.includes('開始日以降')));
+});
+
+test('contract lists and employee deadline cards stay consistent for the whole local expiry day',()=>{
+  const c=context(),node={innerHTML:''};c.document.getElementById=()=>node;c.esc=x=>String(x??'');
+  c.ST={ctTab:'active',contracts:[{id:'c',contract_no:'visible',status:'active',contract_end:c.localDateStr()}]};c.renderContracts();assert.match(node.innerHTML,/visible/);
+  c.ST.ctTab='ended';c.renderContracts();assert.doesNotMatch(node.innerHTML,/visible/);
+  const day='2026-09-22';vm.runInContext(`employees=[{id:1,status:'在籍',visa_expiry:'${day}',license_expiry:'${day}',contract_other_system:true}];`,c);c.calcYukyuInfo=()=>({});c.getLatestEmploymentContractMap=()=>({});
+  const prior=process.env.TZ;try{process.env.TZ='Asia/Tokyo';for(const hour of [0,9,21,23]){const metrics=c.getLedgerFocusMetrics(new Date(2026,8,22,hour,30));assert.equal(metrics.expiredTotal,0);assert.equal(metrics.deadlineTotal,2);}}finally{if(prior===undefined)delete process.env.TZ;else process.env.TZ=prior;}
+  assert.equal(c.grantExpireDate('2022-03-01'),'2024-02-29');assert.equal(c.grantExpireDate('2020-03-01'),'2022-02-28');
+});
+
+test('dashboard secondary read failure replaces loading panels with retry controls',async()=>{
+  for(const tableFailure of ['sites','recent']){
+    const c=context(),nodes=new Map();c.esc=x=>String(x??'');c.document.getElementById=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'spinner',textContent:''});return nodes.get(id)};c.reportReadFailure=error=>Boolean(error);
+    c.db={from(table){let selection='';const q={select(value){selection=value;return q},eq(){return q},in(){return q},order(){return q},limit(){return q},then(resolve){let result={data:table==='contracts'?[{id:'c',site_id:'s',contract_end:c.localDateStr()}]:[],error:null};if((tableFailure==='sites'&&table==='sites'&&selection.includes('clients'))||(tableFailure==='recent'&&table==='contracts'&&selection.includes('sites')))result={data:null,error:Error('offline')};return Promise.resolve(result).then(resolve)}};return q}};
+    await c.loadDashboard();for(const id of ['expiry-list','recent-contracts'])assert.match(nodes.get(id).innerHTML,/再読み込み/);
+  }
+});
+
+test('dispatch renewal clearly explains employment contracts are updated separately',async()=>{
+  const c=context(),elements={};c.document.getElementById=id=>elements[id]??=( {value:'',textContent:'',innerHTML:''} );
+  c.db={from(){return{select(){return{eq(){return{single:async()=>({data:{contract_end:'2026-10-31',contract_employees:[],sites:{name:'Test'}}})}}}}}}};
+  c.reportReadFailure=()=>false;c.esc=s=>s;c.openModal=()=>{};
+  await c.openRenewalModal('contract');assert.match(elements['rn-emp-opts'].textContent,/自動更新されません/);assert.match(elements['rn-emp-opts'].textContent,/従業員台帳/);assert.equal(elements['rn-emp-opts'].innerHTML,'');
+});

@@ -1,3 +1,8 @@
+function dashboardReadFailed(){
+  for(const id of ['expiry-list','recent-contracts'])document.getElementById(id).innerHTML='<div role="alert">読み込みに失敗しました。<button class="btn btn-secondary" onclick="loadDashboard()">再読み込み</button></div>';
+  for(const id of ['op-expiring','op-active-contracts','op-recent-contracts','op-active-staff'])document.getElementById(id).textContent='—';
+}
+let contractSaving=false,renewalSaving=false;
 // ===== DASHBOARD =====
 function updateDispatchFocusCards(metrics){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
@@ -17,17 +22,23 @@ async function loadDashboard(){
   document.getElementById('s-sites').textContent=(s.status==='fulfilled'?(s.value.data||[]).length:'—');
   document.getElementById('s-contracts').textContent=(ct.status==='fulfilled'?(ct.value.data||[]).length:'—');
   document.getElementById('s-staff').textContent=(ce.status==='fulfilled'?(ce.value.data||[]).length:'—');
+  if([c,s,ct,ce].some(result=>result.status==='rejected'||result.value.error)){
+    ['s-clients','s-sites','s-contracts','s-staff','op-expiring','op-active-contracts','op-recent-contracts','op-active-staff'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('expiry-list').textContent='読み込みに失敗しました。画面を開き直してください。';
+    document.getElementById('recent-contracts').textContent='読み込みに失敗しました。画面を開き直してください。';
+    return;
+  }
   const today=new Date();
   const activeContracts=ct.status==='fulfilled'?(ct.value.data||[]):[];
-  const expiring=activeContracts.filter(x=>Math.ceil((new Date(x.contract_end)-today)/86400000)<=60);
+  const expiring=activeContracts.filter(x=>calendarDaysUntil(x.contract_end,today)<=60);
   const exEl=document.getElementById('expiry-list');
   if(!expiring.length){exEl.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>期限が近い契約はありません</p></div>';}
   else{
     const sids=[...new Set(expiring.map(x=>x.site_id))];
-    const {data:sites}=await db.from('sites').select('id,name,clients(name)').in('id',sids);
+    const readResult1=await db.from('sites').select('id,name,clients(name)').in('id',sids);if(reportReadFailure(readResult1.error)){dashboardReadFailed();return;}const sites=readResult1.data;
     const sm={};(sites||[]).forEach(s=>sm[s.id]=s);
     exEl.innerHTML=`<table><thead><tr><th>現場</th><th>取引先</th><th>終了日</th><th>残日数</th><th>操作</th></tr></thead><tbody>
-      ${expiring.map(x=>{const si=sm[x.site_id];const d=Math.ceil((new Date(x.contract_end)-today)/86400000);const cls=d<=14?'expiry-expired':'expiry-near';
+      ${expiring.map(x=>{const si=sm[x.site_id];const d=calendarDaysUntil(x.contract_end,today);const cls=d<=14?'expiry-expired':'expiry-near';
         return`<tr>
           <td data-label="現場">${esc(si?.name||'—')}</td>
           <td data-label="取引先">${esc(si?.clients?.name||'—')}</td>
@@ -37,7 +48,7 @@ async function loadDashboard(){
         </tr>`;
       }).join('')}</tbody></table>`;
   }
-  const {data:recent}=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,is_active)').order('created_at',{ascending:false}).limit(6);
+  const readResult2=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,is_active)').order('created_at',{ascending:false}).limit(6);if(reportReadFailure(readResult2.error)){dashboardReadFailed();return;}const recent=readResult2.data;
   updateDispatchFocusCards({
     expiringCount:expiring.length,
     activeContracts:activeContracts.length,
@@ -62,28 +73,20 @@ async function loadDashboard(){
 }
 function stBadge(status,endDate){
   if(status==='ended') return'<span class="badge badge-gray">終了</span>';
-  const d=Math.ceil((new Date(endDate)-new Date())/86400000);
+  const d=calendarDaysUntil(endDate,new Date());
   if(d<0) return'<span class="badge badge-red">期限切れ</span>';
   if(d<=30) return'<span class="badge badge-yellow">期限間近</span>';
   return'<span class="badge badge-green">有効</span>';
 }
 
 // ===== CONTRACT NO =====
-async function generateContractNo(){
+function contractNumberPrefix(){
   const now=new Date();
-  const ym=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
-  const prefix=`KZ-${ym}-`;
-  const {data}=await db.from('contracts').select('contract_no').like('contract_no',`${prefix}%`).order('contract_no',{ascending:false}).limit(1);
-  let seq=1;
-  if(data&&data.length&&data[0].contract_no){
-    const last=data[0].contract_no.split('-')[2];
-    seq=(parseInt(last)||0)+1;
-  }
-  return`${prefix}${String(seq).padStart(3,'0')}`;
+  return `KZ-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}-`;
 }
 
 // ===== CLIENTS =====
-async function loadClients(force=false){if(!force&&ST.clients.length){renderClients(ST.clients);return;}const {data}=await db.from('clients').select('*').order('name');ST.clients=data||[];renderClients(ST.clients);}
+async function loadClients(force=false){if(!force&&ST.clients.length){renderClients(ST.clients);return;}const readResult4=await db.from('clients').select('*').order('name');if(reportReadFailure(readResult4.error,"clients-table","loadClients(true)"))return;const data=readResult4.data;ST.clients=data||[];renderClients(ST.clients);}
 function renderClients(list){
   const el=document.getElementById('clients-table');
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🏢</div><p>取引先が登録されていません</p></div>';return;}
@@ -138,7 +141,7 @@ async function deleteClient(id){
 }
 
 // ===== SITES =====
-async function loadSites(force=false){if(!force&&ST.sites.length){renderSites(ST.sites);return;}const {data}=await db.from('sites').select('*,clients(name),work_patterns(*)').order('name');ST.sites=data||[];renderSites(ST.sites);}
+async function loadSites(force=false){if(!force&&ST.sites.length){renderSites(ST.sites);return;}const readResult5=await db.from('sites').select('*,clients(name),work_patterns(*)').order('name');if(reportReadFailure(readResult5.error,"sites-table","loadSites(true)"))return;const data=readResult5.data;ST.sites=data||[];renderSites(ST.sites);}
 function renderSites(list){
   const el=document.getElementById('sites-table');
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📍</div><p>現場が登録されていません</p></div>';return;}
@@ -194,9 +197,9 @@ async function openSiteModal(site){
   document.getElementById('s-safety').value = site?.safety_content || DEFAULT_SAFETY;
   document.getElementById('s-welfare').value = site?.welfare_content || DEFAULT_WELFARE;
   wpList=[];
-  if(site?.id){const {data}=await db.from('work_patterns').select('*').eq('site_id',site.id).order('created_at');wpList=(data||[]).map(p=>({...p}));}
+  if(site?.id){const readResult6=await db.from('work_patterns').select('*').eq('site_id',site.id).order('created_at');if(reportReadFailure(readResult6.error))return;const data=readResult6.data;wpList=(data||[]).map(p=>({...p}));}
   renderWP();
-  const {data:clients}=await db.from('clients').select('id,name').order('name');
+  const readResult7=await db.from('clients').select('id,name').order('name');if(reportReadFailure(readResult7.error))return;const clients=readResult7.data;
   document.getElementById('s-client-id').innerHTML=(clients||[]).map(c=>`<option value="${c.id}" ${c.id===site?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal('modal-site');
 }
@@ -291,15 +294,15 @@ async function deleteSite(id){
 // ===== CONTRACTS =====
 async function loadContracts(force=false){
   if(!force&&ST.contracts.length){renderContracts();return;}
-  const {data}=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,employee_id,employment_type,is_active)').order('contract_end',{ascending:true});
+  const readResult8=await db.from('contracts').select('*,sites(name,clients(name)),contract_employees(id,employee_id,employment_type,is_active)').order('contract_end',{ascending:true});if(reportReadFailure(readResult8.error,"contracts-table","loadContracts(true)"))return;const data=readResult8.data;
   ST.contracts=data||[];renderContracts();
 }
 function switchCtTab(tab,el){ST.ctTab=tab;document.querySelectorAll('#page-contracts .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderContracts();}
 function renderContracts(){
   let list=ST.contracts;const today=new Date();
-  if(ST.ctTab==='active') list=list.filter(x=>x.status==='active'&&new Date(x.contract_end)>=today);
-  else if(ST.ctTab==='expiring') list=list.filter(x=>{const d=Math.ceil((new Date(x.contract_end)-today)/86400000);return x.status==='active'&&d>=0&&d<=30;});
-  else if(ST.ctTab==='ended') list=list.filter(x=>x.status==='ended'||new Date(x.contract_end)<today);
+  if(ST.ctTab==='active') list=list.filter(x=>x.status==='active'&&calendarDaysUntil(x.contract_end,today)>=0);
+  else if(ST.ctTab==='expiring') list=list.filter(x=>{const d=calendarDaysUntil(x.contract_end,today);return x.status==='active'&&d>=0&&d<=30;});
+  else if(ST.ctTab==='ended') list=list.filter(x=>x.status==='ended'||calendarDaysUntil(x.contract_end,today)<0);
   const el=document.getElementById('contracts-table');
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📄</div><p>該当する契約がありません</p></div>';return;}
   el.innerHTML=`<table><thead><tr><th>契約番号</th><th>現場</th><th>取引先</th><th>期間</th><th>人数</th><th>状態</th><th>操作</th></tr></thead><tbody>
@@ -324,11 +327,11 @@ function renderContracts(){
 }
 
 async function openCtDetail(cid){
-  const {data:c}=await db.from('contracts').select('*,sites(name,address,job_type,supervisor,clients(name,address,contact_person)),contract_employees(*)').eq('id',cid).single();
+  const readResult9=await db.from('contracts').select('*,sites(name,address,job_type,supervisor,clients(name,address,contact_person)),contract_employees(*)').eq('id',cid).single();if(reportReadFailure(readResult9.error))return;const c=readResult9.data;
   if(!c)return;
   const empIds=(c.contract_employees||[]).map(e=>e.employee_id);
   let enames={};
-  if(empIds.length){const {data:emps}=await db.from('employees').select('id,sei,mei').in('id',empIds);(emps||[]).forEach(e=>enames[e.id]=`${e.sei} ${e.mei}`);}
+  if(empIds.length){const readResult10=await db.from('employees').select('id,sei,mei').in('id',empIds);if(reportReadFailure(readResult10.error))return;const emps=readResult10.data;(emps||[]).forEach(e=>enames[e.id]=`${e.sei} ${e.mei}`);}
   document.getElementById('ctd-title').textContent=`契約詳細：${c.contract_no||c.sites?.name||''}`;
   document.getElementById('ctd-body').innerHTML=`
     <div class="ct-header">
@@ -364,8 +367,9 @@ async function openCtDetail(cid){
 async function endContract(id){
   if(!confirm('この契約を終了しますか？\n元に戻せません。'))return;
   try{
+    const current=await firebaseRows(db.from('contracts').select('*').eq('id',id).single());
     const staff=await firebaseRows(db.from('contract_employees').select('id').eq('contract_id',id));
-    await db.atomicWrite([{table:'contracts',id,data:{status:'ended',updated_at:new Date().toISOString()}},...staff.map(row=>({table:'contract_employees',id:row.id,data:{is_active:false}}))]);
+    await db.atomicWrite([{table:'contracts',id,expectedRevision:current._revision??0,data:{status:'ended',updated_at:new Date().toISOString()}},...staff.map(row=>({table:'contract_employees',id:row.id,data:{is_active:false}}))]);
   }catch(error){toast('契約を終了できませんでした：'+error.message,'error');return;}
   toast('契約を終了しました','success');loadContracts(true);
 }
@@ -373,9 +377,10 @@ async function endContract(id){
 async function deleteContract(id){
   if(!confirm('この契約を完全に削除します。\nスタッフの紐づけも全て削除され、復元できません。\n通常は「契約を終了」を使ってください。\n完全削除を続行しますか？'))return;
   try{
+    const current=await firebaseRows(db.from('contracts').select('*').eq('id',id).single());
     const staff=await replacementOperations('contract_employees','contract_id',id,[]);
     const mirror=await replacementOperations('dispatch_contracts','dispatch_app_contract_id',id,[]);
-    await db.atomicWrite([{table:'contracts',id,remove:true},...staff,...mirror]);
+    await db.atomicWrite([{table:'contracts',id,remove:true,expectedRevision:current._revision??0},...staff,...mirror]);
   }catch(error){toast('削除に失敗しました：'+error.message,'error');return;}
   toast('契約を削除しました','success');loadContracts(true);
 }
@@ -387,7 +392,7 @@ async function searchCEmp(q){
   empTimer=setTimeout(async()=>{
     dd.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text3);">読み込み中...</div>';
     dd.style.display='block';
-    if(!empCache){const {data}=await db.from('employees').select('id,sei,mei,seikana,meikana,employment_type').order('sei').limit(200);empCache=data||[];}
+    if(!empCache){const readResult11=await db.from('employees').select('id,sei,mei,seikana,meikana,employment_type').order('sei').limit(200);if(reportReadFailure(readResult11.error,"ct-emp-dd","searchCEmp(document.getElementById('ct-emp-search').value)"))return;const data=readResult11.data;empCache=data||[];}
     const used=selEmps.map(e=>e.id);
     const filtered=(!q?empCache:empCache.filter(e=>(e.sei||'').toLowerCase().includes(q.toLowerCase())||(e.mei||'').toLowerCase().includes(q.toLowerCase())||(e.seikana||'').includes(q)||(e.meikana||'').includes(q))).filter(e=>!used.includes(e.id));
     if(!filtered.length){dd.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text3);">該当なし</div>';return;}
@@ -432,14 +437,15 @@ function renderSelEmps(){
 async function openContractModal(cid){
   let existing = null;
   if(cid){
-    const {data}=await db.from('contracts').select('*,contract_employees(*)').eq('id',cid).single();
+    const readResult12=await db.from('contracts').select('*,contract_employees(*)').eq('id',cid).single();if(reportReadFailure(readResult12.error))return;const data=readResult12.data;
     existing=data;
   }
 
   document.getElementById('mct-title').textContent=existing?'契約を編集':'契約を作成';
   document.getElementById('ct-id').value=existing?.id||'';
+  document.getElementById('ct-id').dataset.revision=String(existing?._revision??0);
   document.getElementById('ct-parent-id').value='';
-  document.getElementById('ct-no').value=existing?.contract_no||(await generateContractNo());
+  document.getElementById('ct-no').value=existing?.contract_no||'保存時に自動採番';
   document.getElementById('ct-start').value=existing?.contract_start||'';
   document.getElementById('ct-end').value=existing?.contract_end||'';
   document.getElementById('ct-contract-date').value=existing?.contract_date||'';
@@ -450,7 +456,7 @@ async function openContractModal(cid){
   selEmps=[];empCache=null;
   if(existing?.contract_employees?.length){
     const empIds=existing.contract_employees.map(e=>e.employee_id);
-    const {data:emps}=await db.from('employees').select('id,sei,mei,employment_type').in('id',empIds);
+    const readResult13=await db.from('employees').select('id,sei,mei,employment_type').in('id',empIds);if(reportReadFailure(readResult13.error))return;const emps=readResult13.data;
     const empMap={};(emps||[]).forEach(e=>empMap[e.id]=e);
     selEmps=existing.contract_employees.map(e=>{
       const emp=empMap[e.employee_id];
@@ -465,7 +471,7 @@ async function openContractModal(cid){
   document.getElementById('ct-emp-dd').style.display='none';
   document.getElementById('ct-emp-search').value='';
 
-  const {data:sites}=await db.from('sites').select('id,name,clients(name)').order('name');
+  const readResult14=await db.from('sites').select('id,name,clients(name)').order('name');if(reportReadFailure(readResult14.error))return;const sites=readResult14.data;
   document.getElementById('ct-site-id').innerHTML=(sites||[]).map(s=>
     `<option value="${s.id}" ${s.id===existing?.site_id?'selected':''}>${esc(s.clients?.name||'')} / ${esc(s.name)}</option>`
   ).join('');
@@ -474,6 +480,7 @@ async function openContractModal(cid){
 }
 
 async function saveContract(){
+  if(contractSaving)return;
   const id=document.getElementById('ct-id').value;
   if(!selEmps.length){toast('スタッフを1名以上選択してください','error');return;}
   const siteId=document.getElementById('ct-site-id').value;
@@ -483,7 +490,7 @@ async function saveContract(){
   const site=ST.sites.find(s=>s.id===siteId);
   const p={
     site_id:siteId,
-    contract_no:document.getElementById('ct-no').value,
+    contract_no:id?document.getElementById('ct-no').value:'',
     contract_start:document.getElementById('ct-start').value,
     contract_end:document.getElementById('ct-end').value,
     contract_date:document.getElementById('ct-contract-date').value||null,
@@ -500,47 +507,56 @@ async function saveContract(){
     status:'active',updated_at:new Date().toISOString(),
   };
   if(!p.contract_start||!p.contract_end){toast('契約期間を入力してください','error');return;}
+  if(!normalizeDateStr(p.contract_start)||!normalizeDateStr(p.contract_end)||p.contract_end<p.contract_start){toast('終了日は開始日以降の日付を入力してください','error');return;}
   const cid=id||crypto.randomUUID();
-  try{await db.atomicWrite(await contractOperations(cid,p,selEmps));}
+  contractSaving=true;
+  try{
+    const operations=await contractOperations(cid,p,selEmps);
+    if(id)operations[0].expectedRevision=Number(document.getElementById('ct-id').dataset.revision);
+    else operations[0].data._revision=1;
+    await db.atomicWrite(operations,id?{}:{contractId:cid,contractPrefix:contractNumberPrefix()});
+  }
   catch(error){toast('契約を保存できませんでした：'+error.message,'error');return;}
+  finally{contractSaving=false;}
 
   toast('契約を保存しました','success');closeModal('modal-contract');loadContracts(true);
 }
 
 // ===== RENEWAL =====
 async function openRenewalModal(cid){
-  const {data:c}=await db.from('contracts').select('*,contract_employees(*),sites(name)').eq('id',cid).single();
+  const readResult15=await db.from('contracts').select('*,contract_employees(*),sites(name)').eq('id',cid).single();if(reportReadFailure(readResult15.error))return;const c=readResult15.data;
   document.getElementById('rn-contract-id').value=cid;
   document.getElementById('rn-start').value=c.contract_end;
   document.getElementById('rn-end').value='';
   const empIds=(c.contract_employees||[]).map(e=>e.employee_id);
   let enames={};
-  if(empIds.length){const {data:emps}=await db.from('employees').select('id,sei,mei').in('id',empIds);(emps||[]).forEach(e=>enames[e.id]=`${e.sei} ${e.mei}`);}
+  if(empIds.length){const readResult16=await db.from('employees').select('id,sei,mei').in('id',empIds);if(reportReadFailure(readResult16.error))return;const emps=readResult16.data;(emps||[]).forEach(e=>enames[e.id]=`${e.sei} ${e.mei}`);}
   document.getElementById('rn-info').innerHTML=`<strong>現場：</strong>${esc(c.sites?.name||'—')}<br><span style="color:var(--text3);font-size:12px;">配属：${(c.contract_employees||[]).map(e=>esc(enames[e.employee_id]||`ID:${e.employee_id}`)).join('、')}</span>`;
-  const fixed=(c.contract_employees||[]).filter(e=>e.employment_type==='fixed');
-  document.getElementById('rn-emp-opts').innerHTML=fixed.length
-    ?fixed.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked id="rn-${e.employee_id}">${esc(enames[e.employee_id]||`ID:${e.employee_id}`)}（有期）の雇用契約書を更新する</label>`).join('')
-    :'<div style="font-size:12px;color:var(--text3);">無期契約スタッフのみのため雇用契約書の更新は不要です</div>';
+  document.getElementById('rn-emp-opts').textContent='ここで更新するのは派遣契約です。雇用契約書は自動更新されません。従業員台帳の各スタッフの詳細から、内容を確認して別途更新してください。';
   openModal('modal-renewal');
 }
 
 async function execRenewal(){
+  if(renewalSaving)return;
   const cid=document.getElementById('rn-contract-id').value;
   const ns=document.getElementById('rn-start').value;const ne=document.getElementById('rn-end').value;
   if(!ns||!ne){toast('新しい契約期間を入力してください','error');return;}
+  if(!normalizeDateStr(ns)||!normalizeDateStr(ne)||ne<ns){toast('終了日は開始日以降の日付を入力してください','error');return;}
+  renewalSaving=true;
   try{
     const orig=await firebaseRows(db.from('contracts').select('*,contract_employees(*)').eq('id',cid).single());
-    const newNo=await generateContractNo(),newId=crypto.randomUUID();
-    const record={site_id:orig.site_id,contract_no:newNo,contract_start:ns,contract_end:ne,
+    const newNo='',newId=crypto.randomUUID();
+    const record={_revision:1,site_id:orig.site_id,contract_no:newNo,contract_start:ns,contract_end:ne,
       contract_type:orig.contract_type||'',renewal_count:(orig.renewal_count||0)+1,
       parent_contract_id:cid,job_detail:orig.job_detail||'',authority_detail:orig.authority_detail||'',
       overtime_rule:orig.overtime_rule||'',work_days:orig.work_days||'',haken_ryokin:orig.haken_ryokin||'',
       ryokin_tani:orig.ryokin_tani||'',notes:orig.notes||'',status:'active',updated_at:new Date().toISOString()};
     const operations=await contractOperations(newId,record,orig.contract_employees||[]);
-    operations.push({table:'contracts',id:cid,data:{status:'ended',updated_at:new Date().toISOString()}});
+    operations.push({table:'contracts',id:cid,expectedRevision:orig._revision??0,data:{status:'ended',updated_at:new Date().toISOString()}});
     for(const staff of orig.contract_employees||[])operations.push({table:'contract_employees',id:staff.id,data:{is_active:false}});
-    await db.atomicWrite(operations);
+    await db.atomicWrite(operations,{contractId:newId,contractPrefix:contractNumberPrefix()});
   }catch(error){toast('契約を更新できませんでした：'+error.message,'error');return;}
+  finally{renewalSaving=false;}
 
   toast('契約を更新しました','success');closeModal('modal-renewal');loadContracts(true);
   if(ST.page==='dashboard') loadDashboard();
