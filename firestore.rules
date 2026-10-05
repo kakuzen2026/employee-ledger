@@ -1,15 +1,63 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isLedgerAdmin() {
-      return request.auth != null && request.auth.token.ledger_admin == true;
+    function admin() { return request.auth != null && request.auth.token.ledger_admin == true; }
+    function business(c) { return c in ['settings','clients','sites','assignments','billing','contracts','doc_templates','work_patterns','contract_employees','employee_records','departments','visa_types','emp_work_patterns','company_info','employees','yukyu_records','yukyu_grants','certificates','employment_contracts','dispatch_contracts']; }
+    function revision(d) { return d.get('_revision',0); }
+    function validRevision(d) { return revision(d) is int && revision(d) > 0 && revision(d) <= 9007199254740991; }
+    function identity(c,id) {
+      return string(request.resource.data.id) == id
+        && validRevision(request.resource.data)
+        && (c != 'billing' || validBilling());
     }
-
-    // All migrated collections and the ID counter are restricted to explicitly
-    // provisioned administrative accounts. No public or ordinary-user access.
-    match /{collection}/{document} {
-      allow read, create, update, delete: if isLedgerAdmin();
+    function validBilling() {
+      let changed = resource == null ? request.resource.data.keys().toSet() : request.resource.data.diff(resource.data).affectedKeys();
+      return (!changed.hasAny(['amount']) || (request.resource.data.amount is int && request.resource.data.amount >= -9007199254740991 && request.resource.data.amount <= 9007199254740991))
+        && (!changed.hasAny(['is_billed']) || request.resource.data.is_billed is bool);
+    }
+    function audited(c,id,operation) {
+      let marker = getAfter(/databases/$(database)/documents/_meta/last-write).data;
+      let auditPath = /databases/$(database)/documents/_audit_events/$(marker.auditId);
+      let event = getAfter(auditPath).data;
+      return !exists(auditPath) && event.actorUid == request.auth.uid
+        && event.recordedAt == request.time && (c + '/' + id) in event[operation]
+        && (operation == 'deleted' || request.resource.data._auditId == marker.auditId);
+    }
+    match /{collection}/{id} {
+      allow read: if admin() && business(collection);
+      allow create: if admin() && business(collection) && identity(collection,id)
+        && revision(request.resource.data) == 1 && audited(collection,id,'created');
+      allow update: if admin() && business(collection) && identity(collection,id)
+        && request.resource.data.id == resource.data.get('id',request.resource.data.id)
+        && revision(request.resource.data) == revision(resource.data)+1 && audited(collection,id,'updated');
+      allow delete: if admin() && business(collection) && audited(collection,id,'deleted');
+    }
+    match /_audit_events/{id} {
+      allow read: if admin();
+      allow create: if admin() && request.resource.data.keys().hasOnly(['actorUid','recordedAt','created','updated','deleted'])
+        && request.resource.data.keys().hasAll(['actorUid','recordedAt','created','updated','deleted'])
+        && request.resource.data.actorUid == request.auth.uid && request.resource.data.recordedAt == request.time
+        && request.resource.data.created is list && request.resource.data.updated is list && request.resource.data.deleted is list
+        && request.resource.data.created.size()+request.resource.data.updated.size()+request.resource.data.deleted.size() > 0
+        && request.resource.data.created.size()+request.resource.data.updated.size()+request.resource.data.deleted.size() <= 450;
+      allow update,delete: if false;
+    }
+    match /_meta/{id} {
+      allow read: if admin();
+      // Existing allocation documents remain available to the same administrators.
+      allow create,update: if admin() && (id == 'counters' || id.matches('contract-sequence-[0-9]{6}'));
+      allow create,update: if admin() && id == 'last-write'
+        && request.resource.data.keys().hasOnly(['auditId'])
+        && request.resource.data.auditId is string
+        && !exists(/databases/$(database)/documents/_audit_events/$(request.resource.data.auditId))
+        && getAfter(/databases/$(database)/documents/_audit_events/$(request.resource.data.auditId)).data.actorUid == request.auth.uid;
+    }
+    match /_attachment_chunks/{id} {
+      allow read: if admin();
+      allow create: if admin() && id.matches('[a-f0-9]{64}-[0-9]+')
+        && request.resource.data.keys().hasOnly(['data']) && request.resource.data.data is string
+        && request.resource.data.data.size() <= 786432;
+      allow update: if admin() && request.resource.data == resource.data;
     }
   }
 }
