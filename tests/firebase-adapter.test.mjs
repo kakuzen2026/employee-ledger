@@ -16,7 +16,7 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
   const versions = new Map();
   const app = {};
   const authClient = {
-    currentUser: null,
+    currentUser: {uid:'synthetic-admin'},
     onAuthStateChanged(callback) {
       queueMicrotask(() => callback(null));
       return () => {};
@@ -98,9 +98,9 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
         if ([...reads].some(([key, version]) => (versions.get(key) || 0) !== version)) continue;
         if(firestore.failCommit)throw new Error('synthetic commit failure');
         for (const write of writes) {
-          if (write.type === 'delete') await write.reference.delete();
+          if (write.type === 'delete') write.reference.delete();
           else if (write.reference._counter) Object.entries(write.patch).forEach(([key, value]) => counter.set(key, value));
-          else await write.reference.set(write.patch, { merge: true });
+          else write.reference.set(write.patch, { merge: true });
         }
         return result;
       }
@@ -118,7 +118,7 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
     }
   };
 
-  return {
+  const api = {
     apps: [],
     initializeApp() { this.apps.push(app); return app; },
     app() { return app; },
@@ -126,6 +126,8 @@ function createFirebaseMock(seed, signInUser = null, onTransactionRead = null) {
     firestore() { return firestore; },
     database() { return realtime; }
   };
+  api.firestore.FieldValue = {serverTimestamp: () => 'synthetic-server-time'};
+  return api;
 }
 
 function createTwoPartyBarrier() {
@@ -337,7 +339,7 @@ test('Paid-leave transaction rejects a stale concurrent update and keeps the fir
 
   assert.ok(success);
   assert.ok(stale);
-  assert.equal(stale.error.message, '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。');
+  assert.equal(stale.error.message, '別の端末またはタブでこの記録が更新されています。再読み込みして最新内容を確認してからもう一度操作してください。');
   assert.equal(saved.data.days, success.data[0].days);
   assert.equal(saved.data._revision, 1);
 });
@@ -708,4 +710,113 @@ test('a stale concurrent contract edit cannot append a second set of staff links
   assert.equal(results.find(x=>x.status==='rejected').reason.code,'STALE_WRITE');
   const rows=(await db.from('contract_employees').select('*')).data;assert.equal(rows.length,1);
   const contract=(await db.from('contracts').select('*').single()).data;assert.equal(contract._revision,2);assert.equal(rows[0].id,contract.notes);
+});
+
+test('clients and billing freeze displayed revisions across adapters and explicit modal snapshots',async()=>{
+  globalThis.window=globalThis;
+  globalThis.firebase=createFirebaseMock({clients:[{id:'c',name:'legacy',extra:'preserved'}],billing:[{id:'b',amount:100,is_billed:false}]});
+  await import(`../assets/js/firebase-adapter.js?common-cas=${Date.now()}`);
+  const first=createFirebaseDb(), second=createFirebaseDb();
+  for(const [table,id,patch] of [['clients','c',{name:'winner'}],['billing','b',{amount:200}]]){
+    await first.from(table).select('*').eq('id',id);await second.from(table).select('*').eq('id',id);
+    assert.equal((await first.from(table).update(patch).eq('id',id)).error,null);
+    assert.equal((await second.from(table).update(patch).eq('id',id)).error.code,'STALE_WRITE');
+    await second.from(table).select('id').eq('id',id);
+    assert.equal((await second.from(table).update(patch).expectRevision(0).eq('id',id)).error.code,'STALE_WRITE');
+    assert.equal((await second.from(table).delete().expectRevision(0).eq('id',id)).error.code,'STALE_WRITE');
+  }
+  const c=(await first.from('clients').select('*').single()).data;assert.equal(c.extra,'preserved');
+  const audits=(await first.firestore.collection('_audit_events').get()).docs.map(x=>x.data());
+  assert.equal(audits.length,2);assert.ok(audits.every(x=>x.actorUid==='synthetic-admin'));
+  assert.ok(audits.every(x=>Object.keys(x).sort().join(',')==='actorUid,created,deleted,recordedAt,updated'));
+  assert.ok(!JSON.stringify(audits).includes('winner'));
+});
+
+test('minimum validation and failed commits leave business, attachments and audit intact',async()=>{
+  globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({billing:[{id:'b',amount:'legacy'}],clients:[{id:'c',name:'old'}]});
+  await import(`../assets/js/firebase-adapter.js?audit-validation=${Date.now()}`);
+  const db=createFirebaseDb();await db.from('billing').select('*');await db.from('clients').select('*');
+  assert.equal((await db.from('billing').update({notes:'valid legacy edit'}).eq('id','b')).error,null);
+  for(const patch of [{amount:1.5},{amount:Infinity},{is_billed:'true'},{id:'other'},{_auditId:'forged'}]) assert.ok((await db.from('billing').update(patch).eq('id','b')).error);
+  db.firestore.failCommit=true;
+  assert.ok((await db.from('clients').update({name:'new',file:'data:image/png;base64,YQ=='}).eq('id','c')).error);
+  assert.equal((await db.firestore.collection('clients').doc('c').get()).data().name,'old');
+  assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length,0);
+  assert.equal((await db.firestore.collection('_audit_events').get()).docs.length,1);
+  db.firestore.failCommit=false;
+  assert.equal((await db.from('clients').delete().eq('id','c')).error,null);
+  assert.equal((await db.firestore.collection('_audit_events').get()).docs.length,2);
+});
+
+test('partial ID lookups do not refresh an existing editing snapshot, while full reload permits retry',async()=>{
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({settings:[{id:'s',company_name:'original'}]});
+ await import(`../assets/js/firebase-adapter.js?snapshot-partial=${Date.now()}`);
+ const a=createFirebaseDb(),b=createFirebaseDb();await a.from('settings').select('*');await b.from('settings').select('*');
+ assert.equal((await a.from('settings').update({company_name:'winner'}).eq('id','s')).error,null);
+ await b.from('settings').select('id');
+ assert.equal((await b.from('settings').update({company_name:'stale'}).eq('id','s')).error.code,'STALE_WRITE');
+ await b.from('settings').select('*');assert.equal((await b.from('settings').update({company_name:'retry'}).eq('id','s')).error,null);
+ const circular={};circular.self=circular;assert.ok((await b.from('settings').update(circular).eq('id','s')).error);
+});
+
+test('an editor whose row was deleted rejects save instead of reporting an empty successful update',async()=>{
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({clients:[{id:'c',name:'original'}]});
+ await import(`../assets/js/firebase-adapter.js?deleted-editor=${Date.now()}`);
+ const a=createFirebaseDb(),b=createFirebaseDb();await a.from('clients').select('*');await b.from('clients').select('*');
+ assert.equal((await a.from('clients').delete().eq('id','c')).error,null);
+ assert.equal((await b.from('clients').update({name:'stale'}).expectRevision(0).eq('id','c')).error.code,'STALE_WRITE');
+ assert.equal((await b.from('clients').delete().expectRevision(0).eq('id','c')).error.code,'STALE_WRITE');
+});
+
+test('cached atomic updates and deletes reject an observed row that disappeared; intentional new creation still works',async()=>{
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({contract_employees:[{id:'child',contract_id:'ct',employee_id:1,_revision:3}]});
+ await import(`../assets/js/firebase-adapter.js?cached-missing=${Date.now()}`);
+ const db=createFirebaseDb();await db.from('contract_employees').select('*');await db.firestore.collection('contract_employees').doc('child').delete();
+ for(const operation of [{table:'contract_employees',id:'child',data:{is_active:false}},{table:'contract_employees',id:'child',remove:true}])await assert.rejects(db.atomicWrite([operation]),error=>error.code==='STALE_WRITE');
+ assert.equal((await db.firestore.collection('contract_employees').doc('child').get()).exists,false);
+ assert.equal((await db.firestore.collection('_audit_events').get()).docs.length,0);
+ await db.atomicWrite([{table:'contract_employees',id:'new-child',createOnly:true,data:{contract_id:'ct',employee_id:1,is_active:true}}]);
+ assert.equal((await db.firestore.collection('contract_employees').doc('new-child').get()).data().contract_id,'ct');
+});
+
+for(const conflict of ['delete','update'])test(`actual endContract rejects staff ${conflict} during transaction retry without parent, survivor or audit mutation`,async()=>{
+ let changed=false;
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({contracts:[{id:'ct',status:'active',_revision:1}],contract_employees:[{id:'child',contract_id:'ct',employee_id:1,is_active:true,_revision:3},{id:'survivor',contract_id:'ct',employee_id:2,is_active:true,_revision:4}]},null,async ref=>{
+  if(ref._key==='contract_employees/child'&&!changed){changed=true;const row=firebase.firestore().collection('contract_employees').doc('child');if(conflict==='delete')await row.delete();else await row.set({id:'child',contract_id:'ct',employee_id:1,is_active:true,_revision:4,notes:'winner'});}
+ });
+ await import(`../assets/js/firebase-adapter.js?end-handler-race=${conflict}-${Date.now()}`);
+ const db=createFirebaseDb(),notices=[];let reloaded=false;
+ const context={db,confirm:()=>true,toast:(...args)=>notices.push(args),firebaseRows:async query=>{const result=await query;if(result.error)throw result.error;return result.data||[];}};
+ vm.runInNewContext(await readFile(new URL('../assets/js/dispatch.js',import.meta.url),'utf8'),context);context.loadContracts=()=>{reloaded=true;};
+ await context.endContract('ct');
+ assert.deepEqual((await db.firestore.collection('contracts').doc('ct').get()).data(),{id:'ct',status:'active',_revision:1});
+ assert.deepEqual((await db.firestore.collection('contract_employees').doc('survivor').get()).data(),{id:'survivor',contract_id:'ct',employee_id:2,is_active:true,_revision:4});
+ const child=await db.firestore.collection('contract_employees').doc('child').get();
+ if(conflict==='delete')assert.equal(child.exists,false);else assert.equal(child.data().notes,'winner');
+ assert.equal((await db.firestore.collection('_audit_events').get()).docs.length,0);assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length,0);
+ assert.equal(notices.length,1);assert.equal(notices[0][1],'error');assert.match(notices[0][0],/別の端末/);assert.equal(reloaded,false);
+});
+
+test('actual endContract and deleteContract keep normal staff relations and intentional deletion working',async()=>{
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({contracts:[{id:'ct',status:'active',_revision:1}],contract_employees:[{id:'child',contract_id:'ct',employee_id:1,is_active:true,_revision:3}],dispatch_contracts:[]});
+ await import(`../assets/js/firebase-adapter.js?end-handler-normal=${Date.now()}`);
+ const db=createFirebaseDb(),notices=[];
+ const context={db,confirm:()=>true,toast:(...args)=>notices.push(args),firebaseRows:async query=>{const result=await query;if(result.error)throw result.error;return result.data||[];}};
+ vm.runInNewContext(await readFile(new URL('../assets/js/dispatch.js',import.meta.url),'utf8'),context);context.loadContracts=()=>{};
+ await context.endContract('ct');const child=(await db.firestore.collection('contract_employees').doc('child').get()).data();
+ assert.equal(child.contract_id,'ct');assert.equal(child.employee_id,1);assert.equal(child.is_active,false);assert.equal(child._revision,4);
+ assert.equal((await db.firestore.collection('contracts').doc('ct').get()).data().status,'ended');assert.equal(notices.at(-1)[1],'success');
+ await context.deleteContract('ct');assert.equal((await db.firestore.collection('contracts').doc('ct').get()).exists,false);assert.equal((await db.firestore.collection('contract_employees').doc('child').get()).exists,false);assert.equal(notices.at(-1)[1],'success');
+});
+
+test('cached revision remains frozen across retry and missing staff rejects parent and attachment together',async()=>{
+ let db,changed=false;
+ globalThis.window=globalThis;globalThis.firebase=createFirebaseMock({sites:[{id:'s',name:'original',_revision:1}],contract_employees:[{id:'child',contract_id:'ct',employee_id:1,_revision:3}]},null,async ref=>{
+  if(ref._key==='contract_employees/child'&&!changed){changed=true;await firebase.firestore().collection('contract_employees').doc('child').delete();db.readRevisions.delete('contract_employees/child');}
+ });
+ await import(`../assets/js/firebase-adapter.js?frozen-retry=${Date.now()}`);db=createFirebaseDb();await db.from('sites').select('*');await db.from('contract_employees').select('*');
+ await assert.rejects(db.atomicWrite([{table:'sites',id:'s',data:{name:'changed',file:'data:image/png;base64,YQ=='}},{table:'contract_employees',id:'child',data:{is_active:false}}]),error=>error.code==='STALE_WRITE');
+ assert.deepEqual((await db.firestore.collection('sites').doc('s').get()).data(),{id:'s',name:'original',_revision:1});
+ assert.equal((await db.firestore.collection('contract_employees').doc('child').get()).exists,false);
+ assert.equal((await db.firestore.collection('_audit_events').get()).docs.length,0);assert.equal((await db.firestore.collection('_attachment_chunks').get()).docs.length,0);
 });

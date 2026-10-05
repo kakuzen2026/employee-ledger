@@ -24,8 +24,8 @@
     'doc_templates', 'work_patterns', 'contract_employees', 'employee_records',
     'dispatch_contracts'
   ]);
-  const REVISIONED_TABLES = new Set(['yukyu_records', 'yukyu_grants', 'employees']);
-  const STALE_WRITE_MESSAGE = '別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
+  const REVISIONED_TABLES = TABLES;
+  const STALE_WRITE_MESSAGE = '別の端末またはタブでこの記録が更新されています。再読み込みして最新内容を確認してからもう一度操作してください。';
   const BLOB_PREFIX = 'firebase-rtdb://blobs/migration-v1/';
   const ATOMIC_BLOB_PREFIX = 'firebase-firestore://attachments/v1/';
   const BLOB_CHUNKS = /[\s\S]{1,196608}/gu; // Whole code points, at most 768 KiB of UTF-8 per document.
@@ -124,7 +124,8 @@
     }
 
     select(selection = '*') { this.selection = selection; return this; }
-    eq(field, value) { this.filters.push((row) => equal(row[field], value)); return this; }
+    expectRevision(value) { this.expectedRevision = revisionOf(value); return this; }
+    eq(field, value) { if (field === 'id') this.idTarget = value; this.filters.push((row) => equal(row[field], value)); return this; }
     in(field, values) {
       const accepted = Array.isArray(values) ? values : [];
       this.filters.push((row) => accepted.some((value) => equal(row[field], value)));
@@ -160,7 +161,7 @@
         if (this.mode === 'update') return await this.updateRows();
         return await this.deleteRows();
       } catch (error) {
-        return { data: null, error: appError(error.message || 'Firebaseへの操作に失敗しました。', error) };
+        return { data: null, error: appError(error.message || 'Firebaseへの操作に失敗しました。', error, error.code) };
       }
     }
 
@@ -168,6 +169,10 @@
       const context = { cache: new Map() };
       let rows = (await this.adapter.readRows(this.table, context)).filter((row) => this.matches(row));
       rows = this.sort(rows);
+      rows.forEach(row => {
+        const key = `${this.table}/${row.__documentId || row.id}`;
+        if (this.selection === '*' || parseSelection(this.selection).some(x=>x.type==='field' && ['*','_revision'].includes(x.name)) || !this.adapter.readRevisions.has(key)) this.adapter.rememberRevision(this.table,row);
+      });
       if (Number.isFinite(this.maximum)) rows = rows.slice(0, Math.max(0, this.maximum));
       const data = await Promise.all(rows.map((row) => this.adapter.projectRow(this.table, row, parseSelection(this.selection), context)));
       return this.finalize(data);
@@ -185,8 +190,9 @@
     async updateRows() {
       const context = { cache: new Map() };
       const targets = (await this.adapter.readRows(this.table, context)).filter((row) => this.matches(row));
+      if (this.idTarget !== undefined && !targets.length) throw staleWriteError();
       const updated = [];
-      for (const target of targets) updated.push(await this.adapter.updateRow(this.table, target, this.payload));
+      for (const target of targets) updated.push(await this.adapter.updateRow(this.table, target, this.payload, this.expectedRevision));
       const outputContext = { cache: new Map([[this.table, Promise.resolve(updated)]]) };
       const data = await Promise.all(updated.map((row) => this.adapter.projectRow(this.table, row, parseSelection(this.selection), outputContext)));
       return this.finalize(data);
@@ -195,7 +201,8 @@
     async deleteRows() {
       const context = { cache: new Map() };
       const targets = (await this.adapter.readRows(this.table, context)).filter((row) => this.matches(row));
-      await Promise.all(targets.map((row) => this.adapter.deleteRow(this.table, row)));
+      if (this.idTarget !== undefined && !targets.length) throw staleWriteError();
+      await Promise.all(targets.map((row) => this.adapter.deleteRow(this.table, row, this.expectedRevision)));
       return this.finalize([]);
     }
 
@@ -227,6 +234,7 @@
       this.authClient = firebase.auth(this.app);
       this.firestore = firebase.firestore(this.app);
       this.realtime = firebase.database(this.app);
+      this.readRevisions = new Map();
       this.blobCache = new Map();
       this.attachmentReferences = new Map();
       this.authReady = new Promise((resolve) => {
@@ -301,7 +309,7 @@
       const hasWildcard = selection.some((item) => item.type === 'field' && item.name === '*');
       if (hasWildcard) {
         Object.entries(row).forEach(([key, value]) => {
-          if (key !== '__documentId') output[key] = value;
+          if (key !== '__documentId' && key !== '_auditId') output[key] = value;
         });
       }
       for (const item of selection) {
@@ -358,13 +366,17 @@
     async atomicWrite(operations, {contractId,contractPrefix} = {}) {
       if (!Array.isArray(operations) || !operations.length || operations.length > 450) throw appError('一度に保存できる件数を超えています（上限450件）。');
       const blobs = new Map();
+      const auditId = createUuid();
       const writes = await Promise.all(operations.map(async ({table,id,data,remove,createOnly,expectedRevision}) => {
         if (!TABLES.has(table) || id == null || !String(id) || String(id).includes('/')) throw appError('保存対象が不正です。');
-        if (!remove && !isPlainObject(data)) throw appError('登録内容が不正です。');
-        return { table,id,createOnly,expectedRevision,reference: this.firestore.collection(table).doc(String(id)), remove,
+        this.validateChanges(table,id,remove ? {} : data);
+        const frozenRevision = expectedRevision !== undefined ? revisionOf(expectedRevision)
+          : createOnly ? undefined : this.readRevisions.get(`${table}/${id}`);
+        return { table,id,createOnly,expectedRevision,frozenRevision,reference: this.firestore.collection(table).doc(String(id)), remove,
           data: remove ? null : await this.prepareForStorage({...data,id}, blobs) };
       }));
-      if(contractId || writes.some(write=>write.createOnly || write.expectedRevision!==undefined)){
+      if (new Set(writes.map(w=>`${w.table}/${w.id}`)).size !== writes.length) throw appError('同じ保存対象が重複しています。');
+      {
         let counter, maximum=0;
         if(contractId){
           if(!/^KZ-\d{6}-$/.test(contractPrefix)||!writes.some(w=>w.table==='contracts'&&w.id===contractId))throw appError('契約番号の採番対象が不正です。');
@@ -387,12 +399,18 @@
             contractNo=contractPrefix+String(next).padStart(3,'0');
             transaction.set(counter,{value:next});
           }
+          const entries = [];
           writes.forEach((write,index)=>{
             const snapshot=snapshots[index];
             if((write.createOnly || (write.table==='contracts'&&write.id===contractId))&&snapshot.exists)throw appError('同じIDのレコードが既に存在します。再読み込みしてください。');
             let data=write.data;
-            if(write.expectedRevision!==undefined){
-              const expected=revisionOf(write.expectedRevision);
+            if (write.frozenRevision !== undefined && !snapshot.exists) throw staleWriteError();
+            const currentRevision = revisionOf(snapshot.exists ? snapshot.data()._revision : 0);
+            if (!Number.isSafeInteger(currentRevision+1)) throw staleWriteError();
+            if (data) data={...data,_revision:currentRevision+1,_auditId:auditId};
+            entries.push({table:write.table,id:write.id,operation:write.remove ? 'delete' : snapshot.exists ? 'update' : 'create'});
+            if(write.frozenRevision!==undefined){
+              const expected=revisionOf(write.frozenRevision);
               if(!snapshot.exists||revisionOf(snapshot.data()._revision)!==expected||!Number.isSafeInteger(expected+1))throw staleWriteError();
               data={...data,_revision:expected+1};
             }
@@ -400,37 +418,35 @@
             if(write.remove)transaction.delete(write.reference);
             else transaction.set(write.reference,data,{merge:true});
           });
+          this.audit(transaction,auditId,entries);
           this.writeBlobs(transaction,blobs);
         });
         this.rememberBlobs(blobs);
         return;
       }
-      const batch = this.firestore.batch();
-      for (const write of writes) {
-        if (write.remove) batch.delete(write.reference);
-        else batch.set(write.reference, write.data, {merge:true});
-      }
-      this.writeBlobs(batch, blobs);
-      await batch.commit();
-      this.rememberBlobs(blobs);
     }
 
     async insertEmployees(rows) {
       if (!Array.isArray(rows) || !rows.length || rows.length > 450) throw appError('CSVは1〜450件ずつ取り込んでください。');
+      rows.forEach(row=>this.validateChanges('employees',row.id ?? 1,row));
       const prepared = rows;
+      const auditId = createUuid();
       const counter = this.firestore.collection('_meta').doc('counters');
-      return this.firestore.runTransaction(async transaction => {
+      const created = await this.firestore.runTransaction(async transaction => {
         const snapshot = await transaction.get(counter);
         const start = snapshot.data()?.employees;
         if (!snapshot.exists || !Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(start + rows.length)) throw appError('従業員IDの採番情報を確認してください。');
-        const records = prepared.map((row,i)=>({...row,id:start+i+1,_revision:1}));
+        const records = prepared.map((row,i)=>({...row,id:start+i+1,_revision:1,_auditId:auditId}));
         const refs = records.map(row=>this.firestore.collection('employees').doc(String(row.id)));
         const existing = await Promise.all(refs.map(ref=>transaction.get(ref)));
         if (existing.some(doc=>doc.exists)) throw appError('従業員IDが重複しています。管理者に連絡してください。');
         transaction.update(counter,{employees:start+rows.length});
         records.forEach((row,i)=>transaction.set(refs[i],row));
+        this.audit(transaction,auditId,records.map(row=>({table:'employees',id:row.id,operation:'create'})));
         return records;
       });
+      created.forEach(row=>this.rememberRevision('employees',row));
+      return created;
     }
 
     async insertRow(table, input) {
@@ -439,30 +455,76 @@
         ? (UUID_ID_TABLES.has(table) ? createUuid() : await this.nextId(table))
         : input.id;
       const blobs = new Map();
-      const stored = await this.prepareForStorage({ ...input, id }, blobs);
+      this.validateChanges(table, id, input);
+      const auditId = createUuid();
+      const stored = await this.prepareForStorage({ ...input, id, _revision: 1, _auditId: auditId }, blobs);
       const documentId = String(id);
       const reference = this.firestore.collection(table).doc(documentId);
       await this.firestore.runTransaction(async transaction => {
         const existing = await transaction.get(reference);
         if (existing.exists) throw appError('同じIDのレコードが既に存在します。');
         transaction.set(reference, stored);
+        this.audit(transaction,auditId,[{table,id,operation:'create'}]);
         this.writeBlobs(transaction, blobs);
       });
       this.rememberBlobs(blobs);
-      return { ...stored, __documentId: documentId };
+      const created = { ...stored, __documentId: documentId };
+      this.rememberRevision(table,created);
+      return created;
     }
 
-    async updateRow(table, current, patch) {
-      if (!isPlainObject(patch)) throw appError('更新内容が不正です。');
-      const blobs = new Map();
-      const stored = await this.prepareForStorage(patch, blobs);
-      const documentId = current.__documentId || String(current.id);
-      const batch = this.firestore.batch();
-      batch.set(this.firestore.collection(table).doc(documentId), stored, { merge: true });
-      this.writeBlobs(batch, blobs);
-      await batch.commit();
-      this.rememberBlobs(blobs);
-      return { ...current, ...stored, __documentId: documentId };
+    rememberRevision(table, row) {
+      this.readRevisions.set(`${table}/${row.__documentId || row.id}`, revisionOf(row._revision));
+    }
+
+    expectedFor(table, id, explicit) {
+      if (explicit !== undefined) return revisionOf(explicit);
+      const key = `${table}/${id}`;
+      if (!this.readRevisions.has(key)) throw appError('編集前の記録がありません。再読み込みしてください。');
+      return this.readRevisions.get(key);
+    }
+
+    validateChanges(table, id, changes) {
+      if (!TABLES.has(table) || id == null || !String(id) || String(id).includes('/') || !isPlainObject(changes)) throw appError('保存対象が不正です。');
+      if ('id' in changes && !equal(changes.id, id)) throw appError('IDは変更できません。');
+      if ('_auditId' in changes) throw appError('監査IDは変更できません。');
+      if (table === 'billing') {
+        if ('amount' in changes && !Number.isSafeInteger(changes.amount)) throw appError('金額を整数で入力してください。');
+        if ('is_billed' in changes && typeof changes.is_billed !== 'boolean') throw appError('請求状態が不正です。');
+      }
+      const ancestors = new Set();
+      const visit = value => {
+        if (value && typeof value === 'object') {
+          if (ancestors.has(value)) throw appError('循環した入力は保存できません。');
+          if (!Array.isArray(value) && Object.prototype.toString.call(value) !== '[object Object]') throw appError('入力の形式が不正です。');
+          ancestors.add(value);
+        }
+        if (typeof value === 'number' && !Number.isFinite(value)) throw appError('数値が不正です。');
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (isPlainObject(value)) Object.entries(value).forEach(([key, item]) => {
+          if (['__proto__', 'prototype', 'constructor'].includes(key)) throw appError('項目名が不正です。');
+          visit(item);
+        });
+        if (value && typeof value === 'object') ancestors.delete(value);
+      };
+      visit(changes);
+    }
+
+    audit(writer, id, entries) {
+      const uid = this.authClient.currentUser?.uid;
+      if (!uid) throw appError('保存するには再ログインしてください。');
+      writer.set(this.firestore.collection('_audit_events').doc(id), {
+        actorUid: uid, recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        created: entries.filter(x => x.operation === 'create').map(x => `${x.table}/${x.id}`),
+        updated: entries.filter(x => x.operation === 'update').map(x => `${x.table}/${x.id}`),
+        deleted: entries.filter(x => x.operation === 'delete').map(x => `${x.table}/${x.id}`)
+      });
+      writer.set(this.firestore.collection('_meta').doc('last-write'), { auditId: id });
+    }
+
+    async updateRow(table, current, patch, expectedRevision) {
+      return this.updateRowByRevision(table, current.__documentId || current.id,
+        this.expectedFor(table, current.__documentId || current.id, expectedRevision), patch);
     }
 
     async updateByRevision(table, id, expectedRevision, patch) {
@@ -474,10 +536,12 @@
     }
 
     async updateRowByRevision(table, id, expectedRevision, patch) {
-      if (!REVISIONED_TABLES.has(table)) throw appError('この更新方法は有給データ専用です。');
+      this.validateChanges(table, id, patch);
       if (!isPlainObject(patch)) throw appError('更新内容が不正です。');
       const expected = revisionOf(expectedRevision);
+      if (patch._revision !== undefined && revisionOf(patch._revision) !== expected) throw staleWriteError();
       const { _revision, ...changes } = patch;
+      const auditId = createUuid();
       const blobs = new Map();
       const storedChanges = await this.prepareForStorage(changes, blobs);
       const documentId = String(id);
@@ -490,18 +554,20 @@
         if (currentRevision !== expected) throw staleWriteError();
         const nextRevision = currentRevision + 1;
         if (!Number.isSafeInteger(nextRevision)) throw staleWriteError();
-        const stored = { ...storedChanges, _revision: nextRevision };
+        const stored = { ...storedChanges, id: current.id == null ? id : current.id, _revision: nextRevision, _auditId: auditId };
+        this.audit(transaction, auditId, [{table,id,operation:'update'}]);
         transaction.update(reference, stored);
         this.writeBlobs(transaction, blobs);
         return { ...current, ...stored, id: current.id == null ? id : current.id, __documentId: documentId };
       });
       this.rememberBlobs(blobs);
+      this.rememberRevision(table, updated);
       return updated;
     }
 
-    async deleteRow(table, row) {
-      const documentId = row.__documentId || String(row.id);
-      await this.firestore.collection(table).doc(documentId).delete();
+    async deleteRow(table, row, expectedRevision) {
+      const id = row.__documentId || row.id;
+      return this.deleteRowByRevision(table, id, this.expectedFor(table, id, expectedRevision));
     }
 
     async deleteByRevision(table, id, expectedRevision) {
@@ -514,7 +580,8 @@
     }
 
     async deleteRowByRevision(table, id, expectedRevision) {
-      if (!REVISIONED_TABLES.has(table)) throw appError('この削除方法は有給データ専用です。');
+      this.validateChanges(table, id, {});
+      const auditId = createUuid();
       const expected = revisionOf(expectedRevision);
       const reference = this.firestore.collection(table).doc(String(id));
       return this.firestore.runTransaction(async (transaction) => {
@@ -522,6 +589,7 @@
         if (!snapshot.exists) throw staleWriteError();
         if (revisionOf((snapshot.data() || {})._revision) !== expected) throw staleWriteError();
         transaction.delete(reference);
+        this.audit(transaction,auditId,[{table,id,operation:'delete'}]);
       });
     }
 

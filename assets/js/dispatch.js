@@ -1,3 +1,5 @@
+let siteEditRevision;
+let clientEditRevision;
 function dashboardReadFailed(){
   for(const id of ['expiry-list','recent-contracts'])document.getElementById(id).innerHTML='<div role="alert">読み込みに失敗しました。<button class="btn btn-secondary" onclick="loadDashboard()">再読み込み</button></div>';
   for(const id of ['op-expiring','op-active-contracts','op-recent-contracts','op-active-staff'])document.getElementById(id).textContent='—';
@@ -115,6 +117,7 @@ function openClientModalById(id){
   openClientModal(c);
 }
 function openClientModal(c){
+  clientEditRevision=c?(c._revision??0):undefined;
   document.getElementById('mc-title').textContent=c?'取引先を編集':'取引先を登録';
   document.getElementById('c-id').value=c?.id||'';document.getElementById('c-name').value=c?.name||'';
   document.getElementById('c-address').value=c?.address||'';document.getElementById('c-ceo').value=c?.ceo||'';
@@ -129,14 +132,14 @@ async function saveClient(){
     contact_phone:document.getElementById('c-contact-phone').value,contact_email:document.getElementById('c-contact-email').value,
     notes:document.getElementById('c-notes').value,updated_at:new Date().toISOString()};
   if(!p.name){toast('企業名を入力してください','error');return;}
-  const {error}=id?await db.from('clients').update(p).eq('id',id):await db.from('clients').insert(p);
+  const {error}=id?await db.from('clients').update(p).expectRevision(clientEditRevision).eq('id',id):await db.from('clients').insert(p);
   if(error){toast('保存に失敗：'+error.message,'error');return;}
   toast(id?'取引先を更新しました':'取引先を登録しました','success');
   closeModal('modal-client');loadClients(true);
 }
 async function deleteClient(id){
   if(!confirmPermanentDelete('この取引先'))return;
-  const {error}=await db.from('clients').delete().eq('id',id);
+  const {error}=await db.from('clients').delete().expectRevision(ST.clients.find(x=>x.id===id)?._revision??0).eq('id',id);
   if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadClients(true);}
 }
 
@@ -168,6 +171,7 @@ async function openSiteModalById(id){
   await openSiteModal(site);
 }
 async function openSiteModal(site){
+  siteEditRevision=site?(site._revision??0):undefined;
   document.getElementById('ms-title').textContent=site?'現場を編集':'現場を登録';
   const DEFAULT_SAFETY = `派遣先は、派遣労働者の安全衛生に関し、労働安全衛生法等関係法令を遵守し、必要な措置を講ずるものとする。
 ・就業場所の安全管理、衛生管理を適切に行うこと
@@ -220,8 +224,8 @@ function renderWP(){
 function addWP(){wpList.push({pattern_name:'',start_time:'',end_time:'',break_minutes:60});renderWP();}
 
 async function replacementOperations(table,field,value,rows){
-  const existing=await firebaseRows(db.from(table).select('id').eq(field,value));
-  return [...existing.map(row=>({table,id:row.id,remove:true})),
+  const existing=await firebaseRows(db.from(table).select('id,_revision').eq(field,value));
+  return [...existing.map(row=>({table,id:row.id,remove:true,expectedRevision:row._revision??0})),
     ...rows.map(row=>({table,id:crypto.randomUUID(),data:{...row,[field]:value}}))];
 }
 async function contractOperations(id,record,staff){
@@ -280,7 +284,7 @@ async function saveSite(){
   const valid=wpList.filter(x=>x.pattern_name&&x.start_time&&x.end_time);
   try{
     const children=await replacementOperations('work_patterns','site_id',sid,valid.map(x=>({pattern_name:x.pattern_name,start_time:x.start_time,end_time:x.end_time,break_minutes:x.break_minutes??60})));
-    await db.atomicWrite([{table:'sites',id:sid,data:p},...children]);
+    await db.atomicWrite([{table:'sites',id:sid,data:p,...(id?{expectedRevision:siteEditRevision}:{createOnly:true})},...children]);
   }catch(error){toast('現場を保存できませんでした：'+error.message,'error');return;}
   toast(id?'現場を更新しました':'現場を登録しました','success');
   closeModal('modal-site');loadSites(true);
@@ -368,8 +372,8 @@ async function endContract(id){
   if(!confirm('この契約を終了しますか？\n元に戻せません。'))return;
   try{
     const current=await firebaseRows(db.from('contracts').select('*').eq('id',id).single());
-    const staff=await firebaseRows(db.from('contract_employees').select('id').eq('contract_id',id));
-    await db.atomicWrite([{table:'contracts',id,expectedRevision:current._revision??0,data:{status:'ended',updated_at:new Date().toISOString()}},...staff.map(row=>({table:'contract_employees',id:row.id,data:{is_active:false}}))]);
+    const staff=await firebaseRows(db.from('contract_employees').select('id,_revision').eq('contract_id',id));
+    await db.atomicWrite([{table:'contracts',id,expectedRevision:current._revision??0,data:{status:'ended',updated_at:new Date().toISOString()}},...staff.map(row=>({table:'contract_employees',id:row.id,expectedRevision:row._revision??0,data:{is_active:false}}))]);
   }catch(error){toast('契約を終了できませんでした：'+error.message,'error');return;}
   toast('契約を終了しました','success');loadContracts(true);
 }

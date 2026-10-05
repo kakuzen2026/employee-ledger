@@ -1,3 +1,4 @@
+let billingEditRevision;
 // ===== BILLING =====
 function initBillingMonths(){
   const sel=document.getElementById('billing-month-filter');sel.innerHTML='';const now=new Date();
@@ -29,6 +30,7 @@ async function openBillingModalById(id){
   await openBillingModal(b);
 }
 async function openBillingModal(b){
+  billingEditRevision=b?(b._revision??0):undefined;
   document.getElementById('mb-title').textContent=b?'請求を編集':'請求を記録';
   document.getElementById('b-id').value=b?.id||'';document.getElementById('b-amount').value=b?.amount??'';
   document.getElementById('b-billed').value=b?.is_billed?'true':'false';document.getElementById('b-notes').value=b?.notes||'';
@@ -45,7 +47,7 @@ async function saveBilling(){
   if(!/^-?\d+$/.test(rawAmount)||!Number.isSafeInteger(Number(rawAmount))){toast('金額を整数で入力してください','error');return;}
   const p={client_id:document.getElementById('b-client-id').value,billing_month:m+'-01',amount:Number(rawAmount),is_billed:document.getElementById('b-billed').value==='true',notes:document.getElementById('b-notes').value,updated_at:new Date().toISOString()};
   if(!p.client_id||!p.billing_month){toast('必須項目を入力してください','error');return;}
-  const {error}=id?await db.from('billing').update(p).eq('id',id):await db.from('billing').insert(p);
+  const {error}=id?await db.from('billing').update(p).expectRevision(billingEditRevision).eq('id',id):await db.from('billing').insert(p);
   if(error){toast('保存に失敗しました：'+error.message,'error');return;}
   toast(id?'請求を更新しました':'請求を記録しました','success');closeModal('modal-billing');loadBilling();
 }
@@ -53,7 +55,7 @@ async function deleteBilling(id){
   const b=ST.billing.find(x=>x.id===id);
   const label=b?`請求 ${b.billing_month||''} / ${Number(b.amount||0).toLocaleString()}円`:'この請求';
   if(!confirmPermanentDelete(label))return;
-  const {error}=await db.from('billing').delete().eq('id',id);
+  const {error}=await db.from('billing').delete().expectRevision(b?._revision??0).eq('id',id);
   if(error)toast('削除に失敗しました','error');else{toast('削除しました','success');loadBilling();}
 }
 
