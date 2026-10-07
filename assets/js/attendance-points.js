@@ -44,11 +44,11 @@ function attendanceReportHtml(employeeList){
       <button class="btn btn-sm" onclick="exportAttendanceCSV()">集計CSV</button>
     </div>
     <p style="font-size:12px;color:var(--emp-text2)">退職者は表示していません。登録済みの記録による判定です。期間中は暫定です。区分未分類・内容不明・日付不明がある場合は判定を保留します。記録なしは0ptです。</p>
-    <div class="table-wrap"><table><thead><tr><th>氏名</th>${[0,1,2].map(i=>`<th>${start+i+1}月</th>`).join('')}<th>3か月合計</th><th>皆勤手当</th></tr></thead>
+    <div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th>${[0,1,2].map(i=>`<th>${start+i+1}月</th>`).join('')}<th>3か月合計</th><th>皆勤手当</th></tr></thead>
     <tbody>${employeeList.map(e=>{
       const summary=attendanceSummary(yukyuRecords,e.id,year),q=summary.quarters[attendanceQuarter];
-      return `<tr><td data-label="氏名">${emp_esc(e.sei)} ${emp_esc(e.mei)}</td>${summary.months.slice(start,start+3).map((m,i)=>`<td data-label="${start+i+1}月">${m.points}pt${m.unknown?`（未分類等${m.unknown}件）`:''}</td>`).join('')}<td data-label="3か月合計">${q.points}pt${q.unknown?'（未確定）':''}</td><td data-label="皆勤手当"><strong>皆勤手当：${q.eligible===null?'保留':q.eligible?'対象':'対象外'}</strong>${summary.invalidDates?`・日付不明${summary.invalidDates}件`:''}</td></tr>`;
-    }).join('')||'<tr><td colspan="6">該当する従業員がいません</td></tr>'}</tbody></table></div>
+      return `<tr><td data-label="氏名">${emp_esc(e.sei)} ${emp_esc(e.mei)}</td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td>${summary.months.slice(start,start+3).map((m,i)=>`<td data-label="${start+i+1}月">${m.points}pt${m.unknown?`（未分類等${m.unknown}件）`:''}</td>`).join('')}<td data-label="3か月合計">${q.points}pt${q.unknown?'（未確定）':''}</td><td data-label="皆勤手当"><strong>皆勤手当：${q.eligible===null?'保留':q.eligible?'対象':'対象外'}</strong>${summary.invalidDates?`・日付不明${summary.invalidDates}件`:''}</td></tr>`;
+    }).join('')||'<tr><td colspan="7">該当する従業員がいません</td></tr>'}</tbody></table></div>
   </section>`;
 }
 function changeAttendancePeriod(){
@@ -73,8 +73,8 @@ function exportAttendanceCSV(){
   const start=attendanceQuarter*3;
   const rows=attendanceFilteredEmployees(query,employeeId).map(e=>{
     const s=attendanceSummary(yukyuRecords,e.id,attendanceYear),q=s.quarters[attendanceQuarter];
-    return [attendanceYear,`${start+1}〜${start+3}月`,e.shain_no||'',`${e.sei} ${e.mei}`,...s.months.slice(start,start+3).map(m=>m.points),q.points,q.unknown,q.eligible===null?'保留':q.eligible?'対象':'対象外'];
+    return [attendanceYear,`${start+1}〜${start+3}月`,e.shain_no||'',`${e.sei} ${e.mei}`,deptLabelById(e.dept_id),...s.months.slice(start,start+3).map(m=>m.points),q.points,q.unknown,q.eligible===null?'保留':q.eligible?'対象':'対象外'];
   });
-  const header=['年','期間','社員番号','氏名',...Array.from({length:3},(_,i)=>`${start+i+1}月pt`),'合計pt','未分類等件数','皆勤手当（登録済み記録による判定）'];
+  const header=['年','期間','社員番号','氏名','所属',...Array.from({length:3},(_,i)=>`${start+i+1}月pt`),'合計pt','未分類等件数','皆勤手当（登録済み記録による判定）'];
   dlCSV([header,...rows.map(row=>row.map(v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"'))],`勤怠ポイント_${attendanceYear}_${start+1}-${start+3}月`);
 }

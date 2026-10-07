@@ -78,3 +78,24 @@ test('皆勤手当の共通表示・CSV対象から退職者を除外し、他�
   assert.equal(ctx.attendanceFilteredEmployees('',2).length,0);
   assert.deepEqual(Array.from(ctx.attendanceFilteredEmployees('在籍'),e=>e.id),[1]);
 });
+test('皆勤手当一覧とCSVに所属を表示し、未設定・特殊文字・検索条件を維持する',()=>{
+  vm.runInContext(`departments=[{id:1,shozoku1:'検証会社',shozoku2:'第一工場'},{id:2,shozoku1:'=SUM(1,2)"<工場>',shozoku2:''}];employees=[{id:1,sei:'検証',mei:'太郎',status:'在籍',dept_id:'1'},{id:2,sei:'検証',mei:'花子',status:'在籍',dept_id:2},{id:3,sei:'所属なし',mei:'次郎',status:'在籍'},{id:4,sei:'削除済み所属',mei:'三郎',status:'在籍',dept_id:99},{id:5,sei:'退職',mei:'四郎',status:'退職',dept_id:1}];yukyuRecords=[];attendanceRecordsReady=true;attendanceEmployeesReady=true;attendanceYear=2026;attendanceQuarter=0;`,ctx);
+  const html=ctx.attendanceReportHtml(ctx.attendanceFilteredEmployees());
+  assert.match(html,/<th>氏名<\/th><th>所属<\/th>/);
+  assert.match(html,/<td data-label="所属">検証会社 \/ 第一工場<\/td>/);
+  assert.match(html,/<td data-label="所属">=SUM\(1,2\)&quot;&lt;工場&gt;<\/td>/);
+  assert.equal((html.match(/<td data-label="所属">—<\/td>/g)||[]).length,2);
+  assert.match(ctx.attendanceReportHtml([]),/colspan="7"/);
+  let query='',csv;
+  ctx.document.getElementById=id=>({value:id==='fyQ'?query:''});
+  ctx.dlCSV=(data,name)=>{csv={rows:ctx.parseCSV(data.map(r=>r.join(',')).join('\n')),name};};
+  ctx.exportAttendanceCSV();
+  assert.equal(csv.rows[0][4],'所属');
+  assert.equal(csv.rows.length,5);
+  assert.ok(csv.rows.every(r=>r.length===11));
+  assert.deepEqual(Array.from(csv.rows.slice(1),r=>r[4]),['検証会社 / 第一工場',`'=SUM(1,2)"<工場>`,'','']);
+  assert.ok(csv.rows.slice(1).every(r=>r[10]==='対象'));
+  query='第一工場';ctx.exportAttendanceCSV();
+  assert.equal(csv.rows.length,2);
+  assert.equal(csv.rows[1][3],'検証 太郎');
+});
