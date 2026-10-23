@@ -24,7 +24,7 @@ function renderYukyuList(){
       <button onclick="renderYukyuList()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
       <select id="fyEmp" onchange="renderYukyuList()" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}</option>`).join('')}
       </select>
       <input type="month" id="fyMonth" value="${fm}" onchange="renderYukyuList()">
     </div>
@@ -165,7 +165,7 @@ function renderYukyuAdd(){
         <label>従業員を選択 <span style="color:var(--emp-danger)">*</span></label>
         ${yf.employee_id?`
           <div class="emp-selected-box">
-            <span style="font-weight:500;font-size:14px">${yf.employee_name}</span>
+            <span style="font-weight:500;font-size:14px">${emp_esc(yf.employee_name)}</span>
             ${!yfFromDetail?`<button class="btn btn-sm" style="margin-left:auto" onclick="yf.employee_id=null;yf.employee_name='';renderYukyuAdd()">変更</button>`:''}
           </div>`:`
           <div class="emp-search-wrap">
@@ -189,19 +189,19 @@ function renderYukyuAdd(){
 }
 function empDDItems(q){
   return employees.filter(e=>e.status==='在籍'&&(!q||(e.sei+e.mei+(e.seikana||'')+(e.meikana||'')+(e.shain_no||'')).toLowerCase().includes(q.toLowerCase())))
-    .map(e=>`<div class="emp-option" onclick="pickEmp(${e.id},'${e.sei} ${e.mei}')">
-      <div style="font-weight:500">${e.sei} ${e.mei}</div>
+    .map(e=>`<div class="emp-option" onclick="pickEmp(${emp_attr(JSON.stringify(e.id))})">
+      <div style="font-weight:500">${emp_esc(e.sei)} ${emp_esc(e.mei)}</div>
       <div style="font-size:11px;color:var(--emp-text3);display:flex;gap:8px;margin-top:2px">
-        ${e.seikana||e.meikana?`<span>${e.seikana||''} ${e.meikana||''}</span>`:''}
-        ${e.shain_no?`<span>No.${e.shain_no}</span>`:''}
-        <span>${deptLabelById(e.dept_id)||''}</span>
+        ${e.seikana||e.meikana?`<span>${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span>`:''}
+        ${e.shain_no?`<span>No.${emp_esc(e.shain_no)}</span>`:''}
+        <span>${emp_esc(deptLabelById(e.dept_id)||'')}</span>
       </div>
     </div>`).join('');
 }
 function showEmpDD(){document.getElementById('empDD')?.classList.add('show');}
 function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');}
 function filterEmpDD(){const q=document.getElementById('empQ')?.value||'';const d=document.getElementById('empDD');if(d){d.innerHTML=empDDItems(q);d.classList.add('show');}}
-function pickEmp(id,name){yf.employee_id=id;yf.employee_name=name;renderYukyuAdd();}
+function pickEmp(id){const e=employees.find(x=>x.id===id);if(!e)return;yf.employee_id=id;yf.employee_name=e.sei+' '+e.mei;renderYukyuAdd();}
 function selYF(key,val,btn){yf[key]=val;btn.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
 function findYukyuDuplicateRecord(employeeId,useDate,ignoreId=null){
   if(!employeeId||!useDate)return null;
@@ -276,7 +276,7 @@ function renderForm(id){
     <div class="field-grid" style="margin-top:10px">
       <div class="field">
         <label>生年月日</label>
-        <input type="date" id="f_birthday" value="${e.birthday||''}" oninput="calcAge()">
+        <input type="date" id="f_birthday" value="${emp_attr(e.birthday||'')}" oninput="calcAge()">
       </div>
       <div class="field">
         <label>年齢</label>
@@ -300,7 +300,7 @@ function renderForm(id){
           <button type="button" class="sel-btn ${e.company==='セレクト'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='セレクト'">セレクト</button>
           <button type="button" class="sel-btn ${e.company==='覚善'?'selected':''}" onclick="this.closest('.sel-group').querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected');document.getElementById('f_company').value='覚善'">覚善</button>
         </div>
-        <input type="hidden" id="f_company" value="${e.company||''}">
+        <input type="hidden" id="f_company" value="${emp_attr(e.company||'')}">
       </div>
       <div class="field" style="grid-column:1/-1">
         <label>部署（所属1 / 所属2）</label>
@@ -328,7 +328,7 @@ function renderForm(id){
       ${fi('nyusha_date','入社日',e.nyusha_date,'date')}
       <div class="field">
         <label>退職日</label>
-        <input type="date" id="f_taishoku_date" value="${e.taishoku_date||''}" oninput="onTaishokuChange()">
+        <input type="date" id="f_taishoku_date" value="${emp_attr(e.taishoku_date||'')}" oninput="onTaishokuChange()">
       </div>
       <div class="field">
         <label>在籍状況</label>
@@ -559,16 +559,30 @@ function parseCSVLine(line){
 function exportCSV(){
   if(!confirm(`従業員CSVを出力します。\n対象: ${employees.length}件\n住所・電話・メール・保険番号などの個人情報が含まれます。続行しますか？`))return;
   const h=['ID','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
-  const rows=employees.map(e=>{
-    const dept=departments.find(d=>d.id===Number(e.dept_id));
-    return[e.id,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
-  });
-  dlCSV([h,...rows],'従業員台帳');
+  try{
+    const rows=employees.map(e=>{
+      const dept=departments.find(d=>d.id===Number(e.dept_id));
+      return[e.id,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map((v,i)=>csvExportCell(v,{identity:i===0,numeric:i===0||i===16||i===17}));
+    });
+    dlCSV([h,...rows],'従業員台帳');
+  }catch(error){showToast(error.message,'error');}
 }
 function exportYukyuCSV(){
   const h=['ID','従業員ID','氏名','使用日','使用内容','種別','区分','入力者','登録日','備考'];
-  const rows=yukyuRecords.map(r=>[r.id,r.employee_id,r.employee_name,r.use_date,r.use_type,r.shubetsu,r.kubun,r.input_by,r.touroku_date,r.biko].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"'));
-  dlCSV([h,...rows],'有給記録');
+  try{
+    const rows=yukyuRecords.map(r=>[r.id,r.employee_id,r.employee_name,r.use_date,r.use_type,r.shubetsu,r.kubun,r.input_by,r.touroku_date,r.biko].map((v,i)=>csvExportCell(v,{identity:i<2,numeric:i<2})));
+    dlCSV([h,...rows],'有給記録');
+  }catch(error){showToast(error.message,'error');}
+}
+function csvExportCell(value,{identity=false,numeric=false}={}){
+  let text=value==null?'':String(value);
+  const formula=/^[\s\uFEFF]*[=+\-@]/u.test(text)||/^[\t\r\n]/.test(text);
+  const number=numeric&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text.trim());
+  if(formula&&!number){
+    if(identity)throw new Error('IDに数式として解釈される値があるため、CSV出力を中止しました。');
+    text="'"+text;
+  }
+  return '"'+text.replace(/"/g,'""')+'"';
 }
 function dlCSV(data,name){
   const csv='\uFEFF'+data.map(r=>r.join(',')).join('\n');

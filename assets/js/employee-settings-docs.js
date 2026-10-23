@@ -172,25 +172,25 @@ function generateCertificate(empId,type){
   <div class="date">発行日：${todayStr}</div>
   <div class="title">${title}</div>
   <div class="content">
-    <div class="name-line">氏　名：${e.sei} ${e.mei}　様</div>
+    <div class="name-line">氏　名：${emp_esc(e.sei)} ${emp_esc(e.mei)}　様</div>
     <div style="margin:20px 0">上記の者は、下記のとおり${isZaishoku?'在職していることを証明します':'退職したことを証明します'}。</div>
     <table class="table">
-      <tr><td>所属</td><td>${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join('　'):'—'}</td></tr>
-      <tr><td>雇用形態</td><td>${e.koyou||'—'}</td></tr>
+      <tr><td>所属</td><td>${emp_esc(dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join('　'):'—')}</td></tr>
+      <tr><td>雇用形態</td><td>${emp_esc(e.koyou||'—')}</td></tr>
       <tr><td>雇用期間の定め</td><td>${e.employment_type==='permanent'?'無期（期間の定めなし）':e.employment_type==='fixed'?'有期（期間の定めあり）':'—'}</td></tr>
-      <tr><td>入社年月日</td><td>${e.nyusha_date||'—'}</td></tr>
-      ${!isZaishoku?`<tr><td>退職年月日</td><td>${e.taishoku_date||'—'}</td></tr>`:''}
+      <tr><td>入社年月日</td><td>${emp_esc(e.nyusha_date||'—')}</td></tr>
+      ${!isZaishoku?`<tr><td>退職年月日</td><td>${emp_esc(e.taishoku_date||'—')}</td></tr>`:''}
       ${isZaishoku?`<tr><td>在籍状況</td><td>在職中</td></tr>`:''}
     </table>
     <div style="margin-top:30px;font-size:12px;color:#555">※本証明書は${todayStr}現在のものです。</div>
   </div>
   <div class="seal-area">
     <div class="company-info">
-      〒${companyInfo.postal_code||''}<br>
-      ${companyInfo.address||''}<br>
-      ${companyInfo.company_name||''}<br>
-      TEL：${companyInfo.tel||''}<br>
-      代表者：${companyInfo.representative||''}
+      〒${emp_esc(companyInfo.postal_code||'')}<br>
+      ${emp_esc(companyInfo.address||'')}<br>
+      ${emp_esc(companyInfo.company_name||'')}<br>
+      TEL：${emp_esc(companyInfo.tel||'')}<br>
+      代表者：${emp_esc(companyInfo.representative||'')}
     </div>
   </div>
 </body>
@@ -225,9 +225,9 @@ function emp_openContractModal(empId){
       従業員データから自動入力されています。必要に応じて修正してください。
     </div>
     <div class="field-grid" style="gap:8px">
-      <div class="field"><label>契約開始日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_start" value="${e.nyusha_date||''}"></div>
+      <div class="field"><label>契約開始日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_start" value="${emp_attr(e.nyusha_date||'')}"></div>
       ${isFixed?`<div class="field"><label>契約終了日 <span style="color:var(--emp-danger)">*</span></label><input type="date" id="cm_end" value=""></div>`:''}
-      <div class="field"><label>就業場所</label><input type="text" id="cm_place" value="${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join(' '):''}"></div>
+      <div class="field"><label>就業場所</label><input type="text" id="cm_place" value="${emp_attr(dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join(' '):'')}"></div>
       <div class="field"><label>業務内容</label><input type="text" id="cm_work" value="" placeholder="例：製造業務全般"></div>
       <div class="field"><label>始業時刻</label><input type="text" id="cm_start_time" value="08:00"></div>
       <div class="field"><label>終業時刻</label><input type="text" id="cm_end_time" value="17:00"></div>
@@ -240,7 +240,7 @@ function emp_openContractModal(empId){
         <option value="monthly" ${e.kyuyo?'selected':''}>月給制</option>
         <option value="hourly" ${!e.kyuyo&&e.jikyu?'selected':''}>時給制</option>
       </select></div>
-      <div class="field"><label>基本賃金</label><input type="text" id="cm_wage" value="${e.kyuyo?e.kyuyo+'円（月額）':e.jikyu?e.jikyu+'円（時給）':''}"></div>
+      <div class="field"><label>基本賃金</label><input type="text" id="cm_wage" value="${emp_attr(e.kyuyo?e.kyuyo+'円（月額）':e.jikyu?e.jikyu+'円（時給）':'')}"></div>
       <div class="field"><label>賃金締め日</label><input type="text" id="cm_pay_close" value="毎月末日"></div>
       <div class="field"><label>賃金支払日</label><input type="text" id="cm_pay_date" value="翌月25日"></div>
       <div class="field"><label>昇給</label><input type="text" id="cm_raise" value="有（会社業績・本人評価による）"></div>
@@ -314,17 +314,17 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   <div class="parties">
     <div class="party">
       <div class="party-label">使用者（甲）</div>
-      〒${companyInfo.postal_code||''}<br>
-      ${companyInfo.address||''}<br>
-      ${companyInfo.company_name||''}<br>
-      代表者：${companyInfo.representative||''}<br>
-      TEL：${companyInfo.tel||''}
+      〒${emp_esc(companyInfo.postal_code||'')}<br>
+      ${emp_esc(companyInfo.address||'')}<br>
+      ${emp_esc(companyInfo.company_name||'')}<br>
+      代表者：${emp_esc(companyInfo.representative||'')}<br>
+      TEL：${emp_esc(companyInfo.tel||'')}
     </div>
     <div class="party">
       <div class="party-label">労働者（乙）</div>
-      ${e.address||''}<br>
-      氏名：${e.sei} ${e.mei}　　　　㊞<br>
-      生年月日：${e.birthday||''}
+      ${emp_esc(e.address||'')}<br>
+      氏名：${emp_esc(e.sei)} ${emp_esc(e.mei)}　　　　㊞<br>
+      生年月日：${emp_esc(e.birthday||'')}
     </div>
   </div>
 
@@ -332,8 +332,8 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
     <div class="section-title">第１条　契約期間</div>
     <table>
       <tr><td>契約形態</td><td>${isFixed?'有期雇用契約（期間の定めあり）':'無期雇用契約（期間の定めなし）'}</td></tr>
-      <tr><td>契約開始日</td><td>${g('cm_start')||'—'}</td></tr>
-      ${isFixed?`<tr><td>契約終了日</td><td>${g('cm_end')||'—'}</td></tr>`:''}
+      <tr><td>契約開始日</td><td>${emp_esc(g('cm_start')||'—')}</td></tr>
+      ${isFixed?`<tr><td>契約終了日</td><td>${emp_esc(g('cm_end')||'—')}</td></tr>`:''}
       ${isFixed?`<tr><td>契約の更新</td><td>${renewText}</td></tr>`:''}
     </table>
   </div>
@@ -341,21 +341,21 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   <div class="section">
     <div class="section-title">第２条　就業の場所・業務内容</div>
     <table>
-      <tr><td>就業場所</td><td>${g('cm_place')||'—'}</td></tr>
-      <tr><td>業務内容</td><td>${g('cm_work')||'—'}</td></tr>
+      <tr><td>就業場所</td><td>${emp_esc(g('cm_place')||'—')}</td></tr>
+      <tr><td>業務内容</td><td>${emp_esc(g('cm_work')||'—')}</td></tr>
     </table>
   </div>
 
   <div class="section">
     <div class="section-title">第３条　労働時間・休憩・休日</div>
     <table>
-      <tr><td>始業時刻</td><td>${g('cm_start_time')}</td></tr>
-      <tr><td>終業時刻</td><td>${g('cm_end_time')}</td></tr>
-      <tr><td>休憩時間</td><td>${g('cm_break')}</td></tr>
-      <tr><td>所定労働時間</td><td>${g('cm_work_hours')}</td></tr>
-      <tr><td>時間外労働</td><td>${g('cm_overtime')}</td></tr>
-      <tr><td>休日</td><td>${g('cm_holiday')}</td></tr>
-      <tr><td>年次有給休暇</td><td>${g('cm_yukyu')}</td></tr>
+      <tr><td>始業時刻</td><td>${emp_esc(g('cm_start_time'))}</td></tr>
+      <tr><td>終業時刻</td><td>${emp_esc(g('cm_end_time'))}</td></tr>
+      <tr><td>休憩時間</td><td>${emp_esc(g('cm_break'))}</td></tr>
+      <tr><td>所定労働時間</td><td>${emp_esc(g('cm_work_hours'))}</td></tr>
+      <tr><td>時間外労働</td><td>${emp_esc(g('cm_overtime'))}</td></tr>
+      <tr><td>休日</td><td>${emp_esc(g('cm_holiday'))}</td></tr>
+      <tr><td>年次有給休暇</td><td>${emp_esc(g('cm_yukyu'))}</td></tr>
     </table>
   </div>
 
@@ -363,20 +363,20 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
     <div class="section-title">第４条　賃金</div>
     <table>
       <tr><td>賃金形態</td><td>${g('cm_wage_type')==='monthly'?'月給制':'時給制'}</td></tr>
-      <tr><td>基本賃金</td><td>${g('cm_wage')||'—'}</td></tr>
-      <tr><td>賃金締め日</td><td>${g('cm_pay_close')}</td></tr>
-      <tr><td>賃金支払日</td><td>${g('cm_pay_date')}</td></tr>
-      <tr><td>昇給</td><td>${g('cm_raise')}</td></tr>
-      <tr><td>賞与</td><td>${g('cm_bonus')}</td></tr>
-      <tr><td>退職金</td><td>${g('cm_retirement')}</td></tr>
+      <tr><td>基本賃金</td><td>${emp_esc(g('cm_wage')||'—')}</td></tr>
+      <tr><td>賃金締め日</td><td>${emp_esc(g('cm_pay_close'))}</td></tr>
+      <tr><td>賃金支払日</td><td>${emp_esc(g('cm_pay_date'))}</td></tr>
+      <tr><td>昇給</td><td>${emp_esc(g('cm_raise'))}</td></tr>
+      <tr><td>賞与</td><td>${emp_esc(g('cm_bonus'))}</td></tr>
+      <tr><td>退職金</td><td>${emp_esc(g('cm_retirement'))}</td></tr>
     </table>
   </div>
 
   <div class="section">
     <div class="section-title">第５条　試用期間・社会保険</div>
     <table>
-      <tr><td>試用期間</td><td>${g('cm_trial')}</td></tr>
-      <tr><td>社会保険</td><td>${g('cm_insurance')}</td></tr>
+      <tr><td>試用期間</td><td>${emp_esc(g('cm_trial'))}</td></tr>
+      <tr><td>社会保険</td><td>${emp_esc(g('cm_insurance'))}</td></tr>
     </table>
   </div>
 
@@ -396,13 +396,13 @@ body.theme-light #main #page-jugyoin{display:block!important;height:100dvh;overf
   <div class="sign-area">
     <div class="sign-box">
       <div class="sign-label">使用者（甲）署名欄</div>
-      会社名：${companyInfo.company_name||''}<br>
-      代表者：${companyInfo.representative||''}<br><br>
+      会社名：${emp_esc(companyInfo.company_name||'')}<br>
+      代表者：${emp_esc(companyInfo.representative||'')}<br><br>
       署名：　　　　　　　　　㊞
     </div>
     <div class="sign-box">
       <div class="sign-label">労働者（乙）署名欄</div>
-      氏名：${e.sei} ${e.mei}<br><br>
+      氏名：${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><br>
       署名：　　　　　　　　　㊞<br>
       日付：　　年　　月　　日
     </div>
@@ -513,7 +513,7 @@ async function renderContractList(){
     <div class="search-bar" style="margin-bottom:12px">
       <select id="fceEmp" onchange="renderContractList()" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+        ${employees.map(e=>`<option value="${emp_attr(e.id)}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}</option>`).join('')}
       </select>
     </div>
     ${thisList.length===0?'<div class="empty">雇用契約書の発行履歴がありません</div>':`
@@ -565,7 +565,7 @@ function renderCertList(){
     <div class="search-bar">
       <select id="fcEmp" onchange="renderCertList()" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+        ${employees.map(e=>`<option value="${emp_attr(e.id)}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}</option>`).join('')}
       </select>
       <select id="fcType" onchange="renderCertList()">
         <option value="">種別：全て</option>
