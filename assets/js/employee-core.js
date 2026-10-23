@@ -475,7 +475,7 @@ function employeeSearchText(e){
   ).toLowerCase();
 }
 function deptOptions(selectedId){
-  return`<option value="">（未選択）</option>`+departments.map(d=>`<option value="${d.id}" ${Number(selectedId)===d.id?'selected':''}>${deptLabel(d)}</option>`).join('');
+  return`<option value="">（未選択）</option>`+departments.map(d=>`<option value="${emp_attr(d.id)}" ${Number(selectedId)===d.id?'selected':''}>${emp_esc(deptLabel(d))}</option>`).join('');
 }
 function getLatestEmploymentContractMap(){
   const map={};

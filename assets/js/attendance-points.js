@@ -76,5 +76,5 @@ function exportAttendanceCSV(){
     return [attendanceYear,`${start+1}〜${start+3}月`,e.shain_no||'',`${e.sei} ${e.mei}`,deptLabelById(e.dept_id),...s.months.slice(start,start+3).map(m=>m.points),q.points,q.unknown,q.eligible===null?'保留':q.eligible?'対象':'対象外'];
   });
   const header=['年','期間','社員番号','氏名','所属',...Array.from({length:3},(_,i)=>`${start+i+1}月pt`),'合計pt','未分類等件数','皆勤手当（登録済み記録による判定）'];
-  dlCSV([header,...rows.map(row=>row.map(v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"'))],`勤怠ポイント_${attendanceYear}_${start+1}-${start+3}月`);
+  dlCSV([header,...rows.map(row=>row.map(csvCell))],`勤怠ポイント_${attendanceYear}_${start+1}-${start+3}月`);
 }

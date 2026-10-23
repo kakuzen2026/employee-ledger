@@ -25,17 +25,17 @@ function renderSettings(){
         ${departments.length===0?'<div class="empty" style="padding:20px 0">部署が登録されていません</div>':`
         <div id="deptSortList">
           ${departments.map(d=>`
-            <div class="dept-row" draggable="true" data-id="${d.id}"
+            <div class="dept-row" draggable="true" data-id="${emp_attr(d.id)}"
               style="cursor:grab;user-select:none"
-              ondragstart="deptDragStart(event,${d.id})"
+              ondragstart="deptDragStart(event,${jsAttrArg(d.id)})"
               ondragover="deptDragOver(event)"
-              ondrop="deptDrop(event,${d.id})"
+              ondrop="deptDrop(event,${jsAttrArg(d.id)})"
               ondragend="deptDragEnd(event)">
               <span style="color:var(--emp-text3);font-size:16px;margin-right:4px">☰</span>
               <div class="d1">${emp_esc(d.shozoku1)}</div>
               <div class="d2">${emp_esc(d.shozoku2)||'<span style="color:var(--emp-text3)">所属2なし</span>'}</div>
-              <button type="button" class="btn btn-sm" data-employee-action="department-edit" data-id="${d.id}">編集</button>
-              <button type="button" class="btn btn-sm btn-danger" data-employee-action="department-delete" data-id="${d.id}">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="department-edit" data-id="${emp_attr(d.id)}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="department-delete" data-id="${emp_attr(d.id)}">削除</button>
             </div>`).join('')}
         </div>`}
       </div>
@@ -48,8 +48,8 @@ function renderSettings(){
           visaTypes.map(v=>`
             <div class="dept-row">
               <div class="d1" style="flex:2">${emp_esc(v.name)}</div>
-              <button type="button" class="btn btn-sm" data-employee-action="visa-edit" data-id="${v.id}">編集</button>
-              <button type="button" class="btn btn-sm btn-danger" data-employee-action="visa-delete" data-id="${v.id}">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="visa-edit" data-id="${emp_attr(v.id)}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="visa-delete" data-id="${emp_attr(v.id)}">削除</button>
             </div>`).join('')}
       </div>
       <div class="settings-card" style="margin-top:20px">
@@ -65,8 +65,8 @@ function renderSettings(){
                 ${emp_esc(p.start_time||'')}〜${emp_esc(p.end_time||'')} 休憩${emp_esc(p.break_minutes||60)}分
                 週${emp_esc(p.work_days_per_week||'')}日 休日：${emp_esc(p.holidays||'')}
               </div>
-              <button type="button" class="btn btn-sm" data-employee-action="work-pattern-edit" data-id="${p.id}">編集</button>
-              <button type="button" class="btn btn-sm btn-danger" data-employee-action="work-pattern-delete" data-id="${p.id}">削除</button>
+              <button type="button" class="btn btn-sm" data-employee-action="work-pattern-edit" data-id="${emp_attr(p.id)}">編集</button>
+              <button type="button" class="btn btn-sm btn-danger" data-employee-action="work-pattern-delete" data-id="${emp_attr(p.id)}">削除</button>
             </div>`).join('')}
       </div>
     </div>`;
@@ -174,25 +174,25 @@ function generateCertificate(empId,type){
   <div class="date">発行日：${todayStr}</div>
   <div class="title">${title}</div>
   <div class="content">
-    <div class="name-line">氏　名：${e.sei} ${e.mei}　様</div>
+    <div class="name-line">氏　名：${emp_esc(e.sei)} ${emp_esc(e.mei)}　様</div>
     <div style="margin:20px 0">上記の者は、下記のとおり${isZaishoku?'在職していることを証明します':'退職したことを証明します'}。</div>
     <table class="table">
-      <tr><td>所属</td><td>${dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join('　'):'—'}</td></tr>
-      <tr><td>雇用形態</td><td>${e.koyou||'—'}</td></tr>
+      <tr><td>所属</td><td>${emp_esc(dept?[dept.shozoku1,dept.shozoku2].filter(Boolean).join('　'):'—')}</td></tr>
+      <tr><td>雇用形態</td><td>${emp_esc(e.koyou||'—')}</td></tr>
       <tr><td>雇用期間の定め</td><td>${e.employment_type==='permanent'?'無期（期間の定めなし）':e.employment_type==='fixed'?'有期（期間の定めあり）':'—'}</td></tr>
-      <tr><td>入社年月日</td><td>${e.nyusha_date||'—'}</td></tr>
-      ${!isZaishoku?`<tr><td>退職年月日</td><td>${e.taishoku_date||'—'}</td></tr>`:''}
+      <tr><td>入社年月日</td><td>${emp_esc(e.nyusha_date||'—')}</td></tr>
+      ${!isZaishoku?`<tr><td>退職年月日</td><td>${emp_esc(e.taishoku_date||'—')}</td></tr>`:''}
       ${isZaishoku?`<tr><td>在籍状況</td><td>在職中</td></tr>`:''}
     </table>
     <div style="margin-top:30px;font-size:12px;color:#555">※本証明書は${todayStr}現在のものです。</div>
   </div>
   <div class="seal-area">
     <div class="company-info">
-      〒${companyInfo.postal_code||''}<br>
-      ${companyInfo.address||''}<br>
-      ${companyInfo.company_name||''}<br>
-      TEL：${companyInfo.tel||''}<br>
-      代表者：${companyInfo.representative||''}
+      〒${emp_esc(companyInfo.postal_code||'')}<br>
+      ${emp_esc(companyInfo.address||'')}<br>
+      ${emp_esc(companyInfo.company_name||'')}<br>
+      TEL：${emp_esc(companyInfo.tel||'')}<br>
+      代表者：${emp_esc(companyInfo.representative||'')}
     </div>
   </div>
 </body>
@@ -693,11 +693,11 @@ async function renderContractList(){
             :`<span class="badge badge-warn">残${days}日</span>`;
           const rowBg=!ct||days<0?'background:#fdf0f0':'background:#fdf3e7';
           return`<tr style="${rowBg}">
-            <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td>
+            <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td>
             <td data-label="所属" style="font-size:12px">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="状態">${statusLabel}</td>
             <td data-label="契約終了日" style="font-size:12px">${emp_esc(ct?.contract_end||'—')}</td>
-            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書作成</button></td>
+            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${emp_attr(e.id)}">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -717,14 +717,14 @@ async function renderContractList(){
       <thead><tr><th>発行日</th><th>氏名</th><th>契約開始</th><th>契約終了</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${thisList.map(r=>`<tr>
         <td data-label="発行日" style="font-size:13px">${emp_esc(r.issued_date||'—')}</td>
-        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</button></td>
+        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${jsAttrArg(r.employee_id)})">${emp_esc(r.employee_name||'—')}</button></td>
         <td data-label="契約開始" style="font-size:12px">${emp_esc(r.contract_start||'—')}</td>
         <td data-label="契約終了" style="font-size:12px">${emp_esc(r.contract_end||'無期')}</td>
         <td data-label="種別"><span class="badge ${r.is_fixed?'badge-warn':'badge-active'}">${r.is_fixed?'有期':'無期'}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
           ${employmentContractHistoryActions(r)}
-          <details class="row-actions"><summary>その他</summary><button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${r.id}" style="margin-left:4px">削除</button></details>
+          <details class="row-actions"><summary>その他</summary><button type="button" class="btn btn-sm btn-danger" data-employee-action="contract-delete" data-id="${emp_attr(r.id)}" style="margin-left:4px">削除</button></details>
         </td>
       </tr>`).join('')}
       </tbody>
@@ -770,12 +770,12 @@ function renderCertList(){
       <thead><tr><th>発行日</th><th>氏名</th><th>種別</th><th>発行元</th><th></th></tr></thead>
       <tbody>${list.map(r=>`<tr>
         <td data-label="発行日" style="font-size:13px">${emp_esc(r.issued_date||'—')}</td>
-        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${r.employee_id})">${emp_esc(r.employee_name||'—')}</button></td>
+        <td data-label="氏名"><button class="emp-name" onclick="viewDetail(${jsAttrArg(r.employee_id)})">${emp_esc(r.employee_name||'—')}</button></td>
         <td data-label="種別"><span class="badge ${r.cert_type==='在職証明書'?'badge-visa':'badge-retired'}">${emp_esc(r.cert_type||'—')}</span></td>
         <td data-label="発行元" style="font-size:12px;color:var(--emp-text2)">${emp_esc(r.issued_by||'—')}</td>
         <td class="no-label">
-          <button class="btn btn-sm" onclick="${r.cert_type==='雇用契約書'?`emp_openContractModal(${r.employee_id})`:`reissueCert(${r.employee_id},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')`}">再発行</button>
-          <details class="row-actions"><summary>その他</summary><button class="btn btn-sm btn-danger" onclick="deleteCert(${r.id})" style="margin-left:4px">削除</button></details>
+          <button class="btn btn-sm" onclick="${r.cert_type==='雇用契約書'?`emp_openContractModal(${jsAttrArg(r.employee_id)})`:`reissueCert(${jsAttrArg(r.employee_id)},'${r.cert_type==='在職証明書'?'zaishoku':'taishoku'}')`}">再発行</button>
+          <details class="row-actions"><summary>その他</summary><button class="btn btn-sm btn-danger" onclick="deleteCert(${jsAttrArg(r.id)})" style="margin-left:4px">削除</button></details>
         </td>
       </tr>`).join('')}
       </tbody>

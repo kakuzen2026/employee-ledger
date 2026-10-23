@@ -13,7 +13,7 @@ function renderList(){
   const columns=ALL_COLS.filter(c=>c.always||visibleCols.includes(c.key));
   const cell=(e,key)=>{
     const dept=departments.find(d=>d.id===Number(e.dept_id));
-    if(key==='name')return `<button class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button><div class="employee-number">${emp_esc(e.shain_no||'社員番号未設定')}</div>`;
+    if(key==='name')return `<button class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button><div class="employee-number">${emp_esc(e.shain_no||'社員番号未設定')}</div>`;
     if(key==='shozoku1'||key==='shozoku2')return emp_esc(dept?.[key]||'—');
     if(key==='status')return `<span class="status-dot ${e.status==='在籍'?'is-active':''}">${emp_esc(e.status||'—')}</span>`;
     if(key==='remaining')return attendanceRecordsReady&&attendanceGrantsReady?`<strong>${calcYukyuInfo(e.id).invalidGrant?'未確認':calcYukyuInfo(e.id).remaining+'日'}</strong>`:'未確認';
@@ -33,13 +33,13 @@ function renderList(){
     <div class="search-bar employee-search">
       <div class="search-input-group"><input id="searchQ" aria-label="氏名・所属で検索" placeholder="氏名・所属で検索" value="${emp_attr(sq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)render()"><button class="btn" onclick="render()">検索</button></div>
       <select id="fStatus" aria-label="在籍状況" onchange="render()"><option value="">在籍：すべて</option><option value="在籍" ${fs==='在籍'?'selected':''}>在籍中</option><option value="退職" ${fs==='退職'?'selected':''}>退職</option></select>
-      <select id="fDept" aria-label="所属" onchange="render()"><option value="">すべての所属</option>${departments.map(d=>`<option value="${d.id}" ${fd==d.id?'selected':''}>${emp_esc(deptLabel(d))}</option>`).join('')}</select>
+      <select id="fDept" aria-label="所属" onchange="render()"><option value="">すべての所属</option>${departments.map(d=>`<option value="${emp_attr(d.id)}" ${fd==d.id?'selected':''}>${emp_esc(deptLabel(d))}</option>`).join('')}</select>
       <select id="fCompany" aria-label="会社" onchange="render()"><option value="">すべての会社</option>${['セレクト','覚善'].map(c=>`<option ${fc===c?'selected':''}>${c}</option>`).join('')}</select>
       <button class="btn btn-sm" onclick="showColSettings()">表示列</button><span class="result-count">${list.length}名</span>
     </div>
     ${!attendanceEmployeesReady?'<div class="empty" role="alert">従業員を読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':list.length===0?'<div class="empty">条件に合う従業員がいません。検索や絞り込みを変更してください。</div>':`
     <div class="table-wrap employee-table"><table><thead><tr>${columns.map(c=>`<th>${c.label}</th>`).join('')}<th><span class="sr-only">詳細を開く</span></th></tr></thead>
-    <tbody>${list.map(e=>`<tr>${columns.map(c=>`<td data-label="${c.label}" data-column="${c.key}">${cell(e,c.key)}</td>`).join('')}<td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id})" aria-label="${emp_attr(e.sei+' '+e.mei)}の詳細">詳細</button></td></tr>`).join('')}</tbody></table></div>`}
+    <tbody>${list.map(e=>`<tr>${columns.map(c=>`<td data-label="${c.label}" data-column="${c.key}">${cell(e,c.key)}</td>`).join('')}<td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${jsAttrArg(e.id)})" aria-label="${emp_attr(e.sei+' '+e.mei)}の詳細">詳細</button></td></tr>`).join('')}</tbody></table></div>`}
     <div class="workspace-list-footer">${list.length}名を表示<span>書類作成・退職処理は従業員の詳細から行えます。</span></div>`;
 }
 
@@ -55,7 +55,7 @@ function renderDeadlineOverview(focus){
     <div class="deadline-heading"><h2 id="deadlineTitle">期限アラート</h2><button class="text-button" onclick="showView('alert')">書類・その他のアラート →</button></div>
     <div class="deadline-shortcuts">${groups.map(g=>`<button class="deadline-shortcut ${g.expired.length?'has-expired':''}" aria-expanded="${g===selected}" aria-controls="deadlinePeople" data-deadline-kind="${g.key}" onclick="toggleDeadlineOverview('${g.key}')"><span>${g.label}</span><strong>${g.expired.length+g.soon.length}<small>名</small></strong><span class="deadline-breakdown">期限切れ ${g.expired.length}名 · 期限間近 ${g.soon.length}名</span></button>`).join('')}</div>
     <p class="deadline-help">在籍者の期限切れ・90日未満を表示。従業員一覧の絞り込みにかかわらず確認できます。</p>
-    <div id="deadlinePeople" ${selected?'':'hidden'}>${selected?`<div class="deadline-people-heading"><h3>${selected.label}の確認が必要な従業員</h3><button class="text-button" onclick="toggleDeadlineOverview('${selected.key}')">閉じる</button></div>${rows.length?`<ul class="deadline-people">${rows.map(e=>`<li><button class="deadline-person" onclick="viewDeadlineEmployee(${e.id},'${selected.tab}')"><span><strong>${emp_esc(e.sei)} ${emp_esc(e.mei)}</strong><small>${emp_esc(e.shain_no||'')} · ${emp_esc(deptLabelById(e.dept_id)||'所属未設定')}</small></span><span class="deadline-person-date">${selected.expired.includes(e)?'<span class="danger-text">期限切れ</span>':'期限間近'}<strong>${emp_esc(e[selected.field])}</strong></span><span aria-hidden="true">→</span></button></li>`).join('')}</ul>`:'<p class="deadline-empty">該当する従業員はいません。</p>'}` : ''}</div>
+    <div id="deadlinePeople" ${selected?'':'hidden'}>${selected?`<div class="deadline-people-heading"><h3>${selected.label}の確認が必要な従業員</h3><button class="text-button" onclick="toggleDeadlineOverview('${selected.key}')">閉じる</button></div>${rows.length?`<ul class="deadline-people">${rows.map(e=>`<li><button class="deadline-person" onclick="viewDeadlineEmployee(${jsAttrArg(e.id)},'${selected.tab}')"><span><strong>${emp_esc(e.sei)} ${emp_esc(e.mei)}</strong><small>${emp_esc(e.shain_no||'')} · ${emp_esc(deptLabelById(e.dept_id)||'所属未設定')}</small></span><span class="deadline-person-date">${selected.expired.includes(e)?'<span class="danger-text">期限切れ</span>':'期限間近'}<strong>${emp_esc(e[selected.field])}</strong></span><span aria-hidden="true">→</span></button></li>`).join('')}</ul>`:'<p class="deadline-empty">該当する従業員はいません。</p>'}` : ''}</div>
     ${documentLinks}
   </section>`;
 }
@@ -112,7 +112,7 @@ function setDetailTab(tab){
 function employeeSwitcherHtml(id,label){
   const idx=currentFilteredList.findIndex(e=>e.id===id),prev=currentFilteredList[idx-1],next=currentFilteredList[idx+1];
   const name=e=>emp_esc(`${e.sei} ${e.mei}`);
-  return `<nav class="employee-switcher" aria-label="${emp_attr(label)}"><button class="btn btn-sm" ${prev?`onclick="viewDetail(${prev.id},detailTab)" aria-label="前の従業員：${name(prev)}"`:'disabled'}>前の従業員</button><span>${idx+1}/${currentFilteredList.length}</span><button class="btn btn-sm" ${next?`onclick="viewDetail(${next.id},detailTab)" aria-label="次の従業員：${name(next)}"`:'disabled'}>次の従業員</button></nav>`;
+  return `<nav class="employee-switcher" aria-label="${emp_attr(label)}"><button class="btn btn-sm" ${prev?`onclick="viewDetail(${jsAttrArg(prev.id)},detailTab)" aria-label="前の従業員：${name(prev)}"`:'disabled'}>前の従業員</button><span>${idx+1}/${currentFilteredList.length}</span><button class="btn btn-sm" ${next?`onclick="viewDetail(${jsAttrArg(next.id)},detailTab)" aria-label="次の従業員：${name(next)}"`:'disabled'}>次の従業員</button></nav>`;
 }
 function editEmp(id){
   if(!canLeaveEmployeeView())return;
@@ -134,13 +134,13 @@ function renderDetail(id){
       <button class="text-button employee-back" onclick="employeeBackToList()">← 一覧に戻る</button>
       <div class="employee-identity-row"><div><div class="employee-identity"><h1>${emp_esc(e.sei)} ${emp_esc(e.mei)}</h1><span class="status-dot ${e.status==='在籍'?'is-active':''}">${emp_esc(e.status||'—')}</span></div><p>${emp_esc(e.shain_no||'社員番号未設定')}<span> · </span>${emp_esc(deptLabelById(e.dept_id)||'所属未設定')}</p></div>
       ${employeeSwitcherHtml(id,'従業員を切り替え')}</div>
-      <div class="employee-detail-actions"><span class="employee-updated">最終更新：${emp_esc(e.updated_at||'—')}</span><button class="btn btn-sm" onclick="editEmp(${e.id})">情報を編集</button>
+      <div class="employee-detail-actions"><span class="employee-updated">最終更新：${emp_esc(e.updated_at||'—')}</span><button class="btn btn-sm" onclick="editEmp(${jsAttrArg(e.id)})">情報を編集</button>
       <details class="employee-tools"><summary class="btn btn-sm">書類・その他の操作</summary><div>
-        <button class="btn" onclick="generateCertificate(${e.id},'zaishoku')">在職証明</button>
-        ${e.status==='退職'?`<button class="btn" onclick="generateCertificate(${e.id},'taishoku')">退職証明</button>`:''}
-        <button class="btn" data-employee-action="contract-open" data-id="${e.id}">雇用契約書を作成</button>
+        <button class="btn" onclick="generateCertificate(${jsAttrArg(e.id)},'zaishoku')">在職証明</button>
+        ${e.status==='退職'?`<button class="btn" onclick="generateCertificate(${jsAttrArg(e.id)},'taishoku')">退職証明</button>`:''}
+        <button class="btn" data-employee-action="contract-open" data-id="${emp_attr(e.id)}">雇用契約書を作成</button>
         <button class="btn" onclick="window.open('https://kakuzen2026.github.io/dispatch-kanri/','_blank','noopener')">派遣管理で確認 ↗</button>
-        ${e.status==='在籍'?`<button class="btn btn-danger" onclick="retireEmp(${e.id})">退職処理</button>`:''}
+        ${e.status==='在籍'?`<button class="btn btn-danger" onclick="retireEmp(${jsAttrArg(e.id)})">退職処理</button>`:''}
       </div></details></div>
       <nav class="tab-list workspace-tabs" aria-label="従業員情報">${groups.map(g=>`<button class="itab ${g===group?'active':''}" data-tab="${g.tabs[0][0]}" ${g===group?'aria-current="page"':''} onclick="setDetailTab('${g.tabs[0][0]}')">${g.label}</button>`).join('')}</nav>
       ${group.tabs.length>1?`<nav class="employee-subtabs" aria-label="${group.label}の項目">${group.tabs.map(([tab,label])=>`<button class="${tab===detailTab?'active':''}" data-tab="${tab}" ${tab===detailTab?'aria-current="page"':''} onclick="setDetailTab('${tab}')">${label}</button>`).join('')}</nav>`:''}
@@ -216,15 +216,15 @@ async function renderAlert(){
     const visaLabel=e.visa_expiry?(vd<0?`<span class="badge badge-danger">在留 期限切れ</span>`:`<span class="badge badge-warn">在留 残${vd}日</span>`):'';
     const licLabel=e.license_expiry&&ld<90?(ld<0?`<span class="badge badge-danger">免許 期限切れ</span>`:`<span class="badge badge-warn">免許 残${ld}日</span>`):'';
     return`<tr style="${rowBg}">
-      <td><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><span style="font-size:11px;color:var(--emp-text2)">${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span></span></td>
+      <td><span class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)})">${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><span style="font-size:11px;color:var(--emp-text2)">${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span></span></td>
       <td>${emp_esc(dept?.shozoku1||'—')}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding-top:12px">${visaLabel}${licLabel}</td>
       <td style="font-size:12px">${emp_esc(e.visa_expiry&&vd<90?e.visa_expiry:'—')}</td>
       <td style="font-size:12px">${emp_esc(e.license_expiry&&ld<90?e.license_expiry:'—')}</td>
       <td class="no-label" style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="editEmp(${e.id})">更新</button>
-        <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">証明書</button>
-        <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書</button>
+        <button class="btn btn-sm" onclick="editEmp(${jsAttrArg(e.id)})">更新</button>
+        <button class="btn btn-sm" onclick="generateCertificate(${jsAttrArg(e.id)},'zaishoku')">証明書</button>
+        <button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${emp_attr(e.id)}">契約書</button>
       </td>
     </tr>`;
   };
@@ -248,11 +248,11 @@ async function renderAlert(){
             :days<0?`<span class="badge badge-danger">期限切れ（${Math.abs(days)}日）</span>`
             :`<span class="badge badge-warn">残${days}日</span>`;
           return`<tr style="${!ct||days<0?'background:#fdf0f0':'background:#fdf3e7'}">
-            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
+            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)})">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
             <td data-label="所属">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="状態">${statusLabel}</td>
             <td data-label="契約終了日" style="font-size:12px">${emp_esc(ct?.contract_end||'—')}</td>
-            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${e.id}">契約書作成</button></td>
+            <td class="no-label"><button type="button" class="btn btn-sm" data-employee-action="contract-open" data-id="${emp_attr(e.id)}">契約書作成</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -268,10 +268,10 @@ async function renderAlert(){
           const dept=departments.find(d=>d.id===Number(e.dept_id));
           const unsetGrants=yukyuGrants.filter(g=>g.employee_id===e.id&&(g.days===null||g.days===undefined||g.days==='')&&g.grant_date<=todayStr);
           return`<tr style="background:var(--warn-light)">
-            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${e.id},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
+            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</span></td>
             <td data-label="所属">${emp_esc(dept?.shozoku1||'—')}</td>
             <td data-label="未設定の付与日" style="font-size:12px">${unsetGrants.map(g=>emp_esc(g.grant_date)).join('、')}</td>
-            <td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id},'yukyu')">付与設定へ</button></td>
+            <td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${jsAttrArg(e.id)},'yukyu')">付与設定へ</button></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -320,14 +320,14 @@ async function loadDispatchAlerts(){
         <thead><tr><th>氏名</th><th>契約番号</th><th>取引先/現場</th><th>契約終了日</th><th>残日数</th><th></th></tr></thead>
         <tbody>${alertContracts.map(ct=>{
           const emp=empMap[ct.employee_id];
-          const name=emp?`${emp_esc(emp.sei)} ${emp_esc(emp.mei)}`:`ID:${ct.employee_id}`;
+          const name=emp?`${emp_esc(emp.sei)} ${emp_esc(emp.mei)}`:`ID:${emp_esc(ct.employee_id)}`;
           const days=calendarDaysUntil(ct.contract_end,today);
           const rowBg=days<0?'background:var(--danger-light);':days<=14?'background:var(--warn-light);':'';
           const dayLabel=days<0?`<span style="color:var(--emp-danger);font-weight:600;">期限切れ（${Math.abs(days)}日）</span>`
             :`<span style="color:var(--emp-warn);font-weight:600;">${days}日</span>`;
-          const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${emp_esc(ct.dispatch_app_contract_id)}`;
+          const dispatchUrl=`https://kakuzen2026.github.io/dispatch-kanri/?contract=${encodeURIComponent(String(ct.dispatch_app_contract_id)).replace(/'/g,'%27')}`;
           return`<tr style="${rowBg}">
-            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${ct.employee_id},'dispatch')">${name}</span></td>
+            <td data-label="氏名"><span class="emp-name" onclick="viewDetail(${jsAttrArg(ct.employee_id)},'dispatch')">${name}</span></td>
             <td data-label="契約番号" style="font-size:12px;">${emp_esc(ct.contract_no||'—')}</td>
             <td data-label="取引先/現場" style="font-size:12px;">${emp_esc(ct.client_name||'—')} / ${emp_esc(ct.site_name||'—')}</td>
             <td data-label="契約終了日" style="font-size:12px;">${emp_esc(ct.contract_end)}</td>
@@ -400,7 +400,7 @@ async function renderDT(){
         <div style="font-size:12px;color:var(--emp-text2);margin-bottom:8px;font-weight:500">在留カード写真（最大4枚）</div>
         <div id="rcImgGrid">${multiImgGrid(rcImgs,'delRcImg')}</div>        ${rcImgs.length<4?`
         <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを追加" id="rcDetailDrop">
-          <input type="file" id="rcDetailInput" accept="image/*,application/pdf" style="display:none" onchange="addRcImg(${e.id},this)">
+          <input type="file" id="rcDetailInput" accept="image/*,application/pdf" style="display:none" onchange="addRcImg(${jsAttrArg(e.id)},this)">
           ${fileDropHint("image/*,application/pdf")}<span>残り${4-rcImgs.length}枚</span>
         </label>`:''}
       </div>`;
@@ -418,7 +418,7 @@ async function renderDT(){
     c.innerHTML=`
       <div class="employee-leave-summary"><div><span>有休残数</span><strong>${ready?info.remaining+'日':'未確認'}</strong></div><div><span>記録上の取得合計</span><strong>${ready?info.used+'日':'未確認'}</strong></div><div><span>次回付与日</span><strong class="summary-date">${employeeGrantDataReady()&&!info.invalidGrant?emp_esc(info.nextDate||'—'):'未確認'}</strong></div></div>
       <div class="leave-employee-switcher"><span>別の従業員の有休を確認</span>${employeeSwitcherHtml(e.id,'有休・勤怠の従業員を切り替え')}</div>
-      <div class="workspace-heading section-heading"><h2>付与・取得・勤怠の履歴</h2><div class="workspace-actions"><button class="btn" ${employeeGrantDataReady()?'':'disabled'} onclick="openGrantModal(${e.id})">＋ 付与を登録</button><button class="btn btn-primary" onclick="openYukyuFromDetail(${e.id})">＋ 有休・勤怠を登録</button></div></div>
+      <div class="workspace-heading section-heading"><h2>付与・取得・勤怠の履歴</h2><div class="workspace-actions"><button class="btn" ${employeeGrantDataReady()?'':'disabled'} onclick="openGrantModal(${jsAttrArg(e.id)})">＋ 付与を登録</button><button class="btn btn-primary" onclick="openYukyuFromDetail(${jsAttrArg(e.id)})">＋ 有休・勤怠を登録</button></div></div>
       <p class="workspace-help">付与日・取得日を新しい順に表示します。付与済み合計：${attendanceGrantsReady&&!info.invalidGrant?info.granted+'日':'未確認'}${info.invalidGrant?' ／ 付与日・期限・日数を確認してください。':info.unsetDays?' ／ 日数未設定の付与があります。対象月を空欄にして確認してください。':''}</p>
       <label class="month-filter detail-month">対象月<input type="month" id="detailMonth" value="${emp_attr(EMP_UI.detailMonth)}" onchange="setDetailMonth(this.value)"><span>空欄で全期間</span></label>
       ${employeeAttendanceTable(recs,false,true,grants)}
@@ -426,13 +426,13 @@ async function renderDT(){
       <div style="background:var(--emp-bg);border:1px solid var(--emp-border);border-radius:var(--emp-radius);padding:12px 14px;margin-bottom:16px">
         <div style="font-size:12px;color:var(--emp-text2);font-weight:500;margin-bottom:10px">以前の勤続年数を参照しますか？</div>
         <div class="sel-group" style="margin-bottom:10px">
-          <button class="sel-btn ${e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${e.id},true,this)">参照する</button>
-          <button class="sel-btn ${!e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${e.id},false,this)">参照しない</button>
+          <button class="sel-btn ${e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${jsAttrArg(e.id)},true,this)">参照する</button>
+          <button class="sel-btn ${!e.kousoku_start_date?'selected':''}" onclick="toggleKousoku(${jsAttrArg(e.id)},false,this)">参照しない</button>
         </div>
         <div id="kousokuDateRow" style="display:${e.kousoku_start_date?'flex':'none'};gap:8px;align-items:center;flex-wrap:wrap">
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">以前の勤務先の入社日</div>
           <input type="date" id="kousokuInput" value="${emp_esc(e.kousoku_start_date||'')}" style="padding:6px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
-          <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${e.id})">保存</button>
+          <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${jsAttrArg(e.id)})">保存</button>
           <div style="font-size:12px;color:var(--emp-text3);flex-basis:100%">付与日：毎年1月1日</div>
         </div>
         <div style="font-size:12px;color:var(--emp-text3);display:${e.kousoku_start_date?'none':'block'}">付与日：入社6か月後、その後は毎年同月同日${!e.kousoku_start_date?`（本人の入社日：${emp_esc(e.nyusha_date||'未登録')}）`:''}</div>
@@ -447,13 +447,13 @@ async function renderDT(){
           <div class="list-item"><span class="dt">${emp_esc(x.date)}</span>
           <span class="badge ${x.result==='異常なし'?'badge-active':x.result==='要精密検査'?'badge-danger':'badge-warn'}">${emp_esc(x.result)}</span>
           ${x.img?`<img src="${emp_attr(safeAttachmentUrl(x.img))}" style="height:36px;border-radius:4px">`:''}
-          <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delKenko(${e.id},${i})">削除</button></div>`).join('')}
+          <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delKenko(${jsAttrArg(e.id)},${i})">削除</button></div>`).join('')}
       </div>
       <div class="add-row">
         <div><label style="font-size:12px;color:var(--emp-text2)">受診日</label><br><input type="date" id="kd" style="width:150px;margin-top:4px"></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">結果</label><br><select id="kr" style="margin-top:4px">${CHECKRES.map(r=>`<option>${r}</option>`).join('')}</select></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">写真</label><br>${fileDropZone("kimg","image/*,application/pdf","previewKI(this)")} <span id="kimgName" style="font-size:12px;color:var(--emp-text2)"></span></div>
-        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addKenko(${e.id})">追加</button></div>
+        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addKenko(${jsAttrArg(e.id)})">追加</button></div>
       </div>`;
   } else if(detailTab==='license'){
     const slist=e.shikaku_list||[];
@@ -473,7 +473,7 @@ async function renderDT(){
         <div id="licImgGrid">${multiImgGrid(licImgs,'delLicImg')}</div>
         ${licImgs.length<4?`
         <label class="photo-upload file-dropzone" tabindex="0" role="button" aria-label="画像・PDFを追加" id="licDetailDrop">
-          <input type="file" id="licDetailInput" accept="image/*,application/pdf" style="display:none" onchange="addLicImg(${e.id},this)">
+          <input type="file" id="licDetailInput" accept="image/*,application/pdf" style="display:none" onchange="addLicImg(${jsAttrArg(e.id)},this)">
           ${fileDropHint("image/*,application/pdf")}<span>残り${4-licImgs.length}枚</span>
         </label>`:''}
       </div>
@@ -481,7 +481,7 @@ async function renderDT(){
         <div><label style="font-size:12px;color:var(--emp-text2)">免許証番号</label><br><input type="text" id="lic_no" value="${emp_esc(e.license_no||'')}" style="width:160px;margin-top:4px"></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="lic_date" value="${emp_esc(e.license_date||'')}" style="width:150px;margin-top:4px"></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="lic_expiry" value="${emp_esc(e.license_expiry||'')}" style="width:150px;margin-top:4px"></div>
-        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="saveLicense(${e.id})">保存</button></div>
+        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="saveLicense(${jsAttrArg(e.id)})">保存</button></div>
       </div>
 
       <div class="section-title" style="margin-top:24px">その他資格</div>
@@ -493,7 +493,7 @@ async function renderDT(){
             <span class="dt">取得：${emp_esc(x.date||'—')}</span>
             <span class="dt">有効期限：${x.expiry?(sDl<0?`<span style="color:var(--emp-danger)">${emp_esc(x.expiry)}（切れ）</span>`:(sDl<90?`<span style="color:var(--emp-warn)">${emp_esc(x.expiry)}（残${sDl}日）</span>`:emp_esc(x.expiry))):'なし'}</span>
             ${x.img?`<img src="${emp_attr(safeAttachmentUrl(x.img))}" style="height:32px;border-radius:4px">`:''}
-            <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delShikaku(${e.id},${i})">削除</button>
+            <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delShikaku(${jsAttrArg(e.id)},${i})">削除</button>
           </div>`;
         }).join('')}
       </div>
@@ -502,10 +502,10 @@ async function renderDT(){
         <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="sk_date" style="width:150px;margin-top:4px"></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="sk_expiry" style="width:150px;margin-top:4px"></div>
         <div><label style="font-size:12px;color:var(--emp-text2)">写真</label><br>${fileDropZone("sk_img","image/*","previewSkImg(this)")} <span id="skImgName" style="font-size:12px;color:var(--emp-text2)"></span></div>
-        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addShikaku(${e.id})">追加</button></div>
+        <div style="align-self:flex-end"><button class="btn btn-primary" onclick="addShikaku(${jsAttrArg(e.id)})">追加</button></div>
       </div>`;
   } else if(detailTab==='memo'){
-    c.innerHTML=`<div class="field"><label>メモ・備考</label><textarea id="memoText" style="min-height:160px">${emp_textarea(stripFuyouMeta(e.memo))}</textarea></div><div style="margin-top:10px;text-align:right"><button class="btn btn-primary" onclick="saveMemo(${e.id})">保存</button></div>`;
+    c.innerHTML=`<div class="field"><label>メモ・備考</label><textarea id="memoText" style="min-height:160px">${emp_textarea(stripFuyouMeta(e.memo))}</textarea></div><div style="margin-top:10px;text-align:right"><button class="btn btn-primary" onclick="saveMemo(${jsAttrArg(e.id)})">保存</button></div>`;
   } else if(detailTab==='dispatch'){
     c.innerHTML=`<div class="loading">派遣契約を読み込み中...</div>`;
     loadDispatchContracts(e.id).then(contracts=>{
@@ -568,7 +568,7 @@ function renderFuyouEditor(e,deps=getFuyouList(e)){
     </div>
     <div class="page-actions" style="padding-bottom:20px">
       <button class="btn" onclick="renderDT()">変更を破棄</button>
-      <button class="btn btn-primary" onclick="saveFuyou(${e.id})">扶養情報を保存</button>
+      <button class="btn btn-primary" onclick="saveFuyou(${jsAttrArg(e.id)})">扶養情報を保存</button>
     </div>`;
 }
 function fuyouRowHtml(d,i){

@@ -33,7 +33,7 @@ async function loadRecords(){
       </select>
       <select class="form-select" style="width:200px;" id="rec-filter-emp" onchange="loadRecords()">
         <option value="">すべての従業員</option>
-        ${emps.map(e=>`<option value="${e.id}">${esc(e.sei)} ${esc(e.mei)}</option>`).join('')}
+        ${emps.map(e=>`<option value="${esc(e.id)}">${esc(e.sei)} ${esc(e.mei)}</option>`).join('')}
       </select>
     </div>
     <div id="rec-list">
@@ -47,7 +47,7 @@ async function loadRecords(){
               ${r.contract_id?`<span style="font-size:11px;color:var(--text3);">📄 ${esc(ctMap[r.contract_id]||r.contract_id)}</span>`:''}
               ${r.rec_date?`<span style="font-size:11px;color:var(--text3);">${esc(r.rec_date.substring(0,10))}</span>`:''}
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="deleteEmployeeRecord('${r.id}')">削除</button>
+            <button class="btn btn-secondary btn-sm" onclick="deleteEmployeeRecord(${jsAttrArg(String(r.id))})">削除</button>
           </div>
           <div style="margin-top:8px;font-size:12px;color:var(--text2);white-space:pre-wrap;">${esc(r.content||'')}</div>
           ${r.result?`<div style="margin-top:4px;font-size:12px;color:var(--text3);">処理結果：${esc(r.result)}</div>`:''}
@@ -97,10 +97,10 @@ async function openRecordModal(record=null){
   document.getElementById('rec-modal-title').textContent = record ? '📋 記録を編集' : '📋 記録を追加';
   // 従業員リスト
   const readResult1=await db.from('employees').select('id,sei,mei').order('sei');if(reportReadFailure(readResult1.error))return;const emps=readResult1.data;
-  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${esc(e.sei)} ${esc(e.mei)}</option>`).join('');
+  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${esc(e.id)}" ${record?.employee_id===e.id?'selected':''}>${esc(e.sei)} ${esc(e.mei)}</option>`).join('');
   // 契約リスト
   const readResult2=await db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no');if(reportReadFailure(readResult2.error))return;const cts=readResult2.data;
-  document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${c.id}" ${record?.contract_id===c.id?'selected':''}>${esc(c.contract_no||'—')} ${esc(c.sites?.clients?.name||'')} / ${esc(c.sites?.name||'')}</option>`).join('');
+  document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${esc(c.id)}" ${record?.contract_id===c.id?'selected':''}>${esc(c.contract_no||'—')} ${esc(c.sites?.clients?.name||'')} / ${esc(c.sites?.name||'')}</option>`).join('');
   // 種別セット
   if(record) document.getElementById('rec-type').value=record.type;
   renderRecTypeFields();
@@ -201,8 +201,8 @@ async function openDocsModal(cid){
     const isFixed=ce.employment_type==='fixed';
     return`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2);">👤 ${esc(name)}（${isFixed?'有期':'無期'}）</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('koyo_joken','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📑</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">雇用契約書兼就業条件明示書</div></div></button>
-        <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('chicho','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📨</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">派遣先通知書</div></div></button>
+        <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('koyo_joken',${jsAttrArg(String(ce.employee_id))})"><span class="doc-icon" style="font-size:16px;">📑</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">雇用契約書兼就業条件明示書</div></div></button>
+        <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('chicho',${jsAttrArg(String(ce.employee_id))})"><span class="doc-icon" style="font-size:16px;">📨</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">派遣先通知書</div></div></button>
       </div></div>`;
   }).join('');
   document.getElementById('docs-emp-btns').innerHTML=empBtnsHtml;
@@ -608,9 +608,9 @@ ${sec('就業状況')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">${r('就業状況','別添タイムシートのとおり')}</table>
 ${sec('社会保険・雇用保険の被保険者資格取得届の提出の有無')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
-  <tr><td style="${L}">健康保険</td><td style="${V}">${ph.KENPO_ARI||'有 ・ 無'}　　${ph.KENPO_ARI==='無'?'無の理由：':''}</td>
-      <td style="${L}">厚生年金保険</td><td style="${V}">${ph.KOSEI_ARI||'有 ・ 無'}　　${ph.KOSEI_ARI==='無'?'無の理由：':''}</td></tr>
-  <tr><td style="${L}">雇用保険</td><td style="${V}">${ph.KOYO_ARI||'有 ・ 無'}　　${ph.KOYO_ARI==='無'?'無の理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td><td style="${L}"></td><td style="${V}"></td></tr>
+  <tr><td style="${L}">健康保険</td><td style="${V}">${e(ph.KENPO_ARI)||'有 ・ 無'}　　${ph.KENPO_ARI==='無'?'無の理由：':''}</td>
+      <td style="${L}">厚生年金保険</td><td style="${V}">${e(ph.KOSEI_ARI)||'有 ・ 無'}　　${ph.KOSEI_ARI==='無'?'無の理由：':''}</td></tr>
+  <tr><td style="${L}">雇用保険</td><td style="${V}">${e(ph.KOYO_ARI)||'有 ・ 無'}　　${ph.KOYO_ARI==='無'?'無の理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td><td style="${L}"></td><td style="${V}"></td></tr>
 </table>
 ${sec('派遣労働者からの苦情処理状況')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
@@ -686,9 +686,9 @@ ${sec('就業状況')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">${r('就業状況','別添タイムシートのとおり')}</table>
  ${sec('社会保険・雇用保険の被保険者資格取得届の提出の有無')}
  <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
-   <tr><td style="${L}">健康保険</td><td style="${V}">${ph.KENPO_ARI||'有 ・ 無'}${ph.KENPO_ARI==='無'?'　　無の理由：':''}</td></tr>
-   <tr><td style="${L}">厚生年金保険</td><td style="${V}">${ph.KOSEI_ARI||'有 ・ 無'}${ph.KOSEI_ARI==='無'?'　　無の理由：':''}</td></tr>
-   <tr><td style="${L}">雇用保険</td><td style="${V}">${ph.KOYO_ARI||'有 ・ 無'}${ph.KOYO_ARI==='無'?'　　無の理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td></tr>
+   <tr><td style="${L}">健康保険</td><td style="${V}">${e(ph.KENPO_ARI)||'有 ・ 無'}${ph.KENPO_ARI==='無'?'　　無の理由：':''}</td></tr>
+   <tr><td style="${L}">厚生年金保険</td><td style="${V}">${e(ph.KOSEI_ARI)||'有 ・ 無'}${ph.KOSEI_ARI==='無'?'　　無の理由：':''}</td></tr>
+   <tr><td style="${L}">雇用保険</td><td style="${V}">${e(ph.KOYO_ARI)||'有 ・ 無'}${ph.KOYO_ARI==='無'?'　　無の理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td></tr>
  </table>
  ${sec('派遣労働者からの苦情処理状況')}
  <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
@@ -700,11 +700,11 @@ ${sec('就業状況')}
  </table>
 ${sec('雇用安定措置の内容')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
-  ${r('希望する措置の内容', ph.STABILITY_HOPE||'　')}
-  ${r('①派遣先への直接雇用の依頼', (ph.STABILITY_DIRECT_REQ?'依頼日時・方法：'+ph.STABILITY_DIRECT_REQ:'依頼日時・方法：')+(ph.STABILITY_DIRECT_ANS?'\n派遣先の回答：'+ph.STABILITY_DIRECT_ANS:'\n派遣先の回答：'))}
-  ${r('②他の派遣先の紹介', ph.STABILITY_OTHER||'　')}
-  ${r('③期間を定めない雇用の機会の確保', ph.STABILITY_MUKIROGEN||'　')}
-  ${r('④その他', ph.STABILITY_ETC||'　')}
+  ${r('希望する措置の内容', e(ph.STABILITY_HOPE)||'　')}
+  ${r('①派遣先への直接雇用の依頼', (ph.STABILITY_DIRECT_REQ?'依頼日時・方法：'+e(ph.STABILITY_DIRECT_REQ):'依頼日時・方法：')+(ph.STABILITY_DIRECT_ANS?'\n派遣先の回答：'+e(ph.STABILITY_DIRECT_ANS):'\n派遣先の回答：'))}
+  ${r('②他の派遣先の紹介', e(ph.STABILITY_OTHER)||'　')}
+  ${r('③期間を定めない雇用の機会の確保', e(ph.STABILITY_MUKIROGEN)||'　')}
+  ${r('④その他', e(ph.STABILITY_ETC)||'　')}
 </table>
 <div style="font-size:8.5pt;color:#555;margin-top:2mm;">※本台帳は労働者派遣終了後３年間保存すること（派遣法第37条）</div>`;
 }
@@ -875,9 +875,9 @@ ${sec('雇用期間')}
 
 ${sec('労働・社会保険の被保険者資格取得届の提出の有無及び確認資料')}
 <table style="width:100%;border-collapse:collapse;page-break-inside:auto;">
-  <tr><td style="${L}">健康保険</td><td style="${V}">${ph.KENPO_ARI||'有・無'}　　${ph.KENPO_ARI==='無'?'無の場合の具体的な理由：':''}</td></tr>
-  <tr><td style="${L}">厚生年金保険</td><td style="${V}">${ph.KOSEI_ARI||'有・無'}　　${ph.KOSEI_ARI==='無'?'無の場合の具体的な理由：':''}</td></tr>
-  <tr><td style="${L}">雇用保険</td><td style="${V}">${ph.KOYO_ARI||'有・無'}　　${ph.KOYO_ARI==='無'?'無の場合の具体的な理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td></tr>
+  <tr><td style="${L}">健康保険</td><td style="${V}">${e(ph.KENPO_ARI)||'有・無'}　　${ph.KENPO_ARI==='無'?'無の場合の具体的な理由：':''}</td></tr>
+  <tr><td style="${L}">厚生年金保険</td><td style="${V}">${e(ph.KOSEI_ARI)||'有・無'}　　${ph.KOSEI_ARI==='無'?'無の場合の具体的な理由：':''}</td></tr>
+  <tr><td style="${L}">雇用保険</td><td style="${V}">${e(ph.KOYO_ARI)||'有・無'}　　${ph.KOYO_ARI==='無'?'無の場合の具体的な理由：':''}${ph.KOYO_ARI==='有'&&ph.KOYO_HOKEN_NO?'　被保険者番号：'+e(ph.KOYO_HOKEN_NO):''}</td></tr>
   <tr><td style="${L}">確認書類</td><td style="${V}">別添の被保険者証の写しのとおり</td></tr>
 </table>
 

@@ -4,6 +4,8 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 function context(){
   const ctx=vm.createContext({console,Date,URL,crypto,localStorage:{getItem(){return null;}},document:{addEventListener(){}}});
+  const shared=readFileSync(new URL('../assets/js/core.js',import.meta.url),'utf8');
+  vm.runInContext(shared.slice(shared.indexOf('// ===== XSS'),shared.indexOf('// ===== STATE')),ctx);
   for(const f of ['employee-core','employee-files','employee-api','employee-list-detail','paid-leave-csv','dispatch'])vm.runInContext(readFileSync(new URL(`../assets/js/${f}.js`,import.meta.url),'utf8'),ctx);
   return ctx;
 }

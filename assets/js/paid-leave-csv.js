@@ -28,12 +28,12 @@ function renderYukyuList(){
     <div class="workspace-heading"><h1>有休・勤怠</h1><div class="workspace-actions"><button class="btn btn-sm" onclick="exportYukyuCSV()">勤怠CSV</button><button class="btn btn-primary" onclick="showView('yukyu_add')">＋ 有休・勤怠を登録</button></div></div>
     <nav class="workspace-tabs" aria-label="有休・勤怠の表示">${[['records','勤怠記録'],['balance','有休残数・付与'],['allowance','皆勤手当']].map(([key,label])=>`<button class="${key===tab?'active':''}" ${key===tab?'aria-current="page"':''} onclick="setAttendanceTab('${key}')">${label}</button>`).join('')}</nav>
     <div class="search-bar attendance-search"><div class="search-input-group"><input id="fyQ" aria-label="勤怠の氏名・所属で検索" placeholder="氏名・所属で検索" value="${emp_attr(fq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing)updateAttendanceFilters()"><button class="btn" onclick="updateAttendanceFilters()">検索</button></div>
-      <select id="fyEmp" aria-label="従業員" onchange="updateAttendanceFilters()"><option value="">すべての従業員</option>${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}${e.status==='退職'?'（退職）':''}</option>`).join('')}</select>
+      <select id="fyEmp" aria-label="従業員" onchange="updateAttendanceFilters()"><option value="">すべての従業員</option>${employees.map(e=>`<option value="${emp_attr(e.id)}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}${e.status==='退職'?'（退職）':''}</option>`).join('')}</select>
       ${tab==='records'?`<label class="month-filter">対象月<input type="month" id="fyMonth" value="${emp_attr(fm)}" onchange="updateAttendanceFilters()"></label>`:''}
     </div>
     ${tab==='allowance'?attendanceReportHtml(attendanceFilteredEmployees(fq,fe)):tab==='balance'?`
       <p class="workspace-help">在籍中の従業員を表示しています。詳細から付与の登録・編集ができます。</p>
-      ${!attendanceGrantsReady||!attendanceRecordsReady?'<div class="empty" role="alert">有休データを読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':`<div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th><th>有休残数</th><th>付与済み合計</th><th>記録上の取得合計</th><th>次回付与日</th><th></th></tr></thead><tbody>${activeEmps.map(e=>{const info=calcYukyuInfo(e.id);return `<tr><td data-label="氏名"><button class="emp-name" onclick="viewDetail(${e.id},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td><td data-label="有休残数"><strong>${info.invalidGrant?'未確認':info.remaining+'日'}</strong></td><td data-label="付与済み合計">${info.invalidGrant?'未確認':info.granted+'日'}</td><td data-label="記録上の取得合計">${info.invalidGrant?'未確認':info.used+'日'}</td><td data-label="次回付与日">${info.invalidGrant?'未確認':emp_esc(info.nextDate||'—')}</td><td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${e.id},'yukyu')">付与・詳細</button></td></tr>`;}).join('')||'<tr><td colspan="7">該当する従業員がいません。</td></tr>'}</tbody></table></div>`}`:employeeAttendanceTable(list,true)}`;
+      ${!attendanceGrantsReady||!attendanceRecordsReady?'<div class="empty" role="alert">有休データを読み込めませんでした。<button class="btn" onclick="loadAndRender()">再読み込み</button></div>':`<div class="table-wrap"><table><thead><tr><th>氏名</th><th>所属</th><th>有休残数</th><th>付与済み合計</th><th>記録上の取得合計</th><th>次回付与日</th><th></th></tr></thead><tbody>${activeEmps.map(e=>{const info=calcYukyuInfo(e.id);return `<tr><td data-label="氏名"><button class="emp-name" onclick="viewDetail(${jsAttrArg(e.id)},'yukyu')">${emp_esc(e.sei)} ${emp_esc(e.mei)}</button></td><td data-label="所属">${emp_esc(deptLabelById(e.dept_id)||'—')}</td><td data-label="有休残数"><strong>${info.invalidGrant?'未確認':info.remaining+'日'}</strong></td><td data-label="付与済み合計">${info.invalidGrant?'未確認':info.granted+'日'}</td><td data-label="記録上の取得合計">${info.invalidGrant?'未確認':info.used+'日'}</td><td data-label="次回付与日">${info.invalidGrant?'未確認':emp_esc(info.nextDate||'—')}</td><td class="no-label"><button class="btn btn-sm" onclick="viewDetail(${jsAttrArg(e.id)},'yukyu')">付与・詳細</button></td></tr>`;}).join('')||'<tr><td colspan="7">該当する従業員がいません。</td></tr>'}</tbody></table></div>`}`:employeeAttendanceTable(list,true)}`;
 }
 const PAID_LEAVE_STALE_MESSAGE='別の端末またはタブでこの記録が更新されています。最新内容を表示しました。確認してからもう一度操作してください。';
 function paidLeaveRevision(row){return row?._revision==null?0:row._revision;}
@@ -217,7 +217,7 @@ function renderYukyuAdd(){
 }
 function empDDItems(q){
   const list=employees.filter(e=>e.status==='在籍'&&(!q||employeeSearchText(e).includes(q.toLowerCase())));
-  return list.map(e=>`<button type="button" class="emp-option" onclick="pickEmp(${e.id})"><strong>${emp_esc(e.sei)} ${emp_esc(e.mei)}</strong><span>${emp_esc(e.shain_no||'')} · ${emp_esc(deptLabelById(e.dept_id)||'')}</span></button>`).join('')||'<p class="workspace-help">該当する従業員がいません。</p>';
+  return list.map(e=>`<button type="button" class="emp-option" onclick="pickEmp(${jsAttrArg(e.id)})"><strong>${emp_esc(e.sei)} ${emp_esc(e.mei)}</strong><span>${emp_esc(e.shain_no||'')} · ${emp_esc(deptLabelById(e.dept_id)||'')}</span></button>`).join('')||'<p class="workspace-help">該当する従業員がいません。</p>';
 }
 function showEmpDD(){document.getElementById('empDD')?.classList.add('show');}
 function hideEmpDD(){document.getElementById('empDD')?.classList.remove('show');}
@@ -447,7 +447,7 @@ function renderForm(id){
     </div>
     <div class="sticky-footer">
       <button class="btn" onclick="cancelEmployeeForm()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveForm(${isEdit},${e.id||'null'})">保存</button>
+      <button class="btn btn-primary" onclick="saveForm(${isEdit},${jsAttrArg(e.id??null)})">保存</button>
     </div>`;
   groupEmployeeFormSections();bindEmployeeLabels();
 }
@@ -579,7 +579,7 @@ const CSV_COLS=['社員番号','会社','姓','名','姓カナ','名カナ','生
 
 function downloadSampleCSV(){
   const sample=[CSV_COLS,['S001','セレクト','田中','一郎','タナカ','イチロウ','1990-05-12','男','愛知県豊川市','090-1111-2222','tanaka@example.com','班長','正社員','2018-04-01','在籍','280000','','技能実習2号','AB1234567','2025-09-30','12345678','2018-04-01','','87654321','2018-04-01','','','','','〇〇銀行','豊川支店','1234567','タナカ イチロウ','']];
-  dlCSV(sample.map(r=>r.map(v=>'"'+v.replace(/"/g,'""')+'"')),'従業員台帳_サンプル');
+  dlCSV(sample.map(r=>r.map(csvCell)),'従業員台帳_サンプル');
 }
 
 let employeeImportPending=false;
@@ -657,14 +657,20 @@ function exportCSV(){
   const h=['ID','会社','社員番号','姓','名','姓カナ','名カナ','生年月日','性別','住所','電話','メール','所属1','所属2','役職','雇用形態','入社日','在籍状況','月給','時給','在留資格','在留カード番号','在留期限','雇用保険番号','雇用保険加入日','雇用保険喪失日','社会保険番号','社会保険加入日','社会保険喪失日','更新日'];
   const rows=employees.map(e=>{
     const dept=departments.find(d=>d.id===Number(e.dept_id));
-    return[e.id,e.company,e.shain_no,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"');
+    return[e.id,e.company,e.shain_no,e.sei,e.mei,e.seikana,e.meikana,e.birthday,e.gender,e.address,e.tel,e.email,dept?.shozoku1||'',dept?.shozoku2||'',e.position,e.koyou,e.nyusha_date,e.status,e.kyuyo,e.jikyu,e.visa,e.visa_no,e.visa_expiry,e.koyo_hoken_no,e.koyo_nyusha,e.koyo_soshitsu,e.shakai_hoken_no,e.shakai_nyusha,e.shakai_soshitsu,e.updated_at].map(csvCell);
   });
   dlCSV([h,...rows],'従業員台帳');
 }
 function exportYukyuCSV(){
   const h=['ID','従業員ID','氏名','使用日','使用内容','種別','区分','入力者','登録日','備考'];
-  const rows=yukyuRecords.map(r=>[r.id,r.employee_id,r.employee_name,r.use_date,r.use_type,r.shubetsu,r.kubun,r.input_by,r.touroku_date,r.biko].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"'));
+  const rows=yukyuRecords.map(r=>[r.id,r.employee_id,r.employee_name,r.use_date,r.use_type,r.shubetsu,r.kubun,r.input_by,r.touroku_date,r.biko].map(csvCell));
   dlCSV([h,...rows],'有休・勤怠記録');
+}
+// Keep numeric cells numeric-looking; protect text even behind whitespace/control prefixes.
+function csvCell(value){
+  let text=String(value??'');
+  if(typeof value!=='number'&&/^[\s\x00-\x1f\x7f]*[=+@-]/u.test(text))text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
 }
 function dlCSV(data,name){
   const csv='\uFEFF'+data.map(r=>r.join(',')).join('\n');

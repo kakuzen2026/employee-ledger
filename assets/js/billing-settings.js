@@ -19,8 +19,8 @@ async function loadBilling(){
       <td data-label="状態">${b.is_billed?'<span class="badge badge-green">請求済み</span>':'<span class="badge badge-yellow">未請求</span>'}</td>
       <td data-label="備考">${esc(b.notes||'—')}</td>
       <td class="no-label" style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openBillingModalById('${esc(b.id)}')">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteBilling('${esc(b.id)}')">削除</button>
+        <button class="btn btn-secondary btn-sm" onclick="openBillingModalById(${jsAttrArg(String(b.id))})">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBilling(${jsAttrArg(String(b.id))})">削除</button>
       </td></tr>`).join('')}
     <tr style="background:rgba(59,130,246,.05);"><td colspan="2"><strong>合計</strong></td><td colspan="4" style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent2);">${total.toLocaleString('ja-JP')}円</td></tr>
     </tbody></table>`;
@@ -37,7 +37,7 @@ async function openBillingModal(b){
   if(b?.billing_month) document.getElementById('b-month').value=b.billing_month.substring(0,7);
   else{const n=new Date();document.getElementById('b-month').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
   const readResult2=await db.from('clients').select('id,name').order('name');if(reportReadFailure(readResult2.error))return;const cl=readResult2.data;
-  document.getElementById('b-client-id').innerHTML=(cl||[]).map(c=>`<option value="${c.id}" ${c.id===b?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
+  document.getElementById('b-client-id').innerHTML=(cl||[]).map(c=>`<option value="${esc(c.id)}" ${c.id===b?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal('modal-billing');
 }
 async function saveBilling(){

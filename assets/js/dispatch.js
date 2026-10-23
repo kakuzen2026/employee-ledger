@@ -46,7 +46,7 @@ async function loadDashboard(){
           <td data-label="取引先">${esc(si?.clients?.name||'—')}</td>
           <td data-label="終了日" class="${cls}">${esc(x.contract_end)}</td>
           <td data-label="残日数" class="${cls}">${d}日</td>
-          <td class="no-label"><button class="btn btn-warning btn-sm" onclick="openRenewalModal('${esc(x.id)}')">🔄 更新</button></td>
+          <td class="no-label"><button class="btn btn-warning btn-sm" onclick="openRenewalModal(${jsAttrArg(String(x.id))})">🔄 更新</button></td>
         </tr>`;
       }).join('')}</tbody></table>`;
   }
@@ -106,8 +106,8 @@ function renderClients(list){
       <td data-label="電話番号">${esc(c.contact_phone||'—')}</td>
       <td data-label="メール">${esc(c.contact_email||'—')}</td>
       <td class="no-label" style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openClientModalById('${esc(c.id)}')">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteClient('${esc(c.id)}')">削除</button>
+        <button class="btn btn-secondary btn-sm" onclick="openClientModalById(${jsAttrArg(String(c.id))})">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteClient(${jsAttrArg(String(c.id))})">削除</button>
       </td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -159,8 +159,8 @@ function renderSites(list){
         <td data-label="指揮命令者">${esc(s.supervisor||'—')}</td>
         <td data-label="就業時間">${ph}</td>
         <td class="no-label" style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="openSiteModalById('${esc(s.id)}')">編集</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteSite('${esc(s.id)}')">削除</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSiteModalById(${jsAttrArg(String(s.id))})">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteSite(${jsAttrArg(String(s.id))})">削除</button>
         </td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -204,7 +204,7 @@ async function openSiteModal(site){
   if(site?.id){const readResult6=await db.from('work_patterns').select('*').eq('site_id',site.id).order('created_at');if(reportReadFailure(readResult6.error))return;const data=readResult6.data;wpList=(data||[]).map(p=>({...p}));}
   renderWP();
   const readResult7=await db.from('clients').select('id,name').order('name');if(reportReadFailure(readResult7.error))return;const clients=readResult7.data;
-  document.getElementById('s-client-id').innerHTML=(clients||[]).map(c=>`<option value="${c.id}" ${c.id===site?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
+  document.getElementById('s-client-id').innerHTML=(clients||[]).map(c=>`<option value="${esc(c.id)}" ${c.id===site?.client_id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal('modal-site');
 }
 
@@ -320,12 +320,12 @@ function renderContracts(){
         <td data-label="人数"><span class="badge badge-blue">${cnt}名</span></td>
         <td data-label="状態">${stBadge(x.status,x.contract_end)}</td>
         <td class="no-label" style="display:flex;gap:4px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openCtDetail('${esc(x.id)}')">詳細</button>
-          <button class="btn btn-secondary btn-sm" onclick="openContractModal('${esc(x.id)}')">編集</button>
-          <button class="btn btn-purple btn-sm" onclick="openDocsModal('${esc(x.id)}')">📄 書類</button>
-          ${x.status==='active'?`<button class="btn btn-warning btn-sm" onclick="openRenewalModal('${esc(x.id)}')">🔄 更新</button>`:''}
-          ${x.status==='active'?`<button class="btn btn-danger btn-sm" onclick="endContract('${esc(x.id)}')">終了</button>`:''}
-          <button class="btn btn-danger btn-sm" onclick="deleteContract('${esc(x.id)}')">削除</button>
+          <button class="btn btn-secondary btn-sm" onclick="openCtDetail(${jsAttrArg(String(x.id))})">詳細</button>
+          <button class="btn btn-secondary btn-sm" onclick="openContractModal(${jsAttrArg(String(x.id))})">編集</button>
+          <button class="btn btn-purple btn-sm" onclick="openDocsModal(${jsAttrArg(String(x.id))})">📄 書類</button>
+          ${x.status==='active'?`<button class="btn btn-warning btn-sm" onclick="openRenewalModal(${jsAttrArg(String(x.id))})">🔄 更新</button>`:''}
+          ${x.status==='active'?`<button class="btn btn-danger btn-sm" onclick="endContract(${jsAttrArg(String(x.id))})">終了</button>`:''}
+          <button class="btn btn-danger btn-sm" onclick="deleteContract(${jsAttrArg(String(x.id))})">削除</button>
         </td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -352,7 +352,7 @@ async function openCtDetail(cid){
         <div class="emp-card">
           <h4>👤 ${esc(enames[e.employee_id]||'（氏名取得中）')}</h4>
           <div style="font-size:12px;color:var(--text3);">雇用形態：<span style="color:var(--text);">${e.employment_type==='permanent'?'無期契約':'有期契約'}</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace;">従業員ID: ${e.employee_id}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace;">従業員ID: ${esc(e.employee_id)}</div>
           <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%;" onclick="navigate('jugyoin')" title="従業員管理台帳で確認">従業員台帳で確認</button>
         </div>`).join('')}
     </div>
@@ -360,11 +360,11 @@ async function openCtDetail(cid){
     ${c.notes?`<div class="alert alert-info" style="margin-top:12px;">📝 ${esc(c.notes)}</div>`:''}`;
   document.getElementById('ctd-footer').innerHTML=`
     <button class="btn btn-secondary" onclick="closeModal('modal-ct-detail')">閉じる</button>
-    <button class="btn btn-secondary" onclick="closeModal('modal-ct-detail');openContractModal('${esc(c.id)}')">✏️ 編集</button>
-    <button class="btn btn-purple" onclick="closeModal('modal-ct-detail');openDocsModal('${esc(c.id)}')">📄 書類を生成</button>
-    ${c.status==='active'?`<button class="btn btn-warning" onclick="closeModal('modal-ct-detail');openRenewalModal('${esc(c.id)}')">🔄 契約を更新</button>`:''}
-    ${c.status==='active'?`<button class="btn btn-danger" onclick="closeModal('modal-ct-detail');endContract('${esc(c.id)}')">契約を終了</button>`:''}
-    <button class="btn btn-danger" onclick="closeModal('modal-ct-detail');deleteContract('${esc(c.id)}')">🗑 削除</button>`;
+    <button class="btn btn-secondary" onclick="closeModal('modal-ct-detail');openContractModal(${jsAttrArg(String(c.id))})">✏️ 編集</button>
+    <button class="btn btn-purple" onclick="closeModal('modal-ct-detail');openDocsModal(${jsAttrArg(String(c.id))})">📄 書類を生成</button>
+    ${c.status==='active'?`<button class="btn btn-warning" onclick="closeModal('modal-ct-detail');openRenewalModal(${jsAttrArg(String(c.id))})">🔄 契約を更新</button>`:''}
+    ${c.status==='active'?`<button class="btn btn-danger" onclick="closeModal('modal-ct-detail');endContract(${jsAttrArg(String(c.id))})">契約を終了</button>`:''}
+    <button class="btn btn-danger" onclick="closeModal('modal-ct-detail');deleteContract(${jsAttrArg(String(c.id))})">🗑 削除</button>`;
   openModal('modal-ct-detail');
 }
 
@@ -409,7 +409,7 @@ async function searchCEmp(q){
         <div><div style="font-weight:500;">${name}</div>${kana?`<div style="font-size:11px;color:var(--text3);">${kana}</div>`:''}</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:${etColor};font-weight:600;">${etLabel}</span>
-          <span class="emp-id-label">ID:${e.id}</span>
+          <span class="emp-id-label">ID:${esc(e.id)}</span>
         </div></div>`;}).join('');
   },q?150:0);
 }
@@ -432,7 +432,7 @@ function renderSelEmps(){
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:12px;font-weight:600;color:${etColor};">${etLabel}</span>
         <span style="font-size:11px;color:var(--text3);">（従業員台帳から取得）</span>
-        <button class="rm-btn" onclick="removeSelEmp(${e.id})">✕</button>
+        <button class="rm-btn" onclick="removeSelEmp(${jsAttrArg(e.id)})">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -477,7 +477,7 @@ async function openContractModal(cid){
 
   const readResult14=await db.from('sites').select('id,name,clients(name)').order('name');if(reportReadFailure(readResult14.error))return;const sites=readResult14.data;
   document.getElementById('ct-site-id').innerHTML=(sites||[]).map(s=>
-    `<option value="${s.id}" ${s.id===existing?.site_id?'selected':''}>${esc(s.clients?.name||'')} / ${esc(s.name)}</option>`
+    `<option value="${esc(s.id)}" ${s.id===existing?.site_id?'selected':''}>${esc(s.clients?.name||'')} / ${esc(s.name)}</option>`
   ).join('');
 
   openModal('modal-contract');
