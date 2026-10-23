@@ -5,6 +5,9 @@ const db = createFirebaseDb();
 // ===== XSS エスケープ =====
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 
+// A JavaScript literal must be serialized before escaping its enclosing HTML attribute.
+function jsAttrArg(value){return esc(JSON.stringify(value)??'null');}
+
 // ===== STATE =====
 let ST = {clients:[],sites:[],contracts:[],billing:[],page:'jugyoin',ctTab:'active'};
 let wpList=[], selEmps=[], empCache=null, empTimer=null;

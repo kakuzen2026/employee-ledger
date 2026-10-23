@@ -158,7 +158,7 @@ function setDocumentFilter(view,key,value){
   documentFilters(view)[key]=value;render();rememberEmployeeNavigation('replace');
 }
 function documentEmployeeOptions(selected='',activeOnly=false){
-  return employees.filter(e=>!activeOnly||e.status==='在籍').map(e=>`<option value="${e.id}" ${String(selected)===String(e.id)?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)} · ${emp_esc(e.shain_no||'番号未設定')}${e.status==='退職'?'（退職）':''}</option>`).join('');
+  return employees.filter(e=>!activeOnly||e.status==='在籍').map(e=>`<option value="${emp_attr(e.id)}" ${String(selected)===String(e.id)?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)} · ${emp_esc(e.shain_no||'番号未設定')}${e.status==='退職'?'（退職）':''}</option>`).join('');
 }
 function documentComposer(kind){
   if(!attendanceEmployeesReady)return '<p class="workspace-help" role="alert">従業員情報を再読み込みしてから書類を作成してください。<button class="btn btn-sm" onclick="loadAndRender()">再読み込み</button></p>';
