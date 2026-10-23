@@ -86,7 +86,7 @@ function renderList(){
     </div>
     <div class="emp-list-toolbar">
       <div class="search-bar" style="margin-bottom:0">
-        <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${sq}" onkeydown="if(event.key==='Enter'&&!event.isComposing){listFilter.sq=this.value;renderList();}">
+        <input id="searchQ" placeholder="氏名・部署・在留資格で検索" value="${emp_attr(sq)}" onkeydown="if(event.key==='Enter'&&!event.isComposing){listFilter.sq=this.value;renderList();}">
         <button onclick="listFilter.sq=document.getElementById('searchQ').value;renderList();" style="padding:7px 14px;border-radius:8px;border:1px solid var(--emp-border2);background:var(--emp-accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">検索</button>
         <select id="fCompany" onchange="listFilter.fc=this.value;render()">
           <option value="">会社：全て</option>
@@ -125,10 +125,10 @@ function renderList(){
       <tbody>${list.map(e=>{
         const dept=departments.find(d=>d.id===Number(e.dept_id));
         const exp=e.visa_expiry?new Date(e.visa_expiry):null,dl=exp?Math.round((exp-today)/86400000):null;
-        const vb=e.visa?(dl!==null&&dl<0?`<span class="badge badge-danger">${e.visa}</span>`:(dl!==null&&dl<90?`<span class="badge badge-warn">${e.visa}</span>`:`<span class="badge badge-visa">${e.visa}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
-        const el=e.visa_expiry?(dl<0?`<span style="color:var(--emp-danger);font-size:12px">${e.visa_expiry}（期限切れ）</span>`:(dl<90?`<span style="color:var(--emp-warn);font-size:12px">${e.visa_expiry}（残${dl}日）</span>`:`<span style="font-size:12px">${e.visa_expiry}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
+        const vb=e.visa?(dl!==null&&dl<0?`<span class="badge badge-danger">${emp_esc(e.visa)}</span>`:(dl!==null&&dl<90?`<span class="badge badge-warn">${emp_esc(e.visa)}</span>`:`<span class="badge badge-visa">${emp_esc(e.visa)}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
+        const el=e.visa_expiry?(dl<0?`<span style="color:var(--emp-danger);font-size:12px">${emp_esc(e.visa_expiry)}（期限切れ）</span>`:(dl<90?`<span style="color:var(--emp-warn);font-size:12px">${emp_esc(e.visa_expiry)}（残${dl}日）</span>`:`<span style="font-size:12px">${emp_esc(e.visa_expiry)}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
         const licExp=e.license_expiry?new Date(e.license_expiry):null,licDl=licExp?Math.round((licExp-today)/86400000):null;
-        const ll=e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger);font-size:12px">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn);font-size:12px">${e.license_expiry}（残${licDl}日）</span>`:`<span style="font-size:12px">${e.license_expiry}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
+        const ll=e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger);font-size:12px">${emp_esc(e.license_expiry)}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn);font-size:12px">${emp_esc(e.license_expiry)}（残${licDl}日）</span>`:`<span style="font-size:12px">${emp_esc(e.license_expiry)}</span>`)):'<span style="color:var(--emp-text3)">—</span>';
         const isExpired=(dl!==null&&dl<0)||(licDl!==null&&licDl<0);
         const isWarn=(dl!==null&&dl>=0&&dl<90)||(licDl!==null&&licDl>=0&&licDl<90);
         const rowBg=isExpired?'background:#fdf0f0':isWarn?'background:#fdf3e7':'';
@@ -297,11 +297,11 @@ async function renderAlert(){
     const visaLabel=e.visa_expiry?(vd<0?`<span class="badge badge-danger">在留 期限切れ</span>`:`<span class="badge badge-warn">在留 残${vd}日</span>`):'';
     const licLabel=e.license_expiry&&ld<90?(ld<0?`<span class="badge badge-danger">免許 期限切れ</span>`:`<span class="badge badge-warn">免許 残${ld}日</span>`):'';
     return`<tr style="${rowBg}">
-      <td><span class="emp-name" onclick="viewDetail(${e.id})">${e.sei} ${e.mei}<br><span style="font-size:11px;color:var(--emp-text2)">${e.seikana||''} ${e.meikana||''}</span></span></td>
+      <td><span class="emp-name" onclick="viewDetail(${e.id})">${emp_esc(e.sei)} ${emp_esc(e.mei)}<br><span style="font-size:11px;color:var(--emp-text2)">${emp_esc(e.seikana||'')} ${emp_esc(e.meikana||'')}</span></span></td>
       <td>${dept?.shozoku1||'—'}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding-top:12px">${visaLabel}${licLabel}</td>
-      <td style="font-size:12px">${e.visa_expiry&&vd<90?e.visa_expiry:'—'}</td>
-      <td style="font-size:12px">${e.license_expiry&&ld<90?e.license_expiry:'—'}</td>
+      <td style="font-size:12px">${emp_esc(e.visa_expiry&&vd<90?e.visa_expiry:'—')}</td>
+      <td style="font-size:12px">${emp_esc(e.license_expiry&&ld<90?e.license_expiry:'—')}</td>
       <td class="no-label" style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="editEmp(${e.id})">更新</button>
         <button class="btn btn-sm" onclick="generateCertificate(${e.id},'zaishoku')">証明書</button>
@@ -524,10 +524,10 @@ async function renderDT(){
         </div>
         <div id="kousokuDateRow" style="display:${e.kousoku_start_date?'flex':'none'};gap:8px;align-items:center;flex-wrap:wrap">
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">以前の勤務先の入社日</div>
-          <input type="date" id="kousokuInput" value="${e.kousoku_start_date||''}" style="padding:6px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
+          <input type="date" id="kousokuInput" value="${emp_attr(e.kousoku_start_date||'')}" style="padding:6px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
           <button class="btn btn-primary btn-sm" onclick="saveKousokuDate(${e.id})">保存</button>
         </div>
-        ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--emp-text3)">→ 本人の入社日（${e.nyusha_date||'未登録'}）で計算します</div>`:''}
+        ${!e.kousoku_start_date?`<div style="font-size:12px;color:var(--emp-text3)">→ 本人の入社日（${emp_esc(e.nyusha_date||'未登録')}）で計算します</div>`:''}
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -601,7 +601,7 @@ async function renderDT(){
       <div class="detail-grid">
         ${df('免許証番号',e.license_no)}${df('取得日',e.license_date)}
         <div class="detail-field"><div class="detail-label">有効期限</div><div class="detail-val">
-          ${e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger)">${e.license_expiry}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn)">${e.license_expiry}（残${licDl}日）</span>`:e.license_expiry)):('<span style="color:var(--emp-text3)">—</span>')}
+          ${e.license_expiry?(licDl<0?`<span style="color:var(--emp-danger)">${emp_esc(e.license_expiry)}（期限切れ）</span>`:(licDl<90?`<span style="color:var(--emp-warn)">${emp_esc(e.license_expiry)}（残${licDl}日）</span>`:emp_esc(e.license_expiry))):('<span style="color:var(--emp-text3)">—</span>')}
         </div></div>
       </div>
       <div style="margin-top:12px">
@@ -614,9 +614,9 @@ async function renderDT(){
         </div>`:''}
       </div>
       <div class="add-row" style="margin-top:12px">
-        <div><label style="font-size:12px;color:var(--emp-text2)">免許証番号</label><br><input type="text" id="lic_no" value="${e.license_no||''}" style="width:160px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="lic_date" value="${e.license_date||''}" style="width:150px;margin-top:4px"></div>
-        <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="lic_expiry" value="${e.license_expiry||''}" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">免許証番号</label><br><input type="text" id="lic_no" value="${emp_attr(e.license_no||'')}" style="width:160px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">取得日</label><br><input type="date" id="lic_date" value="${emp_attr(e.license_date||'')}" style="width:150px;margin-top:4px"></div>
+        <div><label style="font-size:12px;color:var(--emp-text2)">有効期限</label><br><input type="date" id="lic_expiry" value="${emp_attr(e.license_expiry||'')}" style="width:150px;margin-top:4px"></div>
         <div style="align-self:flex-end"><button class="btn btn-primary" onclick="saveLicense(${e.id})">保存</button></div>
       </div>
 

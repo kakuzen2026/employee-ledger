@@ -48,7 +48,7 @@ function renderKenkoList(){
           <div style="font-size:12px;color:var(--emp-text2);margin-bottom:4px">従業員</div>
           <select id="kfEmp" style="width:100%;padding:7px 10px;border:1px solid var(--emp-border2);border-radius:var(--emp-radius);font-size:13px;font-family:inherit">
             <option value="">選択してください</option>
-            ${employees.filter(e=>e.status==='在籍').map(e=>`<option value="${e.id}">${e.sei} ${e.mei}</option>`).join('')}
+            ${employees.filter(e=>e.status==='在籍').map(e=>`<option value="${emp_attr(e.id)}">${emp_esc(e.sei)} ${emp_esc(e.mei)}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -74,7 +74,7 @@ function renderKenkoList(){
     <div class="search-bar">
       <select id="fkEmp" onchange="renderKenkoList()" style="min-width:160px">
         <option value="">従業員：全て</option>
-        ${employees.map(e=>`<option value="${e.id}" ${fe==e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('')}
+        ${employees.map(e=>`<option value="${emp_attr(e.id)}" ${fe==e.id?'selected':''}>${emp_esc(e.sei)} ${emp_esc(e.mei)}</option>`).join('')}
       </select>
       <select id="fkResult" onchange="renderKenkoList()">
         <option value="">結果：全て</option>
@@ -132,7 +132,7 @@ function exportKenkoCSV(){
   const rows=[];
   employees.forEach(e=>{
     (e.kenkou_list||[]).forEach(k=>{
-      rows.push([k.date,e.sei+' '+e.mei,e.seikana||'',e.meikana||'',k.result].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"'));
+      rows.push([k.date,e.sei+' '+e.mei,e.seikana||'',e.meikana||'',k.result].map(v=>csvExportCell(v)));
     });
   });
   rows.sort((a,b)=>b[0].localeCompare(a[0]));

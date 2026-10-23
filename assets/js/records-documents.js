@@ -32,7 +32,7 @@ async function loadRecords(){
       </select>
       <select class="form-select" style="width:200px;" id="rec-filter-emp" onchange="loadRecords()">
         <option value="">すべての従業員</option>
-        ${emps.map(e=>`<option value="${e.id}">${e.sei} ${e.mei}</option>`).join('')}
+        ${emps.map(e=>`<option value="${e.id}">${esc(e.sei)} ${esc(e.mei)}</option>`).join('')}
       </select>
     </div>
     <div id="rec-list">
@@ -95,7 +95,7 @@ async function openRecordModal(record=null){
   document.getElementById('rec-modal-title').textContent = record ? '📋 記録を編集' : '📋 記録を追加';
   // 従業員リスト
   const {data:emps}=await db.from('employees').select('id,sei,mei').order('sei');
-  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${e.sei} ${e.mei}</option>`).join('');
+  document.getElementById('rec-emp-id').innerHTML=(emps||[]).map(e=>`<option value="${e.id}" ${record?.employee_id===e.id?'selected':''}>${esc(e.sei)} ${esc(e.mei)}</option>`).join('');
   // 契約リスト
   const {data:cts}=await db.from('contracts').select('id,contract_no,sites(name,clients(name))').order('contract_no');
   document.getElementById('rec-contract-id').innerHTML=`<option value="">選択しない</option>`+(cts||[]).map(c=>`<option value="${c.id}" ${record?.contract_id===c.id?'selected':''}>${c.contract_no||'—'} ${c.sites?.clients?.name||''} / ${c.sites?.name||''}</option>`).join('');
@@ -197,7 +197,7 @@ async function openDocsModal(cid){
   const empBtnsHtml=(c.contract_employees||[]).map(ce=>{
     const emp=empData[ce.employee_id];const name=emp?`${emp.sei} ${emp.mei}`:`ID:${ce.employee_id}`;
     const isFixed=ce.employment_type==='fixed';
-    return`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2);">👤 ${name}（${isFixed?'有期':'無期'}）</div>
+    return`<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2);">👤 ${esc(name)}（${isFixed?'有期':'無期'}）</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('koyo_joken','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📑</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">雇用契約書兼就業条件明示書</div></div></button>
         <button class="doc-btn btn-sm" style="padding:8px 12px;" onclick="genEmpDoc('chicho','${ce.employee_id}')"><span class="doc-icon" style="font-size:16px;">📨</span><div class="doc-info"><div class="doc-title" style="font-size:12px;">派遣先通知書</div></div></button>

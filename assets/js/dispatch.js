@@ -380,17 +380,20 @@ async function searchCEmp(q){
     const used=selEmps.map(e=>e.id);
     const filtered=(!q?empCache:empCache.filter(e=>(e.sei||'').toLowerCase().includes(q.toLowerCase())||(e.mei||'').toLowerCase().includes(q.toLowerCase())||(e.seikana||'').includes(q)||(e.meikana||'').includes(q))).filter(e=>!used.includes(e.id));
     if(!filtered.length){dd.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text3);">該当なし</div>';return;}
-    dd.innerHTML=filtered.map(e=>{
+    dd.replaceChildren(...filtered.map(e=>{
       const name=`${esc(e.sei)} ${esc(e.mei)}`;const kana=`${esc(e.seikana||'')} ${esc(e.meikana||'')}`.trim();
       const etLabel=e.employment_type==='permanent'?'無期':'有期';
       const etColor=e.employment_type==='permanent'?'var(--success)':'var(--accent2)';
-      const safeName=`${e.sei} ${e.mei}`.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return`<div class="emp-option" onclick="addSelEmp(${e.id},'${safeName}','${e.employment_type||'fixed'}')">
-        <div><div style="font-weight:500;">${name}</div>${kana?`<div style="font-size:11px;color:var(--text3);">${kana}</div>`:''}</div>
+      const option=document.createElement('div');
+      option.className='emp-option';
+      option.innerHTML=`<div><div style="font-weight:500;">${name}</div>${kana?`<div style="font-size:11px;color:var(--text3);">${kana}</div>`:''}</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:${etColor};font-weight:600;">${etLabel}</span>
-          <span class="emp-id-label">ID:${e.id}</span>
-        </div></div>`;}).join('');
+          <span class="emp-id-label">ID:${esc(e.id)}</span>
+        </div>`;
+      option.addEventListener('click',()=>addSelEmp(e.id,`${e.sei} ${e.mei}`,e.employment_type||'fixed'));
+      return option;
+    }));
   },q?150:0);
 }
 function addSelEmp(id,name,empType){
@@ -516,7 +519,7 @@ async function openRenewalModal(cid){
   document.getElementById('rn-info').innerHTML=`<strong>現場：</strong>${esc(c.sites?.name||'—')}<br><span style="color:var(--text3);font-size:12px;">配属：${(c.contract_employees||[]).map(e=>esc(enames[e.employee_id]||`ID:${e.employee_id}`)).join('、')}</span>`;
   const fixed=(c.contract_employees||[]).filter(e=>e.employment_type==='fixed');
   document.getElementById('rn-emp-opts').innerHTML=fixed.length
-    ?fixed.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked id="rn-${e.employee_id}">${enames[e.employee_id]||`ID:${e.employee_id}`}（有期）の雇用契約書を更新する</label>`).join('')
+    ?fixed.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked id="rn-${e.employee_id}">${esc(enames[e.employee_id]||`ID:${e.employee_id}`)}（有期）の雇用契約書を更新する</label>`).join('')
     :'<div style="font-size:12px;color:var(--text3);">無期契約スタッフのみのため雇用契約書の更新は不要です</div>';
   openModal('modal-renewal');
 }
